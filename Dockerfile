@@ -13,6 +13,9 @@ RUN make -C /usr/src/redis
 RUN make -C /usr/src/redis test || true
 
 RUN make -C /usr/src/redis install
+RUN mkdir /data && chown redis:redis /data
+VOLUME /data
+WORKDIR /data
 
 USER redis
 EXPOSE 6379
