@@ -19,4 +19,4 @@ WORKDIR /data
 
 USER redis
 EXPOSE 6379
-CMD [ "redis-server", "--bind", "0.0.0.0" ]
+CMD [ "redis-server" ]
