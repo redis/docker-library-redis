@@ -3,13 +3,20 @@ FROM debian:wheezy
 # add our user and group first to make sure their IDs get assigned consistently, regardless of whatever dependencies get added
 RUN groupadd -r redis && useradd -r -g redis redis
 
+RUN apt-get update \
+	&& apt-get install -y curl \
+	&& rm -rf /var/lib/apt/lists/*
+
+RUN curl -o /usr/local/bin/gosu -SL 'https://github.com/tianon/gosu/releases/download/1.1/gosu' \
+	&& chmod +x /usr/local/bin/gosu
+
 ENV REDIS_VERSION 2.8.11
 ENV REDIS_DOWNLOAD_URL http://download.redis.io/releases/redis-2.8.11.tar.gz
 ENV REDIS_DOWNLOAD_SHA1 3e3a4603781514f239f040287d3ef1097eb02a76
 
 RUN buildDeps='gcc libc6-dev make'; \
 	set -x; \
-	apt-get update && apt-get install -y $buildDeps curl --no-install-recommends \
+	apt-get update && apt-get install -y $buildDeps --no-install-recommends \
 	&& rm -rf /var/lib/apt/lists/* \
 	&& mkdir -p /usr/src/redis \
 	&& curl -sSL "$REDIS_DOWNLOAD_URL" -o redis.tar.gz \
@@ -19,13 +26,15 @@ RUN buildDeps='gcc libc6-dev make'; \
 	&& make -C /usr/src/redis \
 	&& make -C /usr/src/redis install \
 	&& rm -r /usr/src/redis \
-	&& apt-get purge -y $buildDeps curl \
+	&& apt-get purge -y $buildDeps \
 	&& apt-get autoremove -y
 
 RUN mkdir /data && chown redis:redis /data
 VOLUME /data
 WORKDIR /data
 
-USER redis
+COPY docker-entrypoint.sh /entrypoint.sh
+ENTRYPOINT ["/entrypoint.sh"]
+
 EXPOSE 6379
 CMD [ "redis-server" ]
