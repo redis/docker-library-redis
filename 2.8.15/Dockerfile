@@ -10,9 +10,9 @@ RUN apt-get update \
 RUN curl -o /usr/local/bin/gosu -SL 'https://github.com/tianon/gosu/releases/download/1.1/gosu' \
 	&& chmod +x /usr/local/bin/gosu
 
-ENV REDIS_VERSION 2.8.7
-ENV REDIS_DOWNLOAD_URL http://download.redis.io/releases/redis-2.8.7.tar.gz
-ENV REDIS_DOWNLOAD_SHA1 acc369093ec74223e6da207921595187f7e64998
+ENV REDIS_VERSION 2.8.15
+ENV REDIS_DOWNLOAD_URL http://download.redis.io/releases/redis-2.8.15.tar.gz
+ENV REDIS_DOWNLOAD_SHA1 afc0d753cea68a26038775df2dea75a76e3d0e1d
 
 RUN buildDeps='gcc libc6-dev make'; \
 	set -x; \
