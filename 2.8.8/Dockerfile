@@ -14,6 +14,7 @@ ENV REDIS_VERSION 2.8.8
 ENV REDIS_DOWNLOAD_URL http://download.redis.io/releases/redis-2.8.8.tar.gz
 ENV REDIS_DOWNLOAD_SHA1 aa811f399db58c92c8ec5e48271d307e9ab8eb81
 
+# for redis-sentinel see: http://redis.io/topics/sentinel
 RUN buildDeps='gcc libc6-dev make'; \
 	set -x; \
 	apt-get update && apt-get install -y $buildDeps --no-install-recommends \
@@ -25,6 +26,7 @@ RUN buildDeps='gcc libc6-dev make'; \
 	&& rm redis.tar.gz \
 	&& make -C /usr/src/redis \
 	&& make -C /usr/src/redis install \
+	&& ln -s redis-server "$(dirname "$(which redis-server)")/redis-sentinel" \
 	&& rm -r /usr/src/redis \
 	&& apt-get purge -y $buildDeps \
 	&& apt-get autoremove -y
