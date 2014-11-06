@@ -14,7 +14,8 @@ packages="$(echo "$packagesUrl" | sed -r 's/[^a-zA-Z.-]+/-/g')"
 curl -sSL "$packagesUrl" > "$packages"
 
 for version in "${versions[@]}"; do
-	line="$(grep -Em1 "^hash redis-$version\.tar\.gz " "$packages")"
+	line="$(awk '/^hash redis-'"$version"\.'/' "$packages" | sort -rV | head -1)"
+	fullVersion="$(echo "$line" | cut -d' ' -f2 | sed -r 's/^redis-|\.tar\..*$//g')"
 	downloadUrl="$(echo "$line" | cut -d' ' -f5 | sed 's/[\/&]/\\&/g')"
 	shaHash="$(echo "$line" | cut -d' ' -f4)"
 	[ "$(echo "$line" | cut -d' ' -f3)" = 'sha1' ]
@@ -22,7 +23,7 @@ for version in "${versions[@]}"; do
 	(
 		set -x
 		sed -ri '
-			s/^(ENV REDIS_VERSION) .*/\1 '"$version"'/;
+			s/^(ENV REDIS_VERSION) .*/\1 '"$fullVersion"'/;
 			s/^(ENV REDIS_DOWNLOAD_URL) .*/\1 '"$downloadUrl"'/;
 			s/^(ENV REDIS_DOWNLOAD_SHA1) .*/\1 '"$shaHash"'/
 		' "$version/Dockerfile"
