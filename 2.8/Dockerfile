@@ -16,8 +16,8 @@ ENV REDIS_DOWNLOAD_SHA1 913479f9d2a283bfaadd1444e17e7bab560e5d1e
 
 # for redis-sentinel see: http://redis.io/topics/sentinel
 RUN buildDeps='gcc libc6-dev make'; \
-	set -x; \
-	apt-get update && apt-get install -y $buildDeps --no-install-recommends \
+	set -x \
+	&& apt-get update && apt-get install -y $buildDeps --no-install-recommends \
 	&& rm -rf /var/lib/apt/lists/* \
 	&& mkdir -p /usr/src/redis \
 	&& curl -sSL "$REDIS_DOWNLOAD_URL" -o redis.tar.gz \
@@ -28,8 +28,7 @@ RUN buildDeps='gcc libc6-dev make'; \
 	&& make -C /usr/src/redis install \
 	&& ln -s redis-server "$(dirname "$(which redis-server)")/redis-sentinel" \
 	&& rm -r /usr/src/redis \
-	&& apt-get purge -y $buildDeps \
-	&& apt-get autoremove -y
+	&& apt-get purge -y --auto-remove $buildDeps
 
 RUN mkdir /data && chown redis:redis /data
 VOLUME /data
