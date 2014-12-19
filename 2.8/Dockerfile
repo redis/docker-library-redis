@@ -31,7 +31,6 @@ RUN buildDeps='gcc libc6-dev make'; \
 	&& rm redis.tar.gz \
 	&& make -C /usr/src/redis \
 	&& make -C /usr/src/redis install \
-	&& ln -s redis-server "$(dirname "$(which redis-server)")/redis-sentinel" \
 	&& rm -r /usr/src/redis \
 	&& apt-get purge -y --auto-remove $buildDeps
 
