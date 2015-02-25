@@ -38,6 +38,9 @@ RUN mkdir /data && chown redis:redis /data
 VOLUME /data
 WORKDIR /data
 
+#Disable Transparent Huge Pages (THP) support enabled in your kernel. This will create latency and memory usage issues with Redis.
+RUN echo never > /sys/kernel/mm/transparent_hugepage/enabled
+
 COPY docker-entrypoint.sh /entrypoint.sh
 ENTRYPOINT ["/entrypoint.sh"]
 
