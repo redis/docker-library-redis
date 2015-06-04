@@ -15,9 +15,9 @@ RUN curl -o /usr/local/bin/gosu -SL "https://github.com/tianon/gosu/releases/dow
 	&& rm /usr/local/bin/gosu.asc \
 	&& chmod +x /usr/local/bin/gosu
 
-ENV REDIS_VERSION 2.8.20
-ENV REDIS_DOWNLOAD_URL http://download.redis.io/releases/redis-2.8.20.tar.gz
-ENV REDIS_DOWNLOAD_SHA1 45f134113fb3d75b8c37f7968e46565a70800091
+ENV REDIS_VERSION 2.8.21
+ENV REDIS_DOWNLOAD_URL http://download.redis.io/releases/redis-2.8.21.tar.gz
+ENV REDIS_DOWNLOAD_SHA1 52f619d3d301fc7ae498a1d4cb4d44ecebc5b0f9
 
 # for redis-sentinel see: http://redis.io/topics/sentinel
 RUN buildDeps='gcc libc6-dev make' \
