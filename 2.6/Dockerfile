@@ -3,8 +3,9 @@ FROM debian:wheezy
 # add our user and group first to make sure their IDs get assigned consistently, regardless of whatever dependencies get added
 RUN groupadd -r redis && useradd -r -g redis redis
 
-RUN apt-get update \
-	&& apt-get install -y curl \
+RUN apt-get update && apt-get install -y --no-install-recommends \
+		ca-certificates \
+		curl \
 	&& rm -rf /var/lib/apt/lists/*
 
 # grab gosu for easy step-down from root
@@ -19,7 +20,8 @@ ENV REDIS_VERSION 2.6.17
 ENV REDIS_DOWNLOAD_URL http://download.redis.io/releases/redis-2.6.17.tar.gz
 ENV REDIS_DOWNLOAD_SHA1 b5423e1c423d502074cbd0b21bd4e820409d2003
 
-# for redis-sentinel see: http://redis.io/topics/sentinel
+# "Redis Sentinel version 1, shipped with Redis 2.6, is deprecated and should not be used."
+# http://redis.io/topics/sentinel
 RUN buildDeps='gcc libc6-dev make' \
 	&& set -x \
 	&& apt-get update && apt-get install -y $buildDeps --no-install-recommends \

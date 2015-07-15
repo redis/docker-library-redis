@@ -3,8 +3,9 @@ FROM debian:wheezy
 # add our user and group first to make sure their IDs get assigned consistently, regardless of whatever dependencies get added
 RUN groupadd -r redis && useradd -r -g redis redis
 
-RUN apt-get update \
-	&& apt-get install -y curl \
+RUN apt-get update && apt-get install -y --no-install-recommends \
+		ca-certificates \
+		curl \
 	&& rm -rf /var/lib/apt/lists/*
 
 # grab gosu for easy step-down from root
