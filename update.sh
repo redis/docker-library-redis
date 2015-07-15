@@ -26,7 +26,7 @@ for version in "${versions[@]}"; do
 			s/^(ENV REDIS_VERSION) .*/\1 '"$fullVersion"'/;
 			s/^(ENV REDIS_DOWNLOAD_URL) .*/\1 '"$downloadUrl"'/;
 			s/^(ENV REDIS_DOWNLOAD_SHA1) .*/\1 '"$shaHash"'/
-		' "$version/Dockerfile"
+		' "$version"{/,/32bit/}"Dockerfile"
 	)
 done
 
