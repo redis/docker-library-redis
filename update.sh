@@ -11,7 +11,7 @@ versions=( "${versions[@]%/}" )
 
 packagesUrl='https://raw.githubusercontent.com/antirez/redis-hashes/master/README'
 packages="$(echo "$packagesUrl" | sed -r 's/[^a-zA-Z.-]+/-/g')"
-curl -sSL "$packagesUrl" > "$packages"
+curl -fsSL "$packagesUrl" > "$packages"
 
 travisEnv=
 for version in "${versions[@]}"; do
