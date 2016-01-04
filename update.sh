@@ -27,9 +27,12 @@ for version in "${versions[@]}"; do
 			s/^(ENV REDIS_VERSION) .*/\1 '"$fullVersion"'/;
 			s/^(ENV REDIS_DOWNLOAD_URL) .*/\1 '"$downloadUrl"'/;
 			s/^(ENV REDIS_DOWNLOAD_SHA1) .*/\1 '"$shaHash"'/
-		' "$version"{/,/32bit/}"Dockerfile"
+		' "$version"/{,*/}Dockerfile
 	)
-	travisEnv='\n  - VERSION='"$version VARIANT=32bit$travisEnv"
+	for variant in alpine 32bit; do
+		[ -d "$version/$variant" ] || continue
+		travisEnv='\n  - VERSION='"$version VARIANT=$variant$travisEnv"
+	done
 	travisEnv='\n  - VERSION='"$version VARIANT=$travisEnv"
 done
 
