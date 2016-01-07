@@ -4,6 +4,7 @@ services: docker
 env:
   - VERSION=3.0 VARIANT=
   - VERSION=3.0 VARIANT=32bit
+  - VERSION=3.0 VARIANT=alpine
   - VERSION=2.8 VARIANT=
   - VERSION=2.8 VARIANT=32bit
 
