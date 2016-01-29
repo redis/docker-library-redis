@@ -20,9 +20,9 @@ RUN apk add --no-cache --virtual .gosu-deps \
 	&& rm -r ~/.gnupg \
 	&& apk del .gosu-deps
 
-ENV REDIS_VERSION 3.0.6
-ENV REDIS_DOWNLOAD_URL http://download.redis.io/releases/redis-3.0.6.tar.gz
-ENV REDIS_DOWNLOAD_SHA1 4b1c7b1201984bca8f7f9c6c58862f6928cf0a25
+ENV REDIS_VERSION 3.0.7
+ENV REDIS_DOWNLOAD_URL http://download.redis.io/releases/redis-3.0.7.tar.gz
+ENV REDIS_DOWNLOAD_SHA1 e56b4b7e033ae8dbf311f9191cf6fdf3ae974d1c
 
 # for redis-sentinel see: http://redis.io/topics/sentinel
 RUN set -x \
