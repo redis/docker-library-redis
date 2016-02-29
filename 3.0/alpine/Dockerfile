@@ -3,21 +3,21 @@ FROM alpine:3.3
 # add our user and group first to make sure their IDs get assigned consistently, regardless of whatever dependencies get added
 RUN addgroup -S redis && adduser -S -G redis redis
 
-ENV GOSU_GPG_KEY B42F6819007F00F88E364FD4036A9C25BF357DD4
-ENV GOSU_VERSION 1.7
-
 # grab gosu for easy step-down from root
-RUN apk add --no-cache --virtual .gosu-deps \
+ENV GOSU_VERSION 1.7
+RUN set -x \
+	&& apk add --no-cache --virtual .gosu-deps \
 		dpkg \
 		gnupg \
 		openssl \
-	&& gpg --keyserver ha.pool.sks-keyservers.net --recv-keys B42F6819007F00F88E364FD4036A9C25BF357DD4 \
 	&& wget -O /usr/local/bin/gosu "https://github.com/tianon/gosu/releases/download/$GOSU_VERSION/gosu-$(dpkg --print-architecture)" \
 	&& wget -O /usr/local/bin/gosu.asc "https://github.com/tianon/gosu/releases/download/$GOSU_VERSION/gosu-$(dpkg --print-architecture).asc" \
-	&& gpg --verify /usr/local/bin/gosu.asc \
-	&& rm /usr/local/bin/gosu.asc \
+	&& export GNUPGHOME="$(mktemp -d)" \
+	&& gpg --keyserver ha.pool.sks-keyservers.net --recv-keys B42F6819007F00F88E364FD4036A9C25BF357DD4 \
+	&& gpg --batch --verify /usr/local/bin/gosu.asc /usr/local/bin/gosu \
+	&& rm -r "$GNUPGHOME" /usr/local/bin/gosu.asc \
 	&& chmod +x /usr/local/bin/gosu \
-	&& rm -r ~/.gnupg \
+	&& gosu nobody true \
 	&& apk del .gosu-deps
 
 ENV REDIS_VERSION 3.0.7
@@ -31,7 +31,7 @@ RUN set -x \
 		linux-headers \
 		make \
 		musl-dev \
-	&& wget "$REDIS_DOWNLOAD_URL" -O redis.tar.gz \
+	&& wget -O redis.tar.gz "$REDIS_DOWNLOAD_URL" \
 	&& echo "$REDIS_DOWNLOAD_SHA1 *redis.tar.gz" | sha1sum -c - \
 	&& mkdir -p /usr/src \
 	&& tar -xzf redis.tar.gz -C /usr/src \
