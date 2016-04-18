@@ -17,11 +17,11 @@ RUN set -x \
 		linux-headers \
 		make \
 		musl-dev \
+		tar \
 	&& wget -O redis.tar.gz "$REDIS_DOWNLOAD_URL" \
 	&& echo "$REDIS_DOWNLOAD_SHA1 *redis.tar.gz" | sha1sum -c - \
-	&& mkdir -p /usr/src \
-	&& tar -xzf redis.tar.gz -C /usr/src \
-	&& mv "/usr/src/redis-$REDIS_VERSION" /usr/src/redis \
+	&& mkdir -p /usr/src/redis \
+	&& tar -xzf redis.tar.gz -C /usr/src/redis --strip-components=1 \
 	&& rm redis.tar.gz \
 	&& make -C /usr/src/redis \
 	&& make -C /usr/src/redis install \
@@ -32,8 +32,9 @@ RUN mkdir /data && chown redis:redis /data
 VOLUME /data
 WORKDIR /data
 
-COPY docker-entrypoint.sh /entrypoint.sh
-ENTRYPOINT ["/entrypoint.sh"]
+COPY docker-entrypoint.sh /usr/local/bin/
+RUN ln -s usr/local/bin/docker-entrypoint.sh /entrypoint.sh # backwards compat
+ENTRYPOINT ["docker-entrypoint.sh"]
 
 EXPOSE 6379
 CMD [ "redis-server" ]
