@@ -36,9 +36,4 @@ COPY docker-entrypoint.sh /usr/local/bin/
 ENTRYPOINT ["docker-entrypoint.sh"]
 
 EXPOSE 6379
-
-# Disable Redis protected mode [1] as it is unnecessary in context
-# of Docker. Ports are not automatically exposed when running inside
-# Docker, but rather explicitely by specifying -p / -P.
-# [1] https://github.com/antirez/redis/commit/edd4d555df57dc84265fdfb4ef59a4678832f6da
-CMD [ "redis-server", "--protected-mode", "no" ]
+CMD [ "redis-server" ]
