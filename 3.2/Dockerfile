@@ -20,9 +20,9 @@ RUN set -x \
 	&& chmod +x /usr/local/bin/gosu \
 	&& gosu nobody true
 
-ENV REDIS_VERSION 3.2.2
-ENV REDIS_DOWNLOAD_URL http://download.redis.io/releases/redis-3.2.2.tar.gz
-ENV REDIS_DOWNLOAD_SHA1 3141be9757532139f445bd5f6f4fae293bc33d27
+ENV REDIS_VERSION 3.2.3
+ENV REDIS_DOWNLOAD_URL http://download.redis.io/releases/redis-3.2.3.tar.gz
+ENV REDIS_DOWNLOAD_SHA1 92d6d93ef2efc91e595c8bf578bf72baff397507
 
 # for redis-sentinel see: http://redis.io/topics/sentinel
 RUN buildDeps='gcc libc6-dev make' \
