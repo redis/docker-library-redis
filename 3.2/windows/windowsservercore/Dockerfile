@@ -1,28 +1,41 @@
 FROM microsoft/windowsservercore
-MAINTAINER alexellis2@gmail.com
 
-SHELL ["powershell"]
+# $ProgressPreference: https://github.com/PowerShell/PowerShell/issues/2138#issuecomment-251261324
+SHELL ["powershell", "-Command", "$ErrorActionPreference = 'Stop'; $ProgressPreference = 'SilentlyContinue';"]
 
-# The MSI installs a service which is hard to override, so let's use a zip file.
-RUN $ErrorActionPreference = 'Stop'; \
-    wget https://github.com/MSOpenTech/redis/releases/download/win-3.2.100/Redis-x64-3.2.100.zip -OutFile Redis-x64-3.2.100.zip ; \
-    Expand-Archive Redis-x64-3.2.100.zip -dest 'C:\\Program Files\\Redis\\' ; \
-    Remove-Item Redis-x64-3.2.100.zip -Force
+# PATH isn't actually set in the Docker image, so we have to set it from within the container
+RUN $newPath = ('C:\Redis;{0}' -f $env:PATH); \
+	Write-Host ('Updating PATH: {0}' -f $newPath); \
+# Nano Server does not have "[Environment]::SetEnvironmentVariable()"
+	setx /M PATH $newPath;
+# doing this first to share cache across versions more aggressively
 
-RUN setx PATH '%PATH%;C:\\Program Files\\Redis\\'
-WORKDIR 'C:\\Program Files\\Redis\\'
+ENV REDIS_VERSION 3.2.100
+ENV REDIS_DOWNLOAD_URL https://github.com/MSOpenTech/redis/releases/download/win-${REDIS_VERSION}/Redis-x64-${REDIS_VERSION}.zip
 
-# Change to unprotected mode and open the daemon to listen on all interfaces.
-RUN Get-Content redis.windows.conf | Where { $_ -notmatch 'bind 127.0.0.1' } | Set-Content redis.openport.conf ; \
-  Get-Content redis.openport.conf | Where { $_ -notmatch 'protected-mode yes' } | Set-Content redis.unprotected.conf ; \
-  Add-Content redis.unprotected.conf 'protected-mode no' ; \
-  Add-Content redis.unprotected.conf 'bind 0.0.0.0' ; \
-  Get-Content redis.unprotected.conf
+RUN Write-Host ('Downloading {0} ...' -f $env:REDIS_DOWNLOAD_URL); \
+	Invoke-WebRequest -Uri $env:REDIS_DOWNLOAD_URL -OutFile 'redis.zip'; \
+	\
+	Write-Host 'Expanding ...'; \
+	Expand-Archive redis.zip -DestinationPath C:\Redis; \
+	\
+	Write-Host 'Verifying install ("redis-server --version") ...'; \
+	redis-server --version; \
+	\
+	Write-Host 'Removing ...'; \
+	Remove-Item redis.zip -Force
+
+# Disable Redis protected mode [1] as it is unnecessary in context
+# of Docker. Ports are not automatically exposed when running inside
+# Docker, but rather explicitely by specifying -p / -P.
+# [1] https://github.com/antirez/redis/commit/edd4d555df57dc84265fdfb4ef59a4678832f6da
+RUN (Get-Content C:\Redis\redis.windows.conf) \
+	-Replace '^(bind)\s+.*$', '$1 0.0.0.0' \
+	-Replace '^(protected-mode)\s+.*$', '$1 no' \
+	| Set-Content C:\Redis\redis.docker.conf
+
+VOLUME C:\\data
+WORKDIR C:\\data
 
 EXPOSE 6379
-
-# Define our command to be run when launching the container
-CMD .\\redis-server.exe .\\redis.unprotected.conf --port 6379 ; \
-    Write-Host Redis Started... ; \
-    while ($true) { Start-Sleep -Seconds 3600 }
-
+CMD ["redis-server.exe", "C:\\Redis\\redis.docker.conf"]
