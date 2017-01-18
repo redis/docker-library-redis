@@ -20,7 +20,7 @@ for version in "${versions[@]}"; do
 	downloadUrl="$(echo "$line" | cut -d' ' -f5 | sed 's/[\/&]/\\&/g')"
 	shaHash="$(echo "$line" | cut -d' ' -f4)"
 	[ "$(echo "$line" | cut -d' ' -f3)" = 'sha1' ]
-	
+
 	(
 		set -x
 		sed -ri '
@@ -34,6 +34,21 @@ for version in "${versions[@]}"; do
 		travisEnv='\n  - VERSION='"$version VARIANT=$variant$travisEnv"
 	done
 	travisEnv='\n  - VERSION='"$version VARIANT=$travisEnv"
+
+	windowsVersion="$(
+		git ls-remote --tags 'https://github.com/MSOpenTech/redis.git' \
+			| cut -d/ -f3 \
+			| grep -E "^win-${version}[.]" \
+			| cut -d- -f2- \
+			| sort -rV \
+			| head -n1
+	)"
+	(
+		set -x
+		sed -ri \
+			-e 's!^(ENV REDIS_VERSION) .*!\1 '"$windowsVersion"'!' \
+			"$version"/windows/*/Dockerfile
+	)
 done
 
 travis="$(awk -v 'RS=\n\n' '$1 == "env:" { $0 = "env:'"$travisEnv"'" } { printf "%s%s", $0, RS }' .travis.yml)"
