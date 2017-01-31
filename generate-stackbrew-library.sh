@@ -53,7 +53,6 @@ for version in "${versions[@]}"; do
 	commit="$(dirCommit "$version")"
 
 	fullVersion="$(git show "$commit":"$version/Dockerfile" | awk '$1 == "ENV" && $2 == "REDIS_VERSION" { print $3; exit }')"
-
 	versionAliases=(
 		$fullVersion
 		$version
@@ -77,6 +76,13 @@ for version in "${versions[@]}"; do
 		[ -f "$dir/Dockerfile" ] || continue
 
 		commit="$(dirCommit "$dir")"
+
+		fullVersion="$(git show "$commit":"$dir/Dockerfile" | awk '$1 == "ENV" && $2 == "REDIS_VERSION" { print $3; exit }')"
+		versionAliases=(
+			$fullVersion
+			$version
+			${aliases[$version]:-}
+		)
 
 		variantAliases=( "${versionAliases[@]/%/-$variant}" )
 		variantAliases=( "${variantAliases[@]//latest-/}" )
