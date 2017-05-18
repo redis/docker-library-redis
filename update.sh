@@ -19,15 +19,17 @@ for version in "${versions[@]}"; do
 	fullVersion="$(echo "$line" | cut -d' ' -f2 | sed -r 's/^redis-|\.tar\..*$//g')"
 	downloadUrl="$(echo "$line" | cut -d' ' -f5 | sed 's/[\/&]/\\&/g')"
 	shaHash="$(echo "$line" | cut -d' ' -f4)"
-	[ "$(echo "$line" | cut -d' ' -f3)" = 'sha1' ]
+	shaType="$(echo "$line" | cut -d' ' -f3)"
+	[ "$shaType" = 'sha256' ] || [ "$shaType" = 'sha1' ]
 
 	(
 		set -x
-		sed -ri '
-			s/^(ENV REDIS_VERSION) .*/\1 '"$fullVersion"'/;
-			s/^(ENV REDIS_DOWNLOAD_URL) .*/\1 '"$downloadUrl"'/;
-			s/^(ENV REDIS_DOWNLOAD_SHA1) .*/\1 '"$shaHash"'/
-		' "$version"/{,*/}Dockerfile
+		sed -ri \
+			-e 's/^(ENV REDIS_VERSION) .*/\1 '"$fullVersion"'/' \
+			-e 's/^(ENV REDIS_DOWNLOAD_URL) .*/\1 '"$downloadUrl"'/' \
+			-e 's/^(ENV REDIS_DOWNLOAD_SHA) .*/\1 '"$shaHash"'/' \
+			-e 's!sha[0-9]+sum!'"$shaType"'sum!g' \
+			"$version"/{,*/}Dockerfile
 	)
 	for variant in alpine 32bit; do
 		[ -d "$version/$variant" ] || continue
