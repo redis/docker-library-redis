@@ -25,10 +25,9 @@ RUN Write-Host ('Downloading {0} ...' -f $env:REDIS_DOWNLOAD_URL); \
 	Write-Host 'Removing ...'; \
 	Remove-Item redis.zip -Force
 
-# Disable Redis protected mode [1] as it is unnecessary in context
-# of Docker. Ports are not automatically exposed when running inside
-# Docker, but rather explicitely by specifying -p / -P.
-# [1] https://github.com/antirez/redis/commit/edd4d555df57dc84265fdfb4ef59a4678832f6da
+# disable Redis protected mode [1] as it is unnecessary in context of Docker
+# (ports are not automatically exposed when running inside Docker, but rather explicitly by specifying -p / -P)
+# [1]: https://github.com/antirez/redis/commit/edd4d555df57dc84265fdfb4ef59a4678832f6da
 RUN (Get-Content C:\Redis\redis.windows.conf) \
 	-Replace '^(bind)\s+.*$', '$1 0.0.0.0' \
 	-Replace '^(protected-mode)\s+.*$', '$1 no' \
