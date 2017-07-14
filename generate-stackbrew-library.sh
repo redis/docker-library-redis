@@ -88,7 +88,6 @@ for version in "${versions[@]}"; do
 
 	for v in \
 		32bit alpine \
-		windows/windowsservercore windows/nanoserver \
 	; do
 		dir="$version/$v"
 		variant="$(basename "$v")"
@@ -109,7 +108,6 @@ for version in "${versions[@]}"; do
 
 		case "$v" in
 			32bit)     variantArches='amd64' ;;
-			windows/*) variantArches='windows-amd64' ;;
 			*)
 				variantParent="$(awk 'toupper($1) == "FROM" { print $2 }' "$version/$variant/Dockerfile")"
 				variantArches="${parentRepoToArches[$variantParent]}"
@@ -123,6 +121,5 @@ for version in "${versions[@]}"; do
 			GitCommit: $commit
 			Directory: $dir
 		EOE
-		[ "$variant" = "$v" ] || echo "Constraints: $variant"
 	done
 done
