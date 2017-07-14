@@ -2,12 +2,12 @@ language: bash
 services: docker
 
 env:
+  - VERSION=4.0 VARIANT=
+  - VERSION=4.0 VARIANT=32bit
+  - VERSION=4.0 VARIANT=alpine
   - VERSION=3.2 VARIANT=
   - VERSION=3.2 VARIANT=32bit
   - VERSION=3.2 VARIANT=alpine
-  - VERSION=3.0 VARIANT=
-  - VERSION=3.0 VARIANT=32bit
-  - VERSION=3.0 VARIANT=alpine
 
 install:
   - git clone https://github.com/docker-library/official-images.git ~/official-images
