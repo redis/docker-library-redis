@@ -1,25 +1,52 @@
-FROM alpine:3.6
+FROM debian:jessie-slim
 
 # add our user and group first to make sure their IDs get assigned consistently, regardless of whatever dependencies get added
-RUN addgroup -S redis && adduser -S -G redis redis
+RUN groupadd -r redis && useradd -r -g redis redis
 
-# grab su-exec for easy step-down from root
-RUN apk add --no-cache 'su-exec>=0.2'
+# grab gosu for easy step-down from root
+# https://github.com/tianon/gosu/releases
+ENV GOSU_VERSION 1.10
+RUN set -ex; \
+	\
+	fetchDeps='ca-certificates wget'; \
+	apt-get update; \
+	apt-get install -y --no-install-recommends $fetchDeps; \
+	rm -rf /var/lib/apt/lists/*; \
+	\
+	dpkgArch="$(dpkg --print-architecture | awk -F- '{ print $NF }')"; \
+	wget -O /usr/local/bin/gosu "https://github.com/tianon/gosu/releases/download/$GOSU_VERSION/gosu-$dpkgArch"; \
+	wget -O /usr/local/bin/gosu.asc "https://github.com/tianon/gosu/releases/download/$GOSU_VERSION/gosu-$dpkgArch.asc"; \
+	export GNUPGHOME="$(mktemp -d)"; \
+	gpg --keyserver ha.pool.sks-keyservers.net --recv-keys B42F6819007F00F88E364FD4036A9C25BF357DD4; \
+	gpg --batch --verify /usr/local/bin/gosu.asc /usr/local/bin/gosu; \
+	rm -r "$GNUPGHOME" /usr/local/bin/gosu.asc; \
+	chmod +x /usr/local/bin/gosu; \
+	gosu nobody true; \
+	\
+	apt-get purge -y --auto-remove $fetchDeps
 
-ENV REDIS_VERSION 3.2.11
-ENV REDIS_DOWNLOAD_URL http://download.redis.io/releases/redis-3.2.11.tar.gz
-ENV REDIS_DOWNLOAD_SHA 31ae927cab09f90c9ca5954aab7aeecc3bb4da6087d3d12ba0a929ceb54081b5
+ENV REDIS_VERSION 4.0.2
+ENV REDIS_DOWNLOAD_URL http://download.redis.io/releases/redis-4.0.2.tar.gz
+ENV REDIS_DOWNLOAD_SHA b1a0915dbc91b979d06df1977fe594c3fa9b189f1f3d38743a2948c9f7634813
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+		libc6-i386 \
+	&& rm -rf /var/lib/apt/lists/*
 
 # for redis-sentinel see: http://redis.io/topics/sentinel
 RUN set -ex; \
 	\
-	apk add --no-cache --virtual .build-deps \
-		coreutils \
+	buildDeps=' \
+		wget \
+		\
 		gcc \
-		linux-headers \
+		gcc-multilib \
+		libc6-dev-i386 \
 		make \
-		musl-dev \
-	; \
+	'; \
+	apt-get update; \
+	apt-get install -y $buildDeps --no-install-recommends; \
+	rm -rf /var/lib/apt/lists/*; \
 	\
 	wget -O redis.tar.gz "$REDIS_DOWNLOAD_URL"; \
 	echo "$REDIS_DOWNLOAD_SHA *redis.tar.gz" | sha256sum -c -; \
@@ -37,12 +64,12 @@ RUN set -ex; \
 # see also https://github.com/docker-library/redis/issues/4#issuecomment-50780840
 # (more exactly, this makes sure the default behavior of "save on SIGTERM" stays functional by default)
 	\
-	make -C /usr/src/redis -j "$(nproc)"; \
+	make -C /usr/src/redis -j "$(nproc)" 32bit; \
 	make -C /usr/src/redis install; \
 	\
 	rm -r /usr/src/redis; \
 	\
-	apk del .build-deps
+	apt-get purge -y --auto-remove $buildDeps
 
 RUN mkdir /data && chown redis:redis /data
 VOLUME /data
