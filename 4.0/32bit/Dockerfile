@@ -25,9 +25,9 @@ RUN set -ex; \
 	\
 	apt-get purge -y --auto-remove $fetchDeps
 
-ENV REDIS_VERSION 4.0.5
-ENV REDIS_DOWNLOAD_URL http://download.redis.io/releases/redis-4.0.5.tar.gz
-ENV REDIS_DOWNLOAD_SHA d52bf355b96e20905916482962235e0442634c849934adb034f85362b31ed978
+ENV REDIS_VERSION 4.0.6
+ENV REDIS_DOWNLOAD_URL http://download.redis.io/releases/redis-4.0.6.tar.gz
+ENV REDIS_DOWNLOAD_SHA 769b5d69ec237c3e0481a262ff5306ce30db9b5c8ceb14d1023491ca7be5f6fa
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
 		libc6-i386 \
