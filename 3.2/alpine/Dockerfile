@@ -42,12 +42,16 @@ RUN set -ex; \
 	\
 	rm -r /usr/src/redis; \
 	\
-	apk del .build-deps; \
-	\
-	apk add -vv --no-cache $(scanelf --needed --nobanner --format '%n#p' --recursive /usr/local \
+	runDeps="$( \
+		scanelf --needed --nobanner --format '%n#p' --recursive /usr/local \
 			| tr ',' '\n' \
 			| sort -u \
-			| awk 'system("[ -e /usr/local/lib/" $1 " ]") == 0 { next } { print "so:" $1 }')
+			| awk 'system("[ -e /usr/local/lib/" $1 " ]") == 0 { next } { print "so:" $1 }' \
+	)"; \
+	apk add --virtual .redis-rundeps $runDeps; \
+	apk del .build-deps; \
+	\
+	redis-server --version
 
 RUN mkdir /data && chown redis:redis /data
 VOLUME /data
