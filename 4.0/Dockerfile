@@ -1,4 +1,4 @@
-FROM debian:jessie-slim
+FROM debian:stretch-slim
 
 # add our user and group first to make sure their IDs get assigned consistently, regardless of whatever dependencies get added
 RUN groupadd -r redis && useradd -r -g redis redis
@@ -8,7 +8,12 @@ RUN groupadd -r redis && useradd -r -g redis redis
 ENV GOSU_VERSION 1.10
 RUN set -ex; \
 	\
-	fetchDeps='ca-certificates wget'; \
+	fetchDeps=" \
+		ca-certificates \
+		dirmngr \
+		gnupg \
+		wget \
+	"; \
 	apt-get update; \
 	apt-get install -y --no-install-recommends $fetchDeps; \
 	rm -rf /var/lib/apt/lists/*; \
