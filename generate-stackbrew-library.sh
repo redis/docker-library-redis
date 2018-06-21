@@ -12,6 +12,9 @@ cd "$(dirname "$(readlink -f "$BASH_SOURCE")")"
 versions=( */ )
 versions=( "${versions[@]%/}" )
 
+# sort version numbers with highest first
+IFS=$'\n'; versions=( $(echo "${versions[*]}" | sort -rV) ); unset IFS
+
 # get the most recent commit which modified any of "$@"
 fileCommit() {
 	git log -1 --format='format:%H' HEAD -- "$@"
