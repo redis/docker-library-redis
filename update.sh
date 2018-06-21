@@ -15,18 +15,35 @@ curl -fsSL "$packagesUrl" > "$packages"
 
 travisEnv=
 for version in "${versions[@]}"; do
+	rcVersion="${version%-rc}"
+
 	line="$(awk '/^hash redis-'"$version"\.'/' "$packages" | sort -rV | head -1)"
-	fullVersion="$(echo "$line" | cut -d' ' -f2 | sed -r 's/^redis-|\.tar\..*$//g')"
-	downloadUrl="$(echo "$line" | cut -d' ' -f5 | sed 's/[\/&]/\\&/g')"
-	shaHash="$(echo "$line" | cut -d' ' -f4)"
-	shaType="$(echo "$line" | cut -d' ' -f3)"
+	if [ -n "$line" ]; then
+		fullVersion="$(echo "$line" | cut -d' ' -f2 | sed -r 's/^redis-|\.tar\..*$//g')"
+		downloadUrl="$(echo "$line" | cut -d' ' -f5)"
+		shaHash="$(echo "$line" | cut -d' ' -f4)"
+		shaType="$(echo "$line" | cut -d' ' -f3)"
+	elif [ "$version" != "$rcVersion" ] && fullVersion="$(
+			git ls-remote --tags https://github.com/antirez/redis.git "refs/tags/$rcVersion*" \
+				| cut -d/ -f3 \
+				| cut -d^ -f1 \
+				| sort -urV \
+				| head -1
+	)" && [ -n "$fullVersion" ]; then
+		downloadUrl="https://github.com/antirez/redis/archive/$fullVersion.tar.gz"
+		shaType='sha256'
+		shaHash="$(curl -fsSL "$downloadUrl" | "${shaType}sum" | cut -d' ' -f1)"
+	else
+		echo >&2 "error: full version for $version cannot be determined"
+		exit 1
+	fi
 	[ "$shaType" = 'sha256' ] || [ "$shaType" = 'sha1' ]
 
 	(
 		set -x
 		sed -ri \
 			-e 's/^(ENV REDIS_VERSION) .*/\1 '"$fullVersion"'/' \
-			-e 's/^(ENV REDIS_DOWNLOAD_URL) .*/\1 '"$downloadUrl"'/' \
+			-e 's!^(ENV REDIS_DOWNLOAD_URL) .*!\1 '"$downloadUrl"'!' \
 			-e 's/^(ENV REDIS_DOWNLOAD_SHA) .*/\1 '"$shaHash"'/' \
 			-e 's!sha[0-9]+sum!'"$shaType"'sum!g' \
 			"$version"/{,*/}Dockerfile

@@ -2,6 +2,9 @@ language: bash
 services: docker
 
 env:
+  - VERSION=5.0-rc VARIANT=
+  - VERSION=5.0-rc VARIANT=32bit
+  - VERSION=5.0-rc VARIANT=alpine
   - VERSION=4.0 VARIANT=
   - VERSION=4.0 VARIANT=32bit
   - VERSION=4.0 VARIANT=alpine
