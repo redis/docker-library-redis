@@ -85,5 +85,8 @@ WORKDIR /data
 COPY docker-entrypoint.sh /usr/local/bin/
 ENTRYPOINT ["docker-entrypoint.sh"]
 
+HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
+	CMD /usr/local/bin/redis-cli PING || exit 1
+
 EXPOSE 6379
 CMD ["redis-server"]
