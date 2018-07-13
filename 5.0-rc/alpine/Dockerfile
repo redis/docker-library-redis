@@ -21,7 +21,6 @@ RUN set -ex; \
 		linux-headers \
 		make \
 		musl-dev \
-		wget \
 	; \
 	\
 	wget -O redis.tar.gz "$REDIS_DOWNLOAD_URL"; \
