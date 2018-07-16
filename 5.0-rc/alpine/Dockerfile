@@ -14,14 +14,12 @@ ENV REDIS_DOWNLOAD_SHA 4bb2eeef3695d66d8b64767825acfeeb157d64536233eac7eae71b236
 RUN set -ex; \
 	\
 	apk add --no-cache --virtual .build-deps \
-		ca-certificates \
 		coreutils \
 		gcc \
 		jemalloc-dev \
 		linux-headers \
 		make \
 		musl-dev \
-		wget \
 	; \
 	\
 	wget -O redis.tar.gz "$REDIS_DOWNLOAD_URL"; \
