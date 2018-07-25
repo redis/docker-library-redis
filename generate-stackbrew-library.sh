@@ -69,30 +69,10 @@ join() {
 }
 
 for version in "${versions[@]}"; do
-	commit="$(dirCommit "$version")"
-
-	fullVersion="$(git show "$commit":"$version/Dockerfile" | awk '$1 == "ENV" && $2 == "REDIS_VERSION" { print $3; exit }')"
-	versionAliases=(
-		$fullVersion
-		$version
-		${aliases[$version]:-}
-	)
-
-	parent="$(awk 'toupper($1) == "FROM" { print $2 }' "$version/Dockerfile")"
-	arches="${parentRepoToArches[$parent]}"
-
-	echo
-	cat <<-EOE
-		Tags: $(join ', ' "${versionAliases[@]}")
-		Architectures: $(join ', ' $arches)
-		GitCommit: $commit
-		Directory: $version
-	EOE
-
 	for v in \
-		32bit alpine \
+		'' 32bit alpine \
 	; do
-		dir="$version/$v"
+		dir="$version${v:+/$v}"
 		variant="$(basename "$v")"
 
 		[ -f "$dir/Dockerfile" ] || continue
@@ -106,15 +86,30 @@ for version in "${versions[@]}"; do
 			${aliases[$version]:-}
 		)
 
-		variantAliases=( "${versionAliases[@]/%/-$variant}" )
-		variantAliases=( "${variantAliases[@]//latest-/}" )
+		if [ -n "$variant" ]; then
+			variantAliases=( "${versionAliases[@]/%/-$variant}" )
+			variantAliases=( "${variantAliases[@]//latest-/}" )
+		else
+			variantAliases=( "${versionAliases[@]}" )
+		fi
+
+		variantParent="$(awk 'toupper($1) == "FROM" { print $2 }' "$version/$variant/Dockerfile")"
+
+		suite="${variantParent#*:}" # "jessie-slim", "stretch"
+		suite="${suite%-slim}" # "jessie", "stretch"
+
+		if [ "$v" = 'alpine' ]; then
+			suite="alpine$suite" # "alpine3.8"
+			suiteAliases=( "${versionAliases[@]/%/-$suite}" )
+		else
+			suiteAliases=( "${variantAliases[@]/%/-$suite}" )
+		fi
+		suiteAliases=( "${suiteAliases[@]//latest-/}" )
+		variantAliases+=( "${suiteAliases[@]}" )
 
 		case "$v" in
-			32bit)     variantArches='amd64' ;;
-			*)
-				variantParent="$(awk 'toupper($1) == "FROM" { print $2 }' "$version/$variant/Dockerfile")"
-				variantArches="${parentRepoToArches[$variantParent]}"
-				;;
+			32bit) variantArches='amd64' ;;
+			*) variantArches="${parentRepoToArches[$variantParent]}" ;;
 		esac
 
 		echo
