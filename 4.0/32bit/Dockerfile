@@ -33,7 +33,7 @@ RUN set -ex; \
 
 ENV REDIS_VERSION 4.0.11
 ENV REDIS_DOWNLOAD_URL http://download.redis.io/releases/redis-4.0.11.tar.gz
-ENV REDIS_DOWNLOAD_SHA f9d18796487f27319387f6292f2d93c37b84bd148ffe27b4db24b4da12433060
+ENV REDIS_DOWNLOAD_SHA fc53e73ae7586bcdacb4b63875d1ff04f68c5474c1ddeda78f00e5ae2eed1bbb
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
 		libc6-i386 \
