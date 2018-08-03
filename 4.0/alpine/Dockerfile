@@ -6,9 +6,9 @@ RUN addgroup -S redis && adduser -S -G redis redis
 # grab su-exec for easy step-down from root
 RUN apk add --no-cache 'su-exec>=0.2'
 
-ENV REDIS_VERSION 4.0.10
-ENV REDIS_DOWNLOAD_URL http://download.redis.io/releases/redis-4.0.10.tar.gz
-ENV REDIS_DOWNLOAD_SHA 1db67435a704f8d18aec9b9637b373c34aa233d65b6e174bdac4c1b161f38ca4
+ENV REDIS_VERSION 4.0.11
+ENV REDIS_DOWNLOAD_URL http://download.redis.io/releases/redis-4.0.11.tar.gz
+ENV REDIS_DOWNLOAD_SHA f9d18796487f27319387f6292f2d93c37b84bd148ffe27b4db24b4da12433060
 
 # for redis-sentinel see: http://redis.io/topics/sentinel
 RUN set -ex; \
