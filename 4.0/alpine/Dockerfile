@@ -10,6 +10,8 @@ ENV REDIS_VERSION 4.0.11
 ENV REDIS_DOWNLOAD_URL http://download.redis.io/releases/redis-4.0.11.tar.gz
 ENV REDIS_DOWNLOAD_SHA fc53e73ae7586bcdacb4b63875d1ff04f68c5474c1ddeda78f00e5ae2eed1bbb
 
+ARG EXPOSE_PORT=6379
+
 # for redis-sentinel see: http://redis.io/topics/sentinel
 RUN set -ex; \
 	\
@@ -61,5 +63,5 @@ WORKDIR /data
 COPY docker-entrypoint.sh /usr/local/bin/
 ENTRYPOINT ["docker-entrypoint.sh"]
 
-EXPOSE 6379
+EXPOSE ${EXPOSE_PORT}
 CMD ["redis-server"]
