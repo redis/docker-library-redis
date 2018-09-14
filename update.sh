@@ -17,12 +17,20 @@ travisEnv=
 for version in "${versions[@]}"; do
 	rcVersion="${version%-rc}"
 
-	line="$(awk '/^hash redis-'"$version"\.'/' "$packages" | sort -rV | head -1)"
+	line="$(
+		awk '
+			{ gsub(/^redis-|[.]tar[.]gz$/, "", $2) }
+			$1 == "hash" && $2 ~ /^'"$rcVersion"'([.]|$)/ { print }
+		' "$packages" \
+			| sort -rV \
+			| head -1
+	)"
+
 	if [ -n "$line" ]; then
-		fullVersion="$(echo "$line" | cut -d' ' -f2 | sed -r 's/^redis-|\.tar\..*$//g')"
-		downloadUrl="$(echo "$line" | cut -d' ' -f5)"
-		shaHash="$(echo "$line" | cut -d' ' -f4)"
-		shaType="$(echo "$line" | cut -d' ' -f3)"
+		fullVersion="$(cut -d' ' -f2 <<<"$line")"
+		downloadUrl="$(cut -d' ' -f5 <<<"$line")"
+		shaHash="$(cut -d' ' -f4 <<<"$line")"
+		shaType="$(cut -d' ' -f3 <<<"$line")"
 	elif [ "$version" != "$rcVersion" ] && fullVersion="$(
 			git ls-remote --tags https://github.com/antirez/redis.git "refs/tags/$rcVersion*" \
 				| cut -d/ -f3 \
