@@ -31,9 +31,9 @@ RUN set -ex; \
 	\
 	apt-get purge -y --auto-remove $fetchDeps
 
-ENV REDIS_VERSION 5.0-rc5
-ENV REDIS_DOWNLOAD_URL https://github.com/antirez/redis/archive/5.0-rc5.tar.gz
-ENV REDIS_DOWNLOAD_SHA d070c8a3514e40da5cef9ec26dfd594df0468c203c36398ef2d359a32502b548
+ENV REDIS_VERSION 5.0-rc6
+ENV REDIS_DOWNLOAD_URL https://github.com/antirez/redis/archive/5.0-rc6.tar.gz
+ENV REDIS_DOWNLOAD_SHA 6f16ffb5550b6ba74f8198f873e2f4f1fc031a69583a16084c237c5389f6d159
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
 		libc6-i386 \
