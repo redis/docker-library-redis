@@ -31,9 +31,9 @@ RUN set -ex; \
 	\
 	apt-get purge -y --auto-remove $fetchDeps
 
-ENV REDIS_VERSION 5.0-rc6
-ENV REDIS_DOWNLOAD_URL https://github.com/antirez/redis/archive/5.0-rc6.tar.gz
-ENV REDIS_DOWNLOAD_SHA 6f16ffb5550b6ba74f8198f873e2f4f1fc031a69583a16084c237c5389f6d159
+ENV REDIS_VERSION 5.0.0
+ENV REDIS_DOWNLOAD_URL http://download.redis.io/releases/redis-5.0.0.tar.gz
+ENV REDIS_DOWNLOAD_SHA 70c98b2d0640b2b73c9d8adb4df63bcb62bad34b788fe46d1634b6cf87dc99a4
 
 # for redis-sentinel see: http://redis.io/topics/sentinel
 RUN set -ex; \
