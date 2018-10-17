@@ -1,6 +1,11 @@
 #!/bin/sh
 set -e
 
+# for docker secrets
+if [ -f /run/secrets/env ]; then
+	export $(grep -v '^#' /run/secrets/env | xargs)
+fi
+
 # first arg is `-f` or `--some-option`
 # or first arg is `something.conf`
 if [ "${1#-}" != "$1" ] || [ "${1%.conf}" != "$1" ]; then
