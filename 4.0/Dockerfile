@@ -65,8 +65,10 @@ RUN set -ex; \
 # see also https://github.com/docker-library/redis/issues/4#issuecomment-50780840
 # (more exactly, this makes sure the default behavior of "save on SIGTERM" stays functional by default)
 	\
-	make -C /usr/src/redis -j "$(nproc)"; \
-	make -C /usr/src/redis install; \
+	sed -i -e 's,$(REDIS_INSTALL) $(REDIS_CHECK_AOF_NAME) $(INSTALL_BIN),@ln -sf $(REDIS_SERVER_NAME) $(INSTALL_BIN)/$(REDIS_CHECK_AOF_NAME),g' /usr/src/redis/src/Makefile; \
+	sed -i -e 's,$(REDIS_INSTALL) $(REDIS_CHECK_RDB_NAME) $(INSTALL_BIN),@ln -sf $(REDIS_SERVER_NAME) $(INSTALL_BIN)/$(REDIS_CHECK_RDB_NAME),g' /usr/src/redis/src/Makefile; \
+	\
+	make -C /usr/src/redis -j "$(nproc)" DEBUG="-s" install; \
 	\
 	rm -r /usr/src/redis; \
 	\
