@@ -15,7 +15,7 @@ install:
 before_script:
   - env | sort
   - wget -qO- 'https://github.com/tianon/pgp-happy-eyeballs/raw/master/hack-my-builds.sh' | bash
-  - cd "$VERSION"
+  - cd "$VERSION/$VARIANT"
   - image="redis:${VERSION}${VARIANT:+-$VARIANT}"
 
 script:
