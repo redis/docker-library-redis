@@ -19,7 +19,6 @@ RUN set -ex; \
 	apk add --no-cache --virtual .build-deps \
 		coreutils \
 		gcc \
-		jemalloc-dev \
 		linux-headers \
 		make \
 		musl-dev \
