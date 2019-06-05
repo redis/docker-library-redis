@@ -13,7 +13,7 @@ RUN groupadd -r redis && useradd -r -g redis redis
 
 # grab gosu for easy step-down from root
 # https://github.com/tianon/gosu/releases
-ENV GOSU_VERSION 1.10
+ENV GOSU_VERSION 1.11
 RUN set -ex; \
 	\
 	fetchDeps=" \
