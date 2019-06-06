@@ -1,5 +1,5 @@
-# TAG redislabs/redis-${ARCH}-bionic:5.0.5 redislabs/redis-${ARCH}-bionic:latest
-# TAG redislabs/redis-${ARCH}-bionic-core:5.0.5 redislabs/redis-${ARCH}-bionic-core:latest
+# TAG redislabs/redis-${ARCH}-bionic:5.0.5
+# TAG redislabs/redis-${ARCH}-bionic-core:5.0.5
 
 ARG OS=ubuntu:bionic
 # ARG OS=ubuntu:bionic
@@ -16,24 +16,13 @@ RUN groupadd -r redis && useradd -r -g redis redis
 ENV GOSU_VERSION 1.11
 RUN set -ex; \
 	\
-	fetchDeps=" \
-		ca-certificates \
-		dirmngr \
-		gnupg \
-		wget \
-	"; \
+	fetchDeps="ca-certificates wget"; \
 	apt-get update; \
 	apt-get install -y --no-install-recommends $fetchDeps; \
 	rm -rf /var/lib/apt/lists/*; \
 	\
 	dpkgArch="$(dpkg --print-architecture | awk -F- '{ print $NF }')"; \
-	wget -O /usr/local/bin/gosu "https://github.com/tianon/gosu/releases/download/$GOSU_VERSION/gosu-$dpkgArch"; \
-	wget -O /usr/local/bin/gosu.asc "https://github.com/tianon/gosu/releases/download/$GOSU_VERSION/gosu-$dpkgArch.asc"; \
-	export GNUPGHOME="$(mktemp -d)"; \
-	gpg --batch --keyserver ha.pool.sks-keyservers.net --recv-keys B42F6819007F00F88E364FD4036A9C25BF357DD4; \
-	gpg --batch --verify /usr/local/bin/gosu.asc /usr/local/bin/gosu; \
-	gpgconf --kill all; \
-	rm -r "$GNUPGHOME" /usr/local/bin/gosu.asc; \
+	wget -q -O /usr/local/bin/gosu "https://github.com/tianon/gosu/releases/download/$GOSU_VERSION/gosu-$dpkgArch"; \
 	chmod +x /usr/local/bin/gosu; \
 	gosu nobody true; \
 	\
@@ -58,7 +47,7 @@ RUN set -ex; \
 	apt-get install -y $buildDeps --no-install-recommends; \
 	rm -rf /var/lib/apt/lists/*; \
 	\
-	wget -O redis.tar.gz "$REDIS_DOWNLOAD_URL"; \
+	wget -q -O redis.tar.gz "$REDIS_DOWNLOAD_URL"; \
 	echo "$REDIS_DOWNLOAD_SHA *redis.tar.gz" | sha256sum -c -; \
 	mkdir -p /usr/src/redis; \
 	tar -xzf redis.tar.gz -C /usr/src/redis --strip-components=1; \

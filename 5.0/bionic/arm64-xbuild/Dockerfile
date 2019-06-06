@@ -12,28 +12,16 @@ RUN groupadd -r redis && useradd -r -g redis redis
 ENV GOSU_VERSION 1.11
 RUN set -ex; \
 	\
-	fetchDeps=" \
-		ca-certificates \
-		dirmngr \
-		gnupg \
-		wget \
-	"; \
 	apt-get update; \
-	apt-get install -y --no-install-recommends $fetchDeps; \
+	apt-get install -y --no-install-recommends ca-certificates wget; \
 	rm -rf /var/lib/apt/lists/*; \
 	\
 	dpkgArch="$(dpkg --print-architecture | awk -F- '{ print $NF }')"; \
-	wget -O /usr/local/bin/gosu "https://github.com/tianon/gosu/releases/download/$GOSU_VERSION/gosu-$dpkgArch"; \
-	wget -O /usr/local/bin/gosu.asc "https://github.com/tianon/gosu/releases/download/$GOSU_VERSION/gosu-$dpkgArch.asc"; \
-	export GNUPGHOME="$(mktemp -d)"; \
-	gpg --batch --keyserver ha.pool.sks-keyservers.net --recv-keys B42F6819007F00F88E364FD4036A9C25BF357DD4; \
-	gpg --batch --verify /usr/local/bin/gosu.asc /usr/local/bin/gosu; \
-	gpgconf --kill all; \
-	rm -r "$GNUPGHOME" /usr/local/bin/gosu.asc; \
+	wget -q -O /usr/local/bin/gosu "https://github.com/tianon/gosu/releases/download/$GOSU_VERSION/gosu-$dpkgArch"
+
+RUN \
 	chmod +x /usr/local/bin/gosu; \
-	gosu nobody true; \
-	\
-	apt-get purge -y --auto-remove $fetchDeps
+	gosu nobody true
 
 ENV REDIS_VERSION 5.0.5
 ENV REDIS_DOWNLOAD_URL http://download.redis.io/releases/redis-5.0.5.tar.gz
