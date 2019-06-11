@@ -1,6 +1,6 @@
-# TAG redislabs/redis-arm64-bionic:5.0.5 redislabs/redis-arm64-bionic:latest
+# BUILD redisfab/redis-arm64-bionic:5.0.5
 
-FROM raffapen/ubuntu-arm64-xbuild:bionic
+FROM redisfab/ubuntu-arm64-xbuild:bionic
 
 RUN [ "cross-build-start" ]
 
@@ -42,7 +42,7 @@ RUN set -ex; \
 	apt-get install -y $buildDeps --no-install-recommends; \
 	rm -rf /var/lib/apt/lists/*; \
 	\
-	wget -O redis.tar.gz "$REDIS_DOWNLOAD_URL"; \
+	wget -q -O redis.tar.gz "$REDIS_DOWNLOAD_URL"; \
 	echo "$REDIS_DOWNLOAD_SHA *redis.tar.gz" | sha256sum -c -; \
 	mkdir -p /usr/src/redis; \
 	tar -xzf redis.tar.gz -C /usr/src/redis --strip-components=1; \

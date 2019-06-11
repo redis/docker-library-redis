@@ -1,5 +1,5 @@
-# TAG redislabs/redis-${ARCH}-bionic:5.0.5
-# TAG redislabs/redis-${ARCH}-bionic-core:5.0.5
+# BUILD redislabs/redis-${ARCH}-bionic:5.0.5
+# BUILD redislabs/redis-${ARCH}-bionic-core:5.0.5
 
 ARG OS=ubuntu:bionic
 # ARG OS=ubuntu:bionic
