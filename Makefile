@@ -26,9 +26,9 @@ endef
 all: build
 
 build:
-#	$(call build_x64)
+	$(call build_x64)
 	$(call build_arm,arm32v7)
-#	$(call build_arm,arm64v8)
+	$(call build_arm,arm64v8)
 
 publish:
 	$(call push,x64)
