@@ -1,73 +1,95 @@
 .NOTPARALLEL:
 
 VERSION ?= 5.0.5
+
+OS ?= debian:buster-slim
+
+# OSNICK=buster|stretch|bionic
 OSNICK ?= buster
+
+#----------------------------------------------------------------------------------------------
+
+OS.bionic=ubuntu:bionic
+OS.stretch=debian:stretch-slim
+OS.buster=debian:buster-slim
+OS=$(OS.$(OSNICK))
+
 REPO=redisfab
 STEM=$(REPO)/redis
 
 BUILD_OPT=--rm --squash
 
-_X64=1
-_ARM7=1
-_ARM8=1
-ifeq ($(X64),1)
-_ARM7=
-_ARM8=
-endif
-ifeq ($(ARM7),1)
-_X64=
-_ARM8=
-endif
-ifeq ($(ARM8),1)
-_X64=
-_ARM7=
-endif
+#----------------------------------------------------------------------------------------------
+
+define targets # (1=OP, 2=op)
+$(1)_TARGETS :=
+$(1)_TARGETS += $(if $(findstring $(X64),1),$(2)_x64)
+$(1)_TARGETS += $(if $(findstring $(ARM7),1),$(2)_arm32v7)
+$(1)_TARGETS += $(if $(findstring $(ARM8),1),$(2)_arm64v8)
+
+$(1)_TARGETS += $$(if $$(strip $$($(1)_TARGETS)),,$(2)_arm32v7 $(2)_arm64v8)
+endef
+
+$(eval $(call targets,BUILD,build))
+$(eval $(call targets,PUBLISH,publish))
+
+#----------------------------------------------------------------------------------------------
 
 define build_x64
-docker build $(BUILD_OPT) -t $(STEM)-x64-$(OSNICK):$(VERSION) -f 5.0/Dockerfile 5.0
-docker tag $(STEM)-x64-$(OSNICK):$(VERSION) $(STEM)-x64-$(OSNICK):latest
+build_x64:
+	@docker build $(BUILD_OPT) -t $(STEM)-x64-$(OSNICK):$(VERSION) -f 5.0/Dockerfile.x64 \
+		--build-arg OS=$(OS) --build-arg OSNICK=$(OSNICK) 5.0
+		
+	@docker tag $(STEM)-x64-$(OSNICK):$(VERSION) $(STEM)-x64-$(OSNICK):latest
+
+.PHONY: build_x64
 endef
 
 define build_arm # (1=arch)
-docker build $(BUILD_OPT) -t $(STEM)-$(1)-$(OSNICK)-xbuild:$(VERSION) -f 5.0/Dockerfile.arm --build-arg ARCH=$(1) 5.0
-docker tag $(STEM)-$(1)-$(OSNICK)-xbuild:$(VERSION) $(STEM)-$(1)-$(OSNICK)-xbuild:latest
+build_$(1): 
+	@docker build $(BUILD_OPT) -t $(STEM)-$(1)-$(OSNICK)-xbuild:$(VERSION) -f 5.0/Dockerfile.arm \
+		--build-arg ARCH=$(1) --build-arg OSNICK=$(OSNICK) 5.0
+	@docker tag $(STEM)-$(1)-$(OSNICK)-xbuild:$(VERSION) $(STEM)-$(1)-$(OSNICK)-xbuild:latest
+
+.PHONY: build_$(1)
 endef
 
-define push_x64
-docker push $(STEM)-x64-$(OSNICK):$(VERSION)
-docker push $(STEM)-x64-$(OSNICK):latest
+#----------------------------------------------------------------------------------------------
+
+define publish_x64
+publish_x64:
+	@docker push $(STEM)-x64-$(OSNICK):$(VERSION)
+	@docker push $(STEM)-x64-$(OSNICK):latest
+
+.PHONY: publish_x64
 endef
 
-define push_arm
-docker push $(STEM)-$(1)-$(OSNICK)-xbuild:$(VERSION)
-docker push $(STEM)-$(1)-$(OSNICK)-xbuild:latest
+define publish_arm # (1=arch)
+publish_$(1):
+	@docker push $(STEM)-$(1)-$(OSNICK)-xbuild:$(VERSION)
+	@docker push $(STEM)-$(1)-$(OSNICK)-xbuild:latest
+
+.PHONY: publish_$(1)
 endef
 
-.PHONY: all build public
+#----------------------------------------------------------------------------------------------
 
-all: build
+all: build publish
 
-build:
-ifeq ($(_X64),1)
-	$(call build_x64)
-endif
-ifeq ($(_ARM7),1)
-	$(call build_arm,arm32v7)
-endif
-ifeq ($(_ARM8),1)
-	$(call build_arm,arm64v8)
-endif
+build: $(BUILD_TARGETS)
 
-publish:
-ifeq ($(_X64),1)
-	$(call push_x64)
-endif
-ifeq ($(_ARM7),1)
-	$(call push_arm,arm32v7)
-endif
-ifeq ($(_ARM8),1)
-	$(call push_arm,arm64v8)
-endif
+$(eval $(call build_x64))
+$(eval $(call build_arm,arm64v8))
+$(eval $(call build_arm,arm32v7))
+
+publish: $(PUBLISH_TARGETS)
+
+$(eval $(call publish_x64))
+$(eval $(call publish_arm,arm64v8))
+$(eval $(call publish_arm,arm32v7))
+
+.PHONY: all build publish 
+
 #	docker manifest create -a $(STEM)-$(OSNICK):$(VERSION) \
 #		-a $(STEM)-x64-$(OSNICK):$(VERSION) \
 #		-a $(STEM)-arm32v7-$(OSNICK)-xbuild:$(VERSION) \
