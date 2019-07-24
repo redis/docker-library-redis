@@ -17,7 +17,8 @@ OS=$(OS.$(OSNICK))
 REPO=redisfab
 STEM=$(REPO)/redis
 
-BUILD_OPT=--rm --squash
+BUILD_OPT=--rm
+# --squash
 
 #----------------------------------------------------------------------------------------------
 
@@ -88,7 +89,29 @@ $(eval $(call publish_x64))
 $(eval $(call publish_arm,arm64v8))
 $(eval $(call publish_arm,arm32v7))
 
-.PHONY: all build publish 
+#----------------------------------------------------------------------------------------------
+
+define HELP
+make [X64=1|ARM8=1|ARM7=1] [OS=<os>] [OSNICK=<nick>] [VERSION=<ver>] [build|publish]
+
+OS       OS DOcker image name (e.g. debian:buster)
+OSNICK   buster|stretch|bionic
+VERSION  Redis version
+
+build    Build image(s)
+publish  Push image(s) to Docker Hub
+
+
+endef
+
+help:
+	$(file >/tmp/help,$(HELP))
+	@cat /tmp/help
+	@rm -f /tmp/help
+
+#----------------------------------------------------------------------------------------------
+
+.PHONY: all build publish help
 
 #	docker manifest create -a $(STEM)-$(OSNICK):$(VERSION) \
 #		-a $(STEM)-x64-$(OSNICK):$(VERSION) \
