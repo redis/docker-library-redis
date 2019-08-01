@@ -1,7 +1,8 @@
 FROM alpine:3.10
 
 # add our user and group first to make sure their IDs get assigned consistently, regardless of whatever dependencies get added
-RUN addgroup -S redis && adduser -S -G redis redis
+RUN addgroup -S -g 1000 redis && adduser -S -G redis -u 999 redis
+# alpine already has a gid 999, so we'll use the next id
 
 RUN apk add --no-cache \
 # grab su-exec for easy step-down from root
@@ -13,8 +14,7 @@ ENV REDIS_VERSION 4.0.14
 ENV REDIS_DOWNLOAD_URL http://download.redis.io/releases/redis-4.0.14.tar.gz
 ENV REDIS_DOWNLOAD_SHA 1e1e18420a86cfb285933123b04a82e1ebda20bfb0a289472745a087587e93a7
 
-# for redis-sentinel see: http://redis.io/topics/sentinel
-RUN set -ex; \
+RUN set -eux; \
 	\
 	apk add --no-cache --virtual .build-deps \
 		coreutils \
@@ -43,6 +43,17 @@ RUN set -ex; \
 	make -C /usr/src/redis -j "$(nproc)"; \
 	make -C /usr/src/redis install; \
 	\
+# TODO https://github.com/antirez/redis/pull/3494 (deduplicate "redis-server" copies)
+	serverMd5="$(md5sum /usr/local/bin/redis-server | cut -d' ' -f1)"; export serverMd5; \
+	find /usr/local/bin/redis* -maxdepth 0 \
+		-type f -not -name redis-server \
+		-exec sh -eux -c ' \
+			md5="$(md5sum "$1" | cut -d" " -f1)"; \
+			test "$md5" = "$serverMd5"; \
+		' -- '{}' ';' \
+		-exec ln -svfT 'redis-server' '{}' ';' \
+	; \
+	\
 	rm -r /usr/src/redis; \
 	\
 	runDeps="$( \
@@ -54,6 +65,7 @@ RUN set -ex; \
 	apk add --no-network --virtual .redis-rundeps $runDeps; \
 	apk del --no-network .build-deps; \
 	\
+	redis-cli --version; \
 	redis-server --version
 
 RUN mkdir /data && chown redis:redis /data
