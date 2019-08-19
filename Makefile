@@ -94,7 +94,7 @@ $(eval $(call publish_arm,arm32v7))
 define HELP
 make [X64=1|ARM8=1|ARM7=1] [OS=<os>] [OSNICK=<nick>] [VERSION=<ver>] [build|publish]
 
-OS       OS DOcker image name (e.g. debian:buster)
+OS       OS Docker image name (e.g., debian:buster-slim)
 OSNICK   buster|stretch|bionic
 VERSION  Redis version
 
