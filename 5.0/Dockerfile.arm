@@ -1,9 +1,9 @@
 # BUILD redisfab/redis-${ARCH}-${OSNICK}-xbuild:5.0.5
 
-# buster|stretch|bionic
+# OSNICK=buster|stretch|bionic
 ARG OSNICK=buster
 
-# arm32v7|arm64v8
+# ARCH=arm32v7|arm64v8
 ARG ARCH=arm64v8
 
 #----------------------------------------------------------------------------------------------
@@ -58,11 +58,7 @@ RUN set -ex; \
 ADD ./redis-5.0.5.patch /usr/src/redis/
 RUN set -ex ;\
 	cd /usr/src/redis ;\
-	patch -p1 redis-5.0.5.patch
-#RUN set -ex; \
-#	grep -q '^#define CONFIG_DEFAULT_PROTECTED_MODE 1$' /usr/src/redis/src/server.h; \
-#	sed -ri 's!^(#define CONFIG_DEFAULT_PROTECTED_MODE) 1$!\1 0!' /usr/src/redis/src/server.h; \
-#	grep -q '^#define CONFIG_DEFAULT_PROTECTED_MODE 0$' /usr/src/redis/src/server.h
+	patch -p1 -i redis-5.0.5.patch
 
 # For future reference, we modify this directly in the source instead of just supplying a default
 # configuration flag because apparently "if you specify any argument to redis-server, 
@@ -82,6 +78,10 @@ RUN [ "cross-build-end" ]
 FROM redisfab/${ARCH}-xbuild:${OSNICK}
 
 RUN [ "cross-build-start" ]
+
+RUN set -ex; \
+	apt-get -qq update; \
+	apt-get -qq install -y --no-install-recommends libatomic1
 
 # Add our user and group first to make sure their IDs get assigned consistently, 
 # regardless of whatever dependencies get added
