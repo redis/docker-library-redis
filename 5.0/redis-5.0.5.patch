@@ -1,0 +1,26 @@
+diff --git a/src/Makefile b/src/Makefile
+index 2a686492..44336b42 100644
+--- a/src/Makefile
++++ b/src/Makefile
+@@ -119,7 +119,7 @@ ifeq ($(uname_S),DragonFly)
+ else
+ 	# All the other OSes (notably Linux)
+ 	FINAL_LDFLAGS+= -rdynamic
+-	FINAL_LIBS+=-ldl -pthread -lrt
++	FINAL_LIBS+=-ldl -pthread -lrt -latomic
+ endif
+ endif
+ endif
+diff --git a/src/server.h b/src/server.h
+index aa015fc1..81fe869f 100644
+--- a/src/server.h
++++ b/src/server.h
+@@ -120,7 +120,7 @@ typedef long long mstime_t; /* millisecond time type. */
+ #define CONFIG_DEFAULT_DAEMONIZE 0
+ #define CONFIG_DEFAULT_UNIX_SOCKET_PERM 0
+ #define CONFIG_DEFAULT_TCP_KEEPALIVE 300
+-#define CONFIG_DEFAULT_PROTECTED_MODE 1
++#define CONFIG_DEFAULT_PROTECTED_MODE 0
+ #define CONFIG_DEFAULT_LOGFILE ""
+ #define CONFIG_DEFAULT_SYSLOG_ENABLED 0
+ #define CONFIG_DEFAULT_STOP_WRITES_ON_BGSAVE_ERROR 1
