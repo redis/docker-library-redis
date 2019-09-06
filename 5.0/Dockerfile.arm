@@ -1,7 +1,7 @@
 # BUILD redisfab/redis-${ARCH}-${OSNICK}-xbuild:5.0.5
 
-# stretch|bionic
-ARG OSNICK=stretch
+# buster|stretch|bionic
+ARG OSNICK=buster
 
 # arm32v7|arm64v8
 ARG ARCH=arm64v8
@@ -15,7 +15,7 @@ RUN uname -a; cat /etc/os-release
 
 ENV X_NPROC "cat /proc/cpuinfo|grep processor|wc -l"
 
-ENV REDIS_DEPENDS "ca-certificates dirmngr gnupg wget gcc libc6-dev make"
+ENV REDIS_DEPENDS "ca-certificates dirmngr gnupg wget gcc libc6-dev make patch"
 RUN set -ex; \
 	apt-get -qq update; \
 	apt-get -qq install -y --no-install-recommends $REDIS_DEPENDS
@@ -55,10 +55,14 @@ RUN set -ex; \
 # (ports are not automatically exposed when running inside Docker, but rather explicitly by specifying -p / -P)
 # [1]: https://github.com/antirez/redis/commit/edd4d555df57dc84265fdfb4ef59a4678832f6da
 
-RUN set -ex; \
-	grep -q '^#define CONFIG_DEFAULT_PROTECTED_MODE 1$' /usr/src/redis/src/server.h; \
-	sed -ri 's!^(#define CONFIG_DEFAULT_PROTECTED_MODE) 1$!\1 0!' /usr/src/redis/src/server.h; \
-	grep -q '^#define CONFIG_DEFAULT_PROTECTED_MODE 0$' /usr/src/redis/src/server.h
+ADD ./redis-5.0.5.patch /usr/src/redis/
+RUN set -ex ;\
+	cd /usr/src/redis ;\
+	patch -p1 redis-5.0.5.patch
+#RUN set -ex; \
+#	grep -q '^#define CONFIG_DEFAULT_PROTECTED_MODE 1$' /usr/src/redis/src/server.h; \
+#	sed -ri 's!^(#define CONFIG_DEFAULT_PROTECTED_MODE) 1$!\1 0!' /usr/src/redis/src/server.h; \
+#	grep -q '^#define CONFIG_DEFAULT_PROTECTED_MODE 0$' /usr/src/redis/src/server.h
 
 # For future reference, we modify this directly in the source instead of just supplying a default
 # configuration flag because apparently "if you specify any argument to redis-server, 
@@ -69,7 +73,7 @@ RUN set -ex; \
 # note: ARCH may break build if non-empty
 
 RUN set -ex; \
-	ARCH= make -C /usr/src/redis -j $(eval "$X_NPROC"); \
+	ARCH= make V=1 -C /usr/src/redis -j $(eval "$X_NPROC"); \
 	make -C /usr/src/redis install
 
 RUN [ "cross-build-end" ]
