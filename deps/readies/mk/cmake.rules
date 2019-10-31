@@ -1,0 +1,14 @@
+
+ifneq ($(MK_CMAKE),)
+
+MK_CMAKE_FILES ?= $(SRCDIR)/CMakeLists.txt
+
+$(BINDIR)/Makefile : bindirs $(MK_CMAKE_FILES)
+	$(SHOW)if [ ! -d $(BINDIR) ]; then echo "CMake: $(BINDIR) does not exist."; exit 1; fi
+	$(SHOW)cd $(BINDIR); cmake $(CMAKE_WHY) $(CMAKE_FLAGS) $(abspath $(SRCDIR))
+
+#	$(SHOW)cd $(BINDIR); \
+#	CMAKE_REL_ROOT=`python -c "import os; print os.path.relpath('$(SRCDIR)', '$$PWD')"` \
+#	cmake $(CMAKE_FLAGS) $$CMAKE_REL_ROOT
+
+endif # MK_CMAKE

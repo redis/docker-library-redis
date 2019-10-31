@@ -1,0 +1,38 @@
+
+SHELL=/bin/bash
+
+ifeq ($(ROOT),)
+$(error ROOT is undefined)
+endif
+
+ifneq ($(wildcard $(ROOT)/deps/readies),)
+READIES:=$(ROOT)/deps/readies
+else ifneq ($(wildcard $(ROOT)/opt/readies),)
+READIES:=$(ROOT)/opt/readies
+else
+$(error Cannot find readies root)
+endif
+
+MK:=$(READIES)/mk
+
+MK.pyver ?= 2
+MK.getpy=getpy$(MK.pyver)
+
+ifneq ($(shell { CHECK=1 $(READIES)/bin/$(MK.getpy); echo -n $$?; }),0)
+$(error It seems build prerequisites have not been installed: please run 'make setup'.)
+endif
+
+MK_ALL_TARGETS:=bindirs build
+
+include $(MK)/functions
+include $(MK)/common.defs
+include $(MK)/platform.defs
+
+ifeq ($(OS),macosx)
+include $(MK)/macosx.defs
+endif
+
+include $(MK)/git.defs
+include $(MK)/variant.defs
+include $(MK)/bindirs.defs
+include $(MK)/nproc.defs

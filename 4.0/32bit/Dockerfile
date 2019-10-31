@@ -1,57 +1,66 @@
-FROM debian:stretch-slim
+FROM debian:buster-slim
 
 # add our user and group first to make sure their IDs get assigned consistently, regardless of whatever dependencies get added
-RUN groupadd -r redis && useradd -r -g redis redis
+RUN groupadd -r -g 999 redis && useradd -r -g redis -u 999 redis
 
 # grab gosu for easy step-down from root
 # https://github.com/tianon/gosu/releases
-ENV GOSU_VERSION 1.10
-RUN set -ex; \
-	\
-	fetchDeps=" \
+ENV GOSU_VERSION 1.11
+RUN set -eux; \
+# save list of currently installed packages for later so we can clean up
+	savedAptMark="$(apt-mark showmanual)"; \
+	apt-get update; \
+	apt-get install -y --no-install-recommends \
 		ca-certificates \
 		dirmngr \
 		gnupg \
 		wget \
-	"; \
-	apt-get update; \
-	apt-get install -y --no-install-recommends $fetchDeps; \
+	; \
 	rm -rf /var/lib/apt/lists/*; \
 	\
 	dpkgArch="$(dpkg --print-architecture | awk -F- '{ print $NF }')"; \
 	wget -O /usr/local/bin/gosu "https://github.com/tianon/gosu/releases/download/$GOSU_VERSION/gosu-$dpkgArch"; \
 	wget -O /usr/local/bin/gosu.asc "https://github.com/tianon/gosu/releases/download/$GOSU_VERSION/gosu-$dpkgArch.asc"; \
+	\
+# verify the signature
 	export GNUPGHOME="$(mktemp -d)"; \
-	gpg --batch --keyserver ha.pool.sks-keyservers.net --recv-keys B42F6819007F00F88E364FD4036A9C25BF357DD4; \
+	gpg --batch --keyserver hkps://keys.openpgp.org --recv-keys B42F6819007F00F88E364FD4036A9C25BF357DD4; \
 	gpg --batch --verify /usr/local/bin/gosu.asc /usr/local/bin/gosu; \
 	gpgconf --kill all; \
-	rm -r "$GNUPGHOME" /usr/local/bin/gosu.asc; \
-	chmod +x /usr/local/bin/gosu; \
-	gosu nobody true; \
+	rm -rf "$GNUPGHOME" /usr/local/bin/gosu.asc; \
 	\
-	apt-get purge -y --auto-remove $fetchDeps
+# clean up fetch dependencies
+	apt-mark auto '.*' > /dev/null; \
+	[ -z "$savedAptMark" ] || apt-mark manual $savedAptMark > /dev/null; \
+	apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false; \
+	\
+	chmod +x /usr/local/bin/gosu; \
+# verify that the binary works
+	gosu --version; \
+	gosu nobody true
 
 ENV REDIS_VERSION 4.0.14
 ENV REDIS_DOWNLOAD_URL http://download.redis.io/releases/redis-4.0.14.tar.gz
 ENV REDIS_DOWNLOAD_SHA 1e1e18420a86cfb285933123b04a82e1ebda20bfb0a289472745a087587e93a7
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
-		libc6-i386 \
-	&& rm -rf /var/lib/apt/lists/*
+RUN set -eux; \
+	apt-get update; \
+	apt-get install -y --no-install-recommends libc6-i386; \
+	rm -rf /var/lib/apt/lists/*
 
-# for redis-sentinel see: http://redis.io/topics/sentinel
-RUN set -ex; \
+RUN set -eux; \
 	\
-	buildDeps=' \
+	savedAptMark="$(apt-mark showmanual)"; \
+	apt-get update; \
+	apt-get install -y --no-install-recommends \
+		ca-certificates \
 		wget \
 		\
 		gcc \
 		gcc-multilib \
 		libc6-dev-i386 \
 		make \
-	'; \
-	apt-get update; \
-	apt-get install -y $buildDeps --no-install-recommends; \
+	; \
 	rm -rf /var/lib/apt/lists/*; \
 	\
 	wget -O redis.tar.gz "$REDIS_DOWNLOAD_URL"; \
@@ -73,9 +82,25 @@ RUN set -ex; \
 	make -C /usr/src/redis -j "$(nproc)" 32bit; \
 	make -C /usr/src/redis install; \
 	\
+# TODO https://github.com/antirez/redis/pull/3494 (deduplicate "redis-server" copies)
+	serverMd5="$(md5sum /usr/local/bin/redis-server | cut -d' ' -f1)"; export serverMd5; \
+	find /usr/local/bin/redis* -maxdepth 0 \
+		-type f -not -name redis-server \
+		-exec sh -eux -c ' \
+			md5="$(md5sum "$1" | cut -d" " -f1)"; \
+			test "$md5" = "$serverMd5"; \
+		' -- '{}' ';' \
+		-exec ln -svfT 'redis-server' '{}' ';' \
+	; \
+	\
 	rm -r /usr/src/redis; \
 	\
-	apt-get purge -y --auto-remove $buildDeps
+	apt-mark auto '.*' > /dev/null; \
+	[ -z "$savedAptMark" ] || apt-mark manual $savedAptMark > /dev/null; \
+	apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false; \
+	\
+	redis-cli --version; \
+	redis-server --version
 
 RUN mkdir /data && chown redis:redis /data
 VOLUME /data

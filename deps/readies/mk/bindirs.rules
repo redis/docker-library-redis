@@ -1,0 +1,14 @@
+
+ifneq ($(MK.nobindir),1)
+
+ifeq ($(BINDIR),)
+$(error BINDIR is undefined)
+endif
+
+.PHONY: bindirs
+
+bindirs: $(BIN_DIRS)
+
+$(foreach DIR,$(BIN_DIRS),$(eval $(call mkdir_rule,$(DIR))))
+
+endif # MK.nobindir

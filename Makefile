@@ -4,14 +4,19 @@ VERSION ?= 5.0.5
 
 OS ?= debian:buster-slim
 
-# OSNICK=buster|stretch|bionic
+# OSNICK=buster|stretch|xenial|bionic|centos6|centos7|centos8|fedora30
 OSNICK ?= buster
 
 #----------------------------------------------------------------------------------------------
 
-OS.bionic=ubuntu:bionic
-OS.stretch=debian:stretch-slim
-OS.buster=debian:buster-slim
+OS.xenial=ubuntu:xenial # 16
+OS.bionic=ubuntu:bionic # 18
+OS.stretch=debian:stretch-slim # 9
+OS.buster=debian:buster-slim # 10
+OS.centos6=centos:centos6
+OS.centos7=centos:centos7
+OS.centos8=centos:centos8
+OS.fedora30=fedora:30
 OS=$(OS.$(OSNICK))
 
 REPO=redisfab
@@ -38,8 +43,8 @@ $(eval $(call targets,PUBLISH,publish))
 
 define build_x64
 build_x64:
-	@docker build $(BUILD_OPT) -t $(STEM)-x64-$(OSNICK):$(VERSION) -f 5.0/Dockerfile.x64 \
-		--build-arg OS=$(OS) --build-arg OSNICK=$(OSNICK) 5.0
+	@docker build $(BUILD_OPT) -t $(STEM)-x64-$(OSNICK):$(VERSION) -f 5.0/Dockerfile \
+		--build-arg ARCH=x64 --build-arg OS=$(OS) --build-arg OSNICK=$(OSNICK) .
 		
 	@docker tag $(STEM)-x64-$(OSNICK):$(VERSION) $(STEM)-x64-$(OSNICK):latest
 
@@ -49,7 +54,7 @@ endef
 define build_arm # (1=arch)
 build_$(1): 
 	@docker build $(BUILD_OPT) -t $(STEM)-$(1)-$(OSNICK)-xbuild:$(VERSION) -f 5.0/Dockerfile.arm \
-		--build-arg ARCH=$(1) --build-arg OSNICK=$(OSNICK) 5.0
+		--build-arg ARCH=$(1) --build-arg OSNICK=$(OSNICK) .
 	@docker tag $(STEM)-$(1)-$(OSNICK)-xbuild:$(VERSION) $(STEM)-$(1)-$(OSNICK)-xbuild:latest
 
 .PHONY: build_$(1)
@@ -95,8 +100,8 @@ define HELP
 make [X64=1|ARM8=1|ARM7=1] [OS=<os>] [OSNICK=<nick>] [VERSION=<ver>] [build|publish]
 
 OS       OS Docker image name (e.g., debian:buster-slim)
-OSNICK   buster|stretch|bionic
-VERSION  Redis version
+OSNICK   buster|stretch|xenial|bionic|centos6|centos7|centos8|fedora30
+VERSION  Redis version (e.g. 5.0.5)
 
 build    Build image(s)
 publish  Push image(s) to Docker Hub

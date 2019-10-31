@@ -1,0 +1,5 @@
+
+ifeq ($(shell { [ -d .git ] || git rev-parse --git-dir >/dev/null 2>&1; echo -n $?; }),0)
+GIT_SHA := $(shell git rev-parse HEAD)
+GIT_COMMIT := $(shell git describe --always --abbrev=7 --dirty="+")
+endif

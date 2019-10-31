@@ -1,0 +1,14 @@
+
+ifneq ($(MK_CMAKE),)
+
+MK_MAKEFILES += $(BINDIR)/Makefile
+
+ifeq ($(DEBUG),1)
+CMAKE_FLAGS += -DCMAKE_BUILD_TYPE=Debug
+endif
+
+ifeq ($(WHY),1)
+CMAKE_WHY=--trace-expand
+endif
+
+endif # MK_CMAKE

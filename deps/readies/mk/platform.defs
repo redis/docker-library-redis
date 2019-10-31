@@ -1,0 +1,7 @@
+
+OS:=$(shell $(READIES)/bin/platform --os)
+# ifeq ($(OS),linux)
+# OS:=$(shell $(READIES)/bin/platform --dist)
+# endif
+
+ARCH=$(shell $(READIES)/bin/platform --arch)

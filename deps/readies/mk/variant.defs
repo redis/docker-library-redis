@@ -1,0 +1,47 @@
+
+ifeq ($(DEBUG),1)
+FLAVOR=debug
+else
+FLAVOR=release
+endif
+
+#----------------------------------------------------------------------------------------------
+
+VARIANT.file:=$(shell if [ -f $(ROOT)/VARIANT ]; then cat $(ROOT)/VARIANT; fi)
+
+# if VARIANT not specified and we're the not in submake, use one from file, if present
+ifeq ($(origin VARIANT),undefined)
+ ifneq ($(VARIANT.primary),)
+  ifneq ($(VARIANT.file),)
+   VARIANT:=$(VARIANT.file)
+  endif
+ endif
+else # VARIANT specified
+ ifeq ($(VARIANT.primary),)
+  export VARIANT.primary:=$(VARIANT)
+ endif
+endif
+
+# add variant to variant list
+ifneq ($(firstword $(call reverse,$(VARIANT.list))),$(VARIANT))
+export VARIANT.list:=$(strip $(VARIANT.list) $(VARIANT))
+endif
+
+# join strings with hyphens
+VARIANT.string:=$(subst $(__SPACE),-,$(strip $(VARIANT.list)))
+
+ifeq ($(VARIANT.string),)
+_VARIANT.string:=
+else
+_VARIANT.string:=-$(VARIANT.string)
+endif
+
+FULL_VARIANT:=$(OS)-$(ARCH)-$(FLAVOR)$(_VARIANT.string)
+FULL_VARIANT.release:=$(OS)-$(ARCH)-release$(_VARIANT.string)
+
+# if primary variant present, write it to file. otherwise, delete file
+ifneq ($(VARIANT.primary),)
+ifneq ($(origin VARIANT),)
+$(eval $(shell if [ -z $(VARIANT) ]; then rm -f $(ROOT)/VARIANT; else echo $(VARIANT)>$(ROOT)/VARIANT; fi))
+endif
+endif

@@ -1,0 +1,6 @@
+
+ifeq ($(OS),linux)
+NPROC:=$(shell nproc)
+else ifeq ($(OS),macosx)
+NPROC:=$(shell sysctl -n hw.physicalcpu)
+endif

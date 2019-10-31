@@ -14,29 +14,18 @@ FROM ${OS} as builder
 
 ENV X_NPROC "cat /proc/cpuinfo|grep processor|wc -l"
 
-ENV REDIS_DEPENDS "ca-certificates dirmngr gnupg wget gcc libc6-dev make"
-RUN set -ex; \
-	apt-get -qq update; \
-	apt-get -qq install -y --no-install-recommends $REDIS_DEPENDS
+WORKDIR /build
+ADD /deps/ /build/deps/
+ADD /5.0/system-setup.py /build/
 
-# grab gosu for easy step-down from root
-# https://github.com/tianon/gosu/releases
+# ENV REDIS_DEPENDS "ca-certificates dirmngr gnupg wget gcc libc6-dev make"
+RUN /build/deps/readies/bin/getpy2
+RUN /build/system-setup.py
+
 ENV GOSU_VERSION 1.11
-RUN set -ex; \
-	dpkgArch="$(dpkg --print-architecture | awk -F- '{ print $NF }')"; \
-	wget -q -O /usr/local/bin/gosu "https://github.com/tianon/gosu/releases/download/$GOSU_VERSION/gosu-$dpkgArch"; \
-	wget -q -O /usr/local/bin/gosu.asc "https://github.com/tianon/gosu/releases/download/$GOSU_VERSION/gosu-$dpkgArch.asc"
-
-# note: gpg sometimes fails due to network problems, disabling ipv6 helps
-
-RUN set -ex; \
-	export GNUPGHOME="$(mktemp -d)"; \
-	echo "disable-ipv6" >> $GNUPGHOME/dirmngr.conf; \
-	gpg --batch --keyserver ha.pool.sks-keyservers.net --recv-keys B42F6819007F00F88E364FD4036A9C25BF357DD4; \
-	gpg --batch --verify /usr/local/bin/gosu.asc /usr/local/bin/gosu; \
-	gpgconf --kill all; \
-	rm -r "$GNUPGHOME" /usr/local/bin/gosu.asc; \
-	chmod 755 /usr/local/bin/gosu; \
+RUN set -ex ;\
+	/build/deps/readies/bin/getgosu ;\
+	gosu --version; \
 	gosu nobody true
 
 ENV REDIS_VERSION 5.0.5
@@ -54,10 +43,10 @@ RUN set -ex; \
 # (ports are not automatically exposed when running inside Docker, but rather explicitly by specifying -p / -P)
 # [1]: https://github.com/antirez/redis/commit/edd4d555df57dc84265fdfb4ef59a4678832f6da
 
-RUN set -ex; \
-	grep -q '^#define CONFIG_DEFAULT_PROTECTED_MODE 1$' /usr/src/redis/src/server.h; \
-	sed -ri 's!^(#define CONFIG_DEFAULT_PROTECTED_MODE) 1$!\1 0!' /usr/src/redis/src/server.h; \
-	grep -q '^#define CONFIG_DEFAULT_PROTECTED_MODE 0$' /usr/src/redis/src/server.h
+ADD 5.0/redis-5.0.5.patch /usr/src/redis/
+RUN set -ex ;\
+	cd /usr/src/redis ;\
+	patch -p1 -i redis-5.0.5.patch
 
 # For future reference, we modify this directly in the source instead of just supplying a default
 # configuration flag because apparently "if you specify any argument to redis-server, 
@@ -68,15 +57,21 @@ RUN set -ex; \
 # note: ARCH may break build if non-empty
 
 RUN set -ex; \
-	ARCH= make -C /usr/src/redis -j $(eval "$X_NPROC"); \
+	ARCH= make V=1 -C /usr/src/redis -j $(eval "$X_NPROC"); \
 	make -C /usr/src/redis install
 
 #----------------------------------------------------------------------------------------------
 FROM ${OS}
 
+ARG ARCH
+ARG OSNICK
+
+RUN echo "Building redisfab/redis-${ARCH}-${OSNICK}:5.0.5"
+RUN uname -a; cat /etc/os-release
+
 # Add our user and group first to make sure their IDs get assigned consistently, 
 # regardless of whatever dependencies get added
-RUN groupadd -r redis && useradd -r -g redis redis
+RUN groupadd -r -g 999 redis && useradd -r -g redis -u 999 redis
 
 COPY --from=builder /usr/local/ /usr/local/
 
@@ -84,7 +79,7 @@ RUN mkdir /data && chown redis:redis /data
 VOLUME /data
 WORKDIR /data
 
-COPY docker-entrypoint.sh /usr/local/bin/
+COPY 5.0/docker-entrypoint.sh /usr/local/bin/
 RUN chmod 755 /usr/local/bin/docker-entrypoint.sh
 
 ENTRYPOINT ["docker-entrypoint.sh"]
