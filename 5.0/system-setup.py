@@ -22,9 +22,11 @@ class RedisSetup(paella.Setup):
 
     def redhat_compat(self):
         self.group_install("'Development Tools'")
+        self.install("libatomic")
 
     def fedora(self):
         self.group_install("'Development Tools'")
+        self.install("libatomic")
 
     def macosx(self):
         r, w, e = popen2.popen3('xcode-select -p')

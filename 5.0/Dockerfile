@@ -9,8 +9,15 @@ ARG OSNICK=buster
 # ARCH=x64|arm64v8|arm32v7
 ARG ARCH=x64
 
+ARG UID=999
+
 #----------------------------------------------------------------------------------------------
 FROM ${OS} as builder
+
+ARG OS
+ARG OSNICK
+ARG ARCH
+RUN echo "Building on ${OSNICK} (${OS}) for ${ARCH}"
 
 ENV X_NPROC "cat /proc/cpuinfo|grep processor|wc -l"
 
@@ -65,13 +72,20 @@ FROM ${OS}
 
 ARG ARCH
 ARG OSNICK
+ARG UID
 
-RUN echo "Building redisfab/redis-${ARCH}-${OSNICK}:5.0.5"
+RUN echo "Building redisfab/redis-${ARCH}-${OSNICK}:5.0.5 UID=${UID}"
 RUN uname -a; cat /etc/os-release
 
 # Add our user and group first to make sure their IDs get assigned consistently, 
 # regardless of whatever dependencies get added
-RUN groupadd -r -g 999 redis && useradd -r -g redis -u 999 redis
+RUN groupadd -r -g ${UID} redis && useradd -r -g redis -u ${UID} redis
+
+COPY 5.0/setup.${OSNICK} /usr/local/bin/docker-setup
+RUN set -xe ;\
+	chmod +x /usr/local/bin/docker-setup ;\
+	/usr/local/bin/docker-setup ;\
+	rm /usr/local/bin/docker-setup
 
 COPY --from=builder /usr/local/ /usr/local/
 

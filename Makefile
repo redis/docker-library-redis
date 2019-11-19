@@ -16,8 +16,19 @@ OS.buster=debian:buster-slim # 10
 OS.centos6=centos:centos6
 OS.centos7=centos:centos7
 OS.centos8=centos:centos8
+OS.fedora=fedora:30
 OS.fedora30=fedora:30
 OS=$(OS.$(OSNICK))
+
+UID.centos7=997
+UID.centos8=997
+UID.fedora=989
+UID.fedora30=989
+ifeq ($(UID.$(OSNICK)),)
+UID=999
+else
+UID=$(UID.$(OSNICK))
+endif
 
 REPO=redisfab
 STEM=$(REPO)/redis
@@ -44,7 +55,7 @@ $(eval $(call targets,PUBLISH,publish))
 define build_x64
 build_x64:
 	@docker build $(BUILD_OPT) -t $(STEM)-x64-$(OSNICK):$(VERSION) -f 5.0/Dockerfile \
-		--build-arg ARCH=x64 --build-arg OS=$(OS) --build-arg OSNICK=$(OSNICK) .
+		--build-arg ARCH=x64 --build-arg OS=$(OS) --build-arg OSNICK=$(OSNICK) --build-arg UID=$(UID) .
 		
 	@docker tag $(STEM)-x64-$(OSNICK):$(VERSION) $(STEM)-x64-$(OSNICK):latest
 
@@ -54,7 +65,7 @@ endef
 define build_arm # (1=arch)
 build_$(1): 
 	@docker build $(BUILD_OPT) -t $(STEM)-$(1)-$(OSNICK)-xbuild:$(VERSION) -f 5.0/Dockerfile.arm \
-		--build-arg ARCH=$(1) --build-arg OSNICK=$(OSNICK) .
+		--build-arg ARCH=$(1) --build-arg OSNICK=$(OSNICK) --build-arg UID=$(UID) .
 	@docker tag $(STEM)-$(1)-$(OSNICK)-xbuild:$(VERSION) $(STEM)-$(1)-$(OSNICK)-xbuild:latest
 
 .PHONY: build_$(1)
