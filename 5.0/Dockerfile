@@ -1,4 +1,6 @@
-# BUILD redisfab/redis-${ARCH}-${OSNICK}:5.0.5
+# BUILD redisfab/redis-${ARCH}-${OSNICK}:${REDIS_VER}
+
+ARG REDIS_VER=5.0.7
 
 # OS=debian:buster-slim|debian:stretch-slim|ubuntu:bionic
 ARG OS=debian:buster-slim
@@ -14,16 +16,15 @@ ARG UID=999
 #----------------------------------------------------------------------------------------------
 FROM ${OS} as builder
 
+ARG REDIS_VER
 ARG OS
 ARG OSNICK
 ARG ARCH
-RUN echo "Building on ${OSNICK} (${OS}) for ${ARCH}"
-
-ENV X_NPROC "cat /proc/cpuinfo|grep processor|wc -l"
+RUN echo "Building Redis v${REDIS_VER} on ${OSNICK} (${OS}) for ${ARCH}"
 
 WORKDIR /build
-ADD /deps/ /build/deps/
-ADD /5.0/system-setup.py /build/
+ADD deps/ /build/deps/
+ADD 5.0/system-setup.py /build/
 
 # ENV REDIS_DEPENDS "ca-certificates dirmngr gnupg wget gcc libc6-dev make"
 RUN /build/deps/readies/bin/getpy2
@@ -35,16 +36,18 @@ RUN set -ex ;\
 	gosu --version; \
 	gosu nobody true
 
-ENV REDIS_VERSION 5.0.5
-ENV REDIS_DOWNLOAD_URL http://download.redis.io/releases/redis-5.0.5.tar.gz
+ENV REDIS_VERSION ${REDIS_VER}
+ENV REDIS_DOWNLOAD_URL https://github.com/antirez/redis/archive/${REDIS_VER}.tar.gz
+# ENV REDIS_DOWNLOAD_URL http://download.redis.io/releases/redis-${REDIS_VER}.tar.gz
 ENV REDIS_DOWNLOAD_SHA 2139009799d21d8ff94fc40b7f36ac46699b9e1254086299f8d3b223ca54a375
 
 # for redis-sentinel see: http://redis.io/topics/sentinel
 RUN set -ex; \
 	wget -q -O redis.tar.gz "$REDIS_DOWNLOAD_URL"; \
-	echo "$REDIS_DOWNLOAD_SHA *redis.tar.gz" | sha256sum -c -; \
 	mkdir -p /usr/src/redis; \
 	tar -xzf redis.tar.gz -C /usr/src/redis --strip-components=1
+
+#	echo "$REDIS_DOWNLOAD_SHA *redis.tar.gz" | sha256sum -c -;
 
 # Disable Redis protected mode [1] as it is unnecessary in context of Docker
 # (ports are not automatically exposed when running inside Docker, but rather explicitly by specifying -p / -P)
@@ -64,17 +67,18 @@ RUN set -ex ;\
 # note: ARCH may break build if non-empty
 
 RUN set -ex; \
-	ARCH= make V=1 -C /usr/src/redis -j $(eval "$X_NPROC"); \
+	ARCH= make V=1 -C /usr/src/redis -j $(nproc); \
 	make -C /usr/src/redis install
 
 #----------------------------------------------------------------------------------------------
 FROM ${OS}
 
+ARG REDIS_VER
 ARG ARCH
 ARG OSNICK
 ARG UID
 
-RUN echo "Building redisfab/redis-${ARCH}-${OSNICK}:5.0.5 UID=${UID}"
+RUN echo "Building redisfab/redis-${ARCH}-${OSNICK}:${REDIS_VER} UID=${UID}"
 RUN uname -a; cat /etc/os-release
 
 # Add our user and group first to make sure their IDs get assigned consistently, 

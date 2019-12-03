@@ -1,6 +1,6 @@
 .NOTPARALLEL:
 
-VERSION ?= 5.0.5
+VERSION ?= 5.0.7
 
 OS ?= debian:buster-slim
 
@@ -36,6 +36,10 @@ STEM=$(REPO)/redis
 BUILD_OPT=--rm
 # --squash
 
+ifeq ($(CACHE),0)
+CACHE_ARG=--no-cache
+endif
+
 #----------------------------------------------------------------------------------------------
 
 define targets # (1=OP, 2=op)
@@ -54,19 +58,29 @@ $(eval $(call targets,PUBLISH,publish))
 
 define build_x64
 build_x64:
-	@docker build $(BUILD_OPT) -t $(STEM)-x64-$(OSNICK):$(VERSION) -f 5.0/Dockerfile \
-		--build-arg ARCH=x64 --build-arg OS=$(OS) --build-arg OSNICK=$(OSNICK) --build-arg UID=$(UID) .
+	@docker build $(BUILD_OPT) -t $(STEM):$(VERSION)-x64-$(OSNICK) -f 5.0/Dockerfile \
+		$(CACHE_ARG) \
+		--build-arg ARCH=x64 \
+		--build-arg OS=$(OS) \
+		--build-arg OSNICK=$(OSNICK) \
+		--build-arg UID=$(UID) \
+		--build-arg REDIS_VER=$(VERSION) \
+		.
 		
-	@docker tag $(STEM)-x64-$(OSNICK):$(VERSION) $(STEM)-x64-$(OSNICK):latest
+	@docker tag $(STEM):$(VERSION)-x64-$(OSNICK) $(STEM):latest-x64-$(OSNICK)
 
 .PHONY: build_x64
 endef
 
 define build_arm # (1=arch)
 build_$(1): 
-	@docker build $(BUILD_OPT) -t $(STEM)-$(1)-$(OSNICK)-xbuild:$(VERSION) -f 5.0/Dockerfile.arm \
-		--build-arg ARCH=$(1) --build-arg OSNICK=$(OSNICK) --build-arg UID=$(UID) .
-	@docker tag $(STEM)-$(1)-$(OSNICK)-xbuild:$(VERSION) $(STEM)-$(1)-$(OSNICK)-xbuild:latest
+	@docker build $(BUILD_OPT) -t $(STEM)-xbuild:$(VERSION)-$(1)-$(OSNICK) -f 5.0/Dockerfile.arm \
+		--build-arg ARCH=$(1) \
+		--build-arg OSNICK=$(OSNICK) \
+		--build-arg UID=$(UID) \
+		--build-arg REDIS_VER=$(VERSION) \
+		.
+	@docker tag $(STEM)-xbuild:$(VERSION)-$(1)-$(OSNICK) $(STEM)-xbuild:latest-$(1)-$(OSNICK)
 
 .PHONY: build_$(1)
 endef
@@ -75,16 +89,16 @@ endef
 
 define publish_x64
 publish_x64:
-	@docker push $(STEM)-x64-$(OSNICK):$(VERSION)
-	@docker push $(STEM)-x64-$(OSNICK):latest
+	@docker push $(STEM):$(VERSION)-x64-$(OSNICK)
+	@docker push $(STEM):latest-x64-$(OSNICK)
 
 .PHONY: publish_x64
 endef
 
 define publish_arm # (1=arch)
 publish_$(1):
-	@docker push $(STEM)-$(1)-$(OSNICK)-xbuild:$(VERSION)
-	@docker push $(STEM)-$(1)-$(OSNICK)-xbuild:latest
+	@docker push $(STEM)-xbuild:$(VERSION)-$(1)-$(OSNICK)
+	@docker push $(STEM)-xbuild:latest-$(1)-$(OSNICK)
 
 .PHONY: publish_$(1)
 endef
@@ -108,14 +122,17 @@ $(eval $(call publish_arm,arm32v7))
 #----------------------------------------------------------------------------------------------
 
 define HELP
-make [X64=1|ARM8=1|ARM7=1] [OS=<os>] [OSNICK=<nick>] [VERSION=<ver>] [build|publish]
-
-OS       OS Docker image name (e.g., debian:buster-slim)
-OSNICK   buster|stretch|xenial|bionic|centos6|centos7|centos8|fedora30
-VERSION  Redis version (e.g. 5.0.5)
+make [build|publish] [X64=1|ARM8=1|ARM7=1] [OSNICK=<nick> | OS=<os>] [VERSION=<ver>] [ARGS...]
 
 build    Build image(s)
 publish  Push image(s) to Docker Hub
+
+Arguments:
+OS       OS Docker image name (e.g., debian:buster-slim)
+OSNICK   buster|stretch|xenial|bionic|centos6|centos7|centos8|fedora30
+VERSION  Redis version (e.g. $(VERSION))
+TEST=1   Run tests after build
+CACHE=0  Build without cache
 
 
 endef
@@ -128,11 +145,3 @@ help:
 #----------------------------------------------------------------------------------------------
 
 .PHONY: all build publish help
-
-#	docker manifest create -a $(STEM)-$(OSNICK):$(VERSION) \
-#		-a $(STEM)-x64-$(OSNICK):$(VERSION) \
-#		-a $(STEM)-arm32v7-$(OSNICK)-xbuild:$(VERSION) \
-#		-a $(STEM)-arm64v8-$(OSNICK)-xbuild:$(VERSION)
-#	docker manifest annotate $(STEM)-$(OSNICK):$(VERSION) $(STEM)-arm32v7-$(OSNICK):$(VERSION) --os linux --arch arm
-#	docker manifest annotate $(STEM)-$(OSNICK):$(VERSION) $(STEM)-arm64v8-$(OSNICK):$(VERSION) --os linux --arch arm64 --variant armv8
-#	docker manifest push -p $(STEM)-$(OSNICK):$(VERSION)
