@@ -2,6 +2,7 @@
 set -eu
 
 declare -A aliases=(
+	[6.0-rc]='rc'
 	[5.0]='5 latest'
 	[4.0]='4'
 )

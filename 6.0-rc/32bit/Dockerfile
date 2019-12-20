@@ -1,0 +1,113 @@
+FROM debian:buster-slim
+
+# add our user and group first to make sure their IDs get assigned consistently, regardless of whatever dependencies get added
+RUN groupadd -r -g 999 redis && useradd -r -g redis -u 999 redis
+
+# grab gosu for easy step-down from root
+# https://github.com/tianon/gosu/releases
+ENV GOSU_VERSION 1.11
+RUN set -eux; \
+# save list of currently installed packages for later so we can clean up
+	savedAptMark="$(apt-mark showmanual)"; \
+	apt-get update; \
+	apt-get install -y --no-install-recommends \
+		ca-certificates \
+		dirmngr \
+		gnupg \
+		wget \
+	; \
+	rm -rf /var/lib/apt/lists/*; \
+	\
+	dpkgArch="$(dpkg --print-architecture | awk -F- '{ print $NF }')"; \
+	wget -O /usr/local/bin/gosu "https://github.com/tianon/gosu/releases/download/$GOSU_VERSION/gosu-$dpkgArch"; \
+	wget -O /usr/local/bin/gosu.asc "https://github.com/tianon/gosu/releases/download/$GOSU_VERSION/gosu-$dpkgArch.asc"; \
+	\
+# verify the signature
+	export GNUPGHOME="$(mktemp -d)"; \
+	gpg --batch --keyserver hkps://keys.openpgp.org --recv-keys B42F6819007F00F88E364FD4036A9C25BF357DD4; \
+	gpg --batch --verify /usr/local/bin/gosu.asc /usr/local/bin/gosu; \
+	gpgconf --kill all; \
+	rm -rf "$GNUPGHOME" /usr/local/bin/gosu.asc; \
+	\
+# clean up fetch dependencies
+	apt-mark auto '.*' > /dev/null; \
+	[ -z "$savedAptMark" ] || apt-mark manual $savedAptMark > /dev/null; \
+	apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false; \
+	\
+	chmod +x /usr/local/bin/gosu; \
+# verify that the binary works
+	gosu --version; \
+	gosu nobody true
+
+ENV REDIS_VERSION 6.0-rc1
+ENV REDIS_DOWNLOAD_URL https://github.com/antirez/redis/archive/6.0-rc1.tar.gz
+ENV REDIS_DOWNLOAD_SHA 2676012e2fcfe8d41e594b2ae8a05d0a050d2d84c38a0471ae5fe0143e4b0eca
+
+RUN set -eux; \
+	apt-get update; \
+	apt-get install -y --no-install-recommends libc6-i386; \
+	rm -rf /var/lib/apt/lists/*
+
+RUN set -eux; \
+	\
+	savedAptMark="$(apt-mark showmanual)"; \
+	apt-get update; \
+	apt-get install -y --no-install-recommends \
+		ca-certificates \
+		wget \
+		\
+		gcc \
+		gcc-multilib \
+		libc6-dev-i386 \
+		make \
+	; \
+	rm -rf /var/lib/apt/lists/*; \
+	\
+	wget -O redis.tar.gz "$REDIS_DOWNLOAD_URL"; \
+	echo "$REDIS_DOWNLOAD_SHA *redis.tar.gz" | sha256sum -c -; \
+	mkdir -p /usr/src/redis; \
+	tar -xzf redis.tar.gz -C /usr/src/redis --strip-components=1; \
+	rm redis.tar.gz; \
+	\
+# disable Redis protected mode [1] as it is unnecessary in context of Docker
+# (ports are not automatically exposed when running inside Docker, but rather explicitly by specifying -p / -P)
+# [1]: https://github.com/antirez/redis/commit/edd4d555df57dc84265fdfb4ef59a4678832f6da
+	grep -E '^ *createBoolConfig[(]"protected-mode",.*, *1 *,.*[)],$' /usr/src/redis/src/config.c; \
+	sed -ri 's!^( *createBoolConfig[(]"protected-mode",.*, *)1( *,.*[)],)$!\10\2!' /usr/src/redis/src/config.c; \
+	grep -E '^ *createBoolConfig[(]"protected-mode",.*, *0 *,.*[)],$' /usr/src/redis/src/config.c; \
+# for future reference, we modify this directly in the source instead of just supplying a default configuration flag because apparently "if you specify any argument to redis-server, [it assumes] you are going to specify everything"
+# see also https://github.com/docker-library/redis/issues/4#issuecomment-50780840
+# (more exactly, this makes sure the default behavior of "save on SIGTERM" stays functional by default)
+	\
+	make -C /usr/src/redis -j "$(nproc)" 32bit; \
+	make -C /usr/src/redis install; \
+	\
+# TODO https://github.com/antirez/redis/pull/3494 (deduplicate "redis-server" copies)
+	serverMd5="$(md5sum /usr/local/bin/redis-server | cut -d' ' -f1)"; export serverMd5; \
+	find /usr/local/bin/redis* -maxdepth 0 \
+		-type f -not -name redis-server \
+		-exec sh -eux -c ' \
+			md5="$(md5sum "$1" | cut -d" " -f1)"; \
+			test "$md5" = "$serverMd5"; \
+		' -- '{}' ';' \
+		-exec ln -svfT 'redis-server' '{}' ';' \
+	; \
+	\
+	rm -r /usr/src/redis; \
+	\
+	apt-mark auto '.*' > /dev/null; \
+	[ -z "$savedAptMark" ] || apt-mark manual $savedAptMark > /dev/null; \
+	apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false; \
+	\
+	redis-cli --version; \
+	redis-server --version
+
+RUN mkdir /data && chown redis:redis /data
+VOLUME /data
+WORKDIR /data
+
+COPY docker-entrypoint.sh /usr/local/bin/
+ENTRYPOINT ["docker-entrypoint.sh"]
+
+EXPOSE 6379
+CMD ["redis-server"]
