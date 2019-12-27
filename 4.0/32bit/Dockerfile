@@ -39,14 +39,14 @@ RUN set -eux; \
 	gosu --version; \
 	gosu nobody true
 
-ENV REDIS_VERSION 4.0.14
-ENV REDIS_DOWNLOAD_URL http://download.redis.io/releases/redis-4.0.14.tar.gz
-ENV REDIS_DOWNLOAD_SHA 1e1e18420a86cfb285933123b04a82e1ebda20bfb0a289472745a087587e93a7
-
 RUN set -eux; \
 	apt-get update; \
 	apt-get install -y --no-install-recommends libc6-i386; \
 	rm -rf /var/lib/apt/lists/*
+
+ENV REDIS_VERSION 4.0.14
+ENV REDIS_DOWNLOAD_URL http://download.redis.io/releases/redis-4.0.14.tar.gz
+ENV REDIS_DOWNLOAD_SHA 1e1e18420a86cfb285933123b04a82e1ebda20bfb0a289472745a087587e93a7
 
 RUN set -eux; \
 	\
