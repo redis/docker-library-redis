@@ -1,5 +1,5 @@
-#!/bin/bash
-set -e
+#!/usr/bin/env bash
+set -Eeuo pipefail
 
 cd "$(dirname "$(readlink -f "$BASH_SOURCE")")"
 
@@ -11,7 +11,8 @@ versions=( "${versions[@]%/}" )
 
 packagesUrl='https://raw.githubusercontent.com/antirez/redis-hashes/master/README'
 packages="$(echo "$packagesUrl" | sed -r 's/[^a-zA-Z.-]+/-/g')"
-curl -fsSL "$packagesUrl" > "$packages"
+trap "$(printf 'rm -f %q' "$packages")" EXIT
+curl -fsSL "$packagesUrl" -o "$packages"
 
 travisEnv=
 for version in "${versions[@]}"; do
@@ -47,23 +48,38 @@ for version in "${versions[@]}"; do
 	fi
 	[ "$shaType" = 'sha256' ] || [ "$shaType" = 'sha1' ]
 
-	(
-		set -x
-		sed -ri \
+	echo "$version: $fullVersion"
+
+	for variant in \
+		alpine 32bit '' \
+	; do
+		dir="$version${variant:+/$variant}"
+		[ -d "$dir" ] || continue
+		template="Dockerfile${variant:+-$variant}.template"
+
+		sed -r \
 			-e 's/^(ENV REDIS_VERSION) .*/\1 '"$fullVersion"'/' \
 			-e 's!^(ENV REDIS_DOWNLOAD_URL) .*!\1 '"$downloadUrl"'!' \
 			-e 's/^(ENV REDIS_DOWNLOAD_SHA) .*/\1 '"$shaHash"'/' \
 			-e 's!sha[0-9]+sum!'"$shaType"'sum!g' \
-			"$version"/{,*/}Dockerfile
-	)
-	for variant in alpine 32bit; do
-		[ -d "$version/$variant" ] || continue
+			"$template" > "$dir/Dockerfile"
+
+		case "$version" in
+			4.0 | 5.0)
+				gawk -i inplace '
+					$1 == "##</protected-mode-sed>##" { ia = 0 }
+					!ia { print }
+					$1 == "##<protected-mode-sed>##" { ia = 1; ac = 0 }
+					ia { ac++ }
+					ia && ac == 1 { system("grep -vE \"^#\" old-protected-mode-sed.template") }
+				' "$dir/Dockerfile"
+				;;
+		esac
+		sed -ri -e '/protected-mode-sed/d' "$dir/Dockerfile"
+
 		travisEnv='\n  - VERSION='"$version VARIANT=$variant$travisEnv"
 	done
-	travisEnv='\n  - VERSION='"$version VARIANT=$travisEnv"
 done
 
 travis="$(awk -v 'RS=\n\n' '$1 == "env:" { $0 = "env:'"$travisEnv"'" } { printf "%s%s", $0, RS }' .travis.yml)"
 echo "$travis" > .travis.yml
-
-rm "$packages"
