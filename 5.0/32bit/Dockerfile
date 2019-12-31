@@ -39,11 +39,6 @@ RUN set -eux; \
 	gosu --version; \
 	gosu nobody true
 
-RUN set -eux; \
-	apt-get update; \
-	apt-get install -y --no-install-recommends libc6-i386; \
-	rm -rf /var/lib/apt/lists/*
-
 ENV REDIS_VERSION 5.0.7
 ENV REDIS_DOWNLOAD_URL http://download.redis.io/releases/redis-5.0.7.tar.gz
 ENV REDIS_DOWNLOAD_SHA 61db74eabf6801f057fd24b590232f2f337d422280fd19486eca03be87d3a82b
@@ -57,8 +52,7 @@ RUN set -eux; \
 		wget \
 		\
 		gcc \
-		gcc-multilib \
-		libc6-dev-i386 \
+		libc6-dev-i386 gcc-multilib \
 		make \
 	; \
 	rm -rf /var/lib/apt/lists/*; \
@@ -97,6 +91,14 @@ RUN set -eux; \
 	\
 	apt-mark auto '.*' > /dev/null; \
 	[ -z "$savedAptMark" ] || apt-mark manual $savedAptMark > /dev/null; \
+	find /usr/local -type f -executable -exec ldd '{}' ';' \
+		| awk '/=>/ { print $(NF-1) }' \
+		| sort -u \
+		| xargs -r dpkg-query --search \
+		| cut -d: -f1 \
+		| sort -u \
+		| xargs -r apt-mark manual \
+	; \
 	apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false; \
 	\
 	redis-cli --version; \
