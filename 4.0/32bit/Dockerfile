@@ -39,11 +39,6 @@ RUN set -eux; \
 	gosu --version; \
 	gosu nobody true
 
-RUN set -eux; \
-	apt-get update; \
-	apt-get install -y --no-install-recommends libc6-i386; \
-	rm -rf /var/lib/apt/lists/*
-
 ENV REDIS_VERSION 4.0.14
 ENV REDIS_DOWNLOAD_URL http://download.redis.io/releases/redis-4.0.14.tar.gz
 ENV REDIS_DOWNLOAD_SHA 1e1e18420a86cfb285933123b04a82e1ebda20bfb0a289472745a087587e93a7
@@ -57,8 +52,7 @@ RUN set -eux; \
 		wget \
 		\
 		gcc \
-		gcc-multilib \
-		libc6-dev-i386 \
+		libc6-dev-i386 gcc-multilib \
 		make \
 	; \
 	rm -rf /var/lib/apt/lists/*; \
@@ -97,6 +91,14 @@ RUN set -eux; \
 	\
 	apt-mark auto '.*' > /dev/null; \
 	[ -z "$savedAptMark" ] || apt-mark manual $savedAptMark > /dev/null; \
+	find /usr/local -type f -executable -exec ldd '{}' ';' \
+		| awk '/=>/ { print $(NF-1) }' \
+		| sort -u \
+		| xargs -r dpkg-query --search \
+		| cut -d: -f1 \
+		| sort -u \
+		| xargs -r apt-mark manual \
+	; \
 	apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false; \
 	\
 	redis-cli --version; \
