@@ -3,7 +3,6 @@ services: docker
 
 env:
   - VERSION=6.0-rc VARIANT=
-  - VERSION=6.0-rc VARIANT=32bit
   - VERSION=6.0-rc VARIANT=alpine
   - VERSION=5.0 VARIANT=
   - VERSION=5.0 VARIANT=32bit
