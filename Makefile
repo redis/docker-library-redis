@@ -7,6 +7,8 @@ OS ?= debian:buster-slim
 # OSNICK=buster|stretch|xenial|bionic|centos6|centos7|centos8|fedora30
 OSNICK ?= buster
 
+DOCKER ?= docker
+
 #----------------------------------------------------------------------------------------------
 
 OS.xenial=ubuntu:xenial # 16
@@ -18,12 +20,14 @@ OS.centos7=centos:centos7
 OS.centos8=centos:centos8
 OS.fedora=fedora:30
 OS.fedora30=fedora:30
+OS.rhel7.4=rhel:7.4
 OS=$(OS.$(OSNICK))
 
 UID.centos7=997
 UID.centos8=997
 UID.fedora=989
 UID.fedora30=989
+UID.rhel7.4=800
 ifeq ($(UID.$(OSNICK)),)
 UID=999
 else
@@ -58,7 +62,7 @@ $(eval $(call targets,PUBLISH,publish))
 
 define build_x64
 build_x64:
-	@docker build $(BUILD_OPT) -t $(STEM):$(VERSION)-x64-$(OSNICK) -f 5.0/Dockerfile \
+	@$(DOCKER) build $(BUILD_OPT) -t $(STEM):$(VERSION)-x64-$(OSNICK) -f 5.0/Dockerfile \
 		$(CACHE_ARG) \
 		--build-arg ARCH=x64 \
 		--build-arg OS=$(OS) \
@@ -67,20 +71,20 @@ build_x64:
 		--build-arg REDIS_VER=$(VERSION) \
 		.
 		
-	@docker tag $(STEM):$(VERSION)-x64-$(OSNICK) $(STEM):latest-x64-$(OSNICK)
+	@$(DOCKER) tag $(STEM):$(VERSION)-x64-$(OSNICK) $(STEM):latest-x64-$(OSNICK)
 
 .PHONY: build_x64
 endef
 
 define build_arm # (1=arch)
 build_$(1): 
-	@docker build $(BUILD_OPT) -t $(STEM)-xbuild:$(VERSION)-$(1)-$(OSNICK) -f 5.0/Dockerfile.arm \
+	@$(DOCKER) build $(BUILD_OPT) -t $(STEM)-xbuild:$(VERSION)-$(1)-$(OSNICK) -f 5.0/Dockerfile.arm \
 		--build-arg ARCH=$(1) \
 		--build-arg OSNICK=$(OSNICK) \
 		--build-arg UID=$(UID) \
 		--build-arg REDIS_VER=$(VERSION) \
 		.
-	@docker tag $(STEM)-xbuild:$(VERSION)-$(1)-$(OSNICK) $(STEM)-xbuild:latest-$(1)-$(OSNICK)
+	@$(DOCKER) tag $(STEM)-xbuild:$(VERSION)-$(1)-$(OSNICK) $(STEM)-xbuild:latest-$(1)-$(OSNICK)
 
 .PHONY: build_$(1)
 endef
@@ -89,16 +93,16 @@ endef
 
 define publish_x64
 publish_x64:
-	@docker push $(STEM):$(VERSION)-x64-$(OSNICK)
-	@docker push $(STEM):latest-x64-$(OSNICK)
+	@$(DOCKER) push $(STEM):$(VERSION)-x64-$(OSNICK)
+	@$(DOCKER) push $(STEM):latest-x64-$(OSNICK)
 
 .PHONY: publish_x64
 endef
 
 define publish_arm # (1=arch)
 publish_$(1):
-	@docker push $(STEM)-xbuild:$(VERSION)-$(1)-$(OSNICK)
-	@docker push $(STEM)-xbuild:latest-$(1)-$(OSNICK)
+	@$(DOCKER) push $(STEM)-xbuild:$(VERSION)-$(1)-$(OSNICK)
+	@$(DOCKER) push $(STEM)-xbuild:latest-$(1)-$(OSNICK)
 
 .PHONY: publish_$(1)
 endef
