@@ -39,9 +39,9 @@ RUN set -eux; \
 	gosu --version; \
 	gosu nobody true
 
-ENV REDIS_VERSION 6.0-rc2
-ENV REDIS_DOWNLOAD_URL https://github.com/antirez/redis/archive/6.0-rc2.tar.gz
-ENV REDIS_DOWNLOAD_SHA ac8ac8aae2c143ba972c386f9852ae40b418dbcecab3841bf7f6d4b71fccd7cb
+ENV REDIS_VERSION 6.0-rc3
+ENV REDIS_DOWNLOAD_URL https://github.com/antirez/redis/archive/6.0-rc3.tar.gz
+ENV REDIS_DOWNLOAD_SHA a81f92ed0aeb2ecab1488ce916725da1283fa86c3ff43828430e77ce8e612534
 
 RUN set -eux; \
 	\
