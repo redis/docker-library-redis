@@ -1,6 +1,6 @@
 # BUILD redisfab/redis-${ARCH}-${OSNICK}:${REDIS_VER}
 
-ARG REDIS_VER=5.0.8
+ARG REDIS_VER=6.0-rc3
 
 # OS=debian:buster-slim|debian:stretch-slim|ubuntu:bionic
 ARG OS=debian:buster-slim
@@ -24,7 +24,7 @@ RUN echo "Building Redis v${REDIS_VER} on ${OSNICK} (${OS}) for ${ARCH}"
 
 WORKDIR /build
 ADD deps/ /build/deps/
-ADD 5.0/system-setup.py /build/
+ADD 6.0/system-setup.py /build/
 
 # ENV REDIS_DEPENDS "ca-certificates dirmngr gnupg wget gcc libc6-dev make"
 RUN /build/deps/readies/bin/getpy2
@@ -53,10 +53,10 @@ RUN set -ex; \
 # (ports are not automatically exposed when running inside Docker, but rather explicitly by specifying -p / -P)
 # [1]: https://github.com/antirez/redis/commit/edd4d555df57dc84265fdfb4ef59a4678832f6da
 
-ADD 5.0/redis-5.0.5.patch /usr/src/redis/
+ADD 6.0/redis-6.0.patch /usr/src/redis/
 RUN set -ex ;\
 	cd /usr/src/redis ;\
-	patch -p1 -i redis-5.0.5.patch
+	patch -p1 -i redis-6.0.patch
 
 # For future reference, we modify this directly in the source instead of just supplying a default
 # configuration flag because apparently "if you specify any argument to redis-server, 
@@ -85,7 +85,7 @@ RUN uname -a; cat /etc/os-release
 # regardless of whatever dependencies get added
 RUN groupadd -r -g ${UID} redis && useradd -r -g redis -u ${UID} redis
 
-COPY 5.0/setup.${OSNICK} /usr/local/bin/docker-setup
+COPY 6.0/platforms/setup.${OSNICK} /usr/local/bin/docker-setup
 RUN set -xe ;\
 	chmod +x /usr/local/bin/docker-setup ;\
 	/usr/local/bin/docker-setup ;\
@@ -97,7 +97,7 @@ RUN mkdir /data && chown redis:redis /data
 VOLUME /data
 WORKDIR /data
 
-COPY 5.0/docker-entrypoint.sh /usr/local/bin/
+COPY 6.0/docker-entrypoint.sh /usr/local/bin/
 RUN chmod 755 /usr/local/bin/docker-entrypoint.sh
 
 ENTRYPOINT ["docker-entrypoint.sh"]

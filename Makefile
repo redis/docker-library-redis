@@ -1,20 +1,31 @@
 .NOTPARALLEL:
 
-VERSION ?= 5.0.7
+# 5.0.x|6.0.x|5|6
+VERSION ?= 5.0.8
+# LATEST=1
+# MASTER=1
 
 OS ?= debian:buster-slim
 
 # OSNICK=buster|stretch|xenial|bionic|centos6|centos7|centos8|fedora30
 OSNICK ?= buster
 
-DOCKER ?= docker
+ifeq ($(patsubst 4%,4,$(VERSION)),4)
+MAJOR=6.0
+else ifeq ($(patsubst 5%,5,$(VERSION)),5)
+MAJOR=5.0
+else ifeq ($(patsubst 6%,6,$(VERSION)),6)
+MAJOR=6.0
+else
+$(info Strange Redis version: $(VERSION))
+endif
 
 #----------------------------------------------------------------------------------------------
 
-OS.xenial=ubuntu:xenial # 16
-OS.bionic=ubuntu:bionic # 18
-OS.stretch=debian:stretch-slim # 9
-OS.buster=debian:buster-slim # 10
+OS.xenial=ubuntu:xenial
+OS.bionic=ubuntu:bionic
+OS.stretch=debian:stretch-slim
+OS.buster=debian:buster-slim
 OS.centos6=centos:centos6
 OS.centos7=centos:centos7
 OS.centos8=centos:centos8
@@ -22,6 +33,8 @@ OS.fedora=fedora:30
 OS.fedora30=fedora:30
 OS.rhel7.4=rhel:7.4
 OS=$(OS.$(OSNICK))
+
+#----------------------------------------------------------------------------------------------
 
 UID.centos7=997
 UID.centos8=997
@@ -34,8 +47,12 @@ else
 UID=$(UID.$(OSNICK))
 endif
 
+#----------------------------------------------------------------------------------------------
+
 REPO=redisfab
 STEM=$(REPO)/redis
+
+DOCKER ?= docker
 
 BUILD_OPT=--rm
 # --squash
@@ -62,7 +79,7 @@ $(eval $(call targets,PUBLISH,publish))
 
 define build_x64
 build_x64:
-	@$(DOCKER) build $(BUILD_OPT) -t $(STEM):$(VERSION)-x64-$(OSNICK) -f 5.0/Dockerfile \
+	@$(DOCKER) build $(BUILD_OPT) -t $(STEM):$(VERSION)-x64-$(OSNICK) -f $(MAJOR)/Dockerfile \
 		$(CACHE_ARG) \
 		--build-arg ARCH=x64 \
 		--build-arg OS=$(OS) \
@@ -78,7 +95,7 @@ endef
 
 define build_arm # (1=arch)
 build_$(1): 
-	@$(DOCKER) build $(BUILD_OPT) -t $(STEM)-xbuild:$(VERSION)-$(1)-$(OSNICK) -f 5.0/Dockerfile.arm \
+	@$(DOCKER) build $(BUILD_OPT) -t $(STEM)-xbuild:$(VERSION)-$(1)-$(OSNICK) -f $(MAJOR)/Dockerfile.arm \
 		--build-arg ARCH=$(1) \
 		--build-arg OSNICK=$(OSNICK) \
 		--build-arg UID=$(UID) \
@@ -109,7 +126,13 @@ endef
 
 #----------------------------------------------------------------------------------------------
 
-all: build publish
+all: build publish commons
+
+commons:
+	$(MAKE) $(DO) VERSION=5.0 LATEST=1
+	$(MAKE) $(DO) VERSION=5.0 MASTER=1
+	$(MAKE) $(DO) VERSION=6.0 LATEST=1
+	$(MAKE) $(DO) VERSION=6.0 MASTER=1
 
 build: $(BUILD_TARGETS)
 
@@ -130,13 +153,16 @@ make [build|publish] [X64=1|ARM8=1|ARM7=1] [OSNICK=<nick> | OS=<os>] [VERSION=<v
 
 build    Build image(s)
 publish  Push image(s) to Docker Hub
+commons  Build common versions (with DO="<operations>")
 
 Arguments:
-OS       OS Docker image name (e.g., debian:buster-slim)
-OSNICK   buster|stretch|xenial|bionic|centos6|centos7|centos8|fedora30
-VERSION  Redis version (e.g. $(VERSION))
-TEST=1   Run tests after build
-CACHE=0  Build without cache
+OSNICK           buster|stretch|xenial|bionic|centos6|centos7|centos8|fedora30
+OS               (optional) OS Docker image name (e.g., debian:buster-slim)
+VERSION          Redis version (e.g. $(VERSION))
+MASTER=1         Build sources from master branch ("edge" version)
+LATEST=1         Build the latest version of branch given by VERSION
+TEST=1           Run tests after build
+CACHE=0          Build without cache
 
 
 endef

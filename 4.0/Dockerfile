@@ -46,7 +46,7 @@ ENV REDIS_DOWNLOAD_SHA 1e1e18420a86cfb285933123b04a82e1ebda20bfb0a289472745a0875
 RUN set -eux; \
 	\
 	savedAptMark="$(apt-mark showmanual)"; \
-	apt-get update; \
+	apt-get -qq update; \
 	apt-get install -y --no-install-recommends \
 		ca-certificates \
 		wget \
@@ -73,7 +73,7 @@ RUN set -eux; \
 # see also https://github.com/docker-library/redis/issues/4#issuecomment-50780840
 # (more exactly, this makes sure the default behavior of "save on SIGTERM" stays functional by default)
 	\
-	make -C /usr/src/redis -j "$(nproc)"; \
+	make -C /usr/src/redis -j "$(nproc)" all; \
 	make -C /usr/src/redis install; \
 	\
 # TODO https://github.com/antirez/redis/pull/3494 (deduplicate "redis-server" copies)
@@ -91,6 +91,14 @@ RUN set -eux; \
 	\
 	apt-mark auto '.*' > /dev/null; \
 	[ -z "$savedAptMark" ] || apt-mark manual $savedAptMark > /dev/null; \
+	find /usr/local -type f -executable -exec ldd '{}' ';' \
+		| awk '/=>/ { print $(NF-1) }' \
+		| sort -u \
+		| xargs -r dpkg-query --search \
+		| cut -d: -f1 \
+		| sort -u \
+		| xargs -r apt-mark manual \
+	; \
 	apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false; \
 	\
 	redis-cli --version; \
