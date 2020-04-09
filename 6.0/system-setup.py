@@ -22,6 +22,10 @@ class RedisSetup(paella.Setup):
 
     def redhat_compat(self):
         self.group_install("'Development Tools'")
+        self.install("centos-release-scl")
+        self.install("devtoolset-8")
+        self.run("cp /opt/rh/devtoolset-8/enable /etc/profile.d/scl-devtoolset-8.sh")
+        # self.run("scl enable devtoolset-8 bash")
         self.install("libatomic")
 
     def fedora(self):

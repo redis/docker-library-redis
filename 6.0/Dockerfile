@@ -29,6 +29,7 @@ ADD 6.0/system-setup.py /build/
 # ENV REDIS_DEPENDS "ca-certificates dirmngr gnupg wget gcc libc6-dev make"
 RUN /build/deps/readies/bin/getpy2
 RUN /build/system-setup.py
+RUN gcc --version
 
 ENV GOSU_VERSION 1.11
 RUN set -ex ;\
