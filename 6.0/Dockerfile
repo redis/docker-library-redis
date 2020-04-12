@@ -68,6 +68,9 @@ RUN set -ex ;\
 # note: ARCH may break build if non-empty
 
 RUN set -ex; \
+	if [ -e /opt/rh/devtoolset-8/enable ]; then \
+		source /opt/rh/devtoolset-8/enable ;\
+	fi ;\
 	ARCH= make V=1 -C /usr/src/redis -j $(nproc) all; \
 	make -C /usr/src/redis install
 

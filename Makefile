@@ -20,6 +20,9 @@ else
 $(info Strange Redis version: $(VERSION))
 endif
 
+# latest version on 5.0
+# curl -s "https://api.github.com/repos/antirez/redis/tags" | jq '.[].name'  |cut -d\" -f2|grep "^5\.0"|head -1
+
 #----------------------------------------------------------------------------------------------
 
 OS.xenial=ubuntu:xenial
