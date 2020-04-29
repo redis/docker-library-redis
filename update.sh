@@ -14,7 +14,6 @@ packages="$(echo "$packagesUrl" | sed -r 's/[^a-zA-Z.-]+/-/g')"
 trap "$(printf 'rm -f %q' "$packages")" EXIT
 curl -fsSL "$packagesUrl" -o "$packages"
 
-travisEnv=
 for version in "${versions[@]}"; do
 	rcVersion="${version%-rc}"
 
@@ -94,10 +93,5 @@ for version in "${versions[@]}"; do
 				-e '/BUILD_TLS/d' \
 				"$dir/Dockerfile"
 		fi
-
-		travisEnv='\n  - VERSION='"$version VARIANT=$variant$travisEnv"
 	done
 done
-
-travis="$(awk -v 'RS=\n\n' '$1 == "env:" { $0 = "env:'"$travisEnv"'" } { printf "%s%s", $0, RS }' .travis.yml)"
-echo "$travis" > .travis.yml
