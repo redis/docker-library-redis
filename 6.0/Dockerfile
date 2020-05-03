@@ -1,6 +1,6 @@
 # BUILD redisfab/redis-${ARCH}-${OSNICK}:${REDIS_VER}
 
-ARG REDIS_VER=6.0-rc3
+ARG REDIS_VER=6.0.1
 
 # OS=debian:buster-slim|debian:stretch-slim|ubuntu:bionic
 ARG OS=debian:buster-slim
