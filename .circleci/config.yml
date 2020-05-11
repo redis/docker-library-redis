@@ -1,0 +1,54 @@
+version: 2.1
+
+jobs:
+  build:
+    docker:
+      - image: 'debian:buster'
+    steps:
+      - run:
+          name: Setup executor
+          command: |
+            apt-get -qq update
+            apt-get -q install -y git openssh-client curl ca-certificates make tar gzip
+            bash <(curl -fsSL https://get.docker.com)
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Setup
+          command: |
+            git submodule update --init --recursive
+            ./deps/readies/bin/getpy2
+            # echo "$DOCKER_REDISFAB_PWD" | docker login --username redisfab --password-stdin
+            docker login --username redisfab --password "$DOCKER_REDISFAB_PWD"
+      - run:
+          name: Build debian:buster
+          command: make build publish X64=1 OSNICK=buster STD_VERSIONS=1
+          no_output_timeout: 30m
+      - run:
+          name: Build centos7
+          command: make build publish X64=1 OSNICK=centos7 STD_VERSIONS=1
+          no_output_timeout: 30m
+      - run:
+          name: Build ubuntu:bionic
+          command: make build publish X64=1 OSNICK=bionic STD_VERSIONS=1
+          no_output_timeout: 30m
+
+workflows:
+  version: 2
+  build_all:
+    jobs:
+      - build:
+          filters:
+            tags:
+              only: /.*/
+  weekly:
+    triggers:
+      - schedule:
+          # Run on Sundat 21:17 [M H DoM M DoW]
+          cron: "21 17 * * 0"
+          filters:
+             branches:
+               only:
+                 - master
+    jobs:
+      - build

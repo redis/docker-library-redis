@@ -18,7 +18,7 @@ class RedisSetup(paella.Setup):
         self.install_downloaders()
 
     def debian_compat(self):
-        self.install("build-essential")
+        self.install("build-essential libssl-dev")
 
     def redhat_compat(self):
         self.group_install("'Development Tools'")
@@ -26,16 +26,17 @@ class RedisSetup(paella.Setup):
         self.install("devtoolset-8")
         self.run("cp /opt/rh/devtoolset-8/enable /etc/profile.d/scl-devtoolset-8.sh")
         # self.run("scl enable devtoolset-8 bash")
-        self.install("libatomic")
+        self.install("libatomic openssl-devel")
 
     def fedora(self):
         self.group_install("'Development Tools'")
-        self.install("libatomic")
+        self.install("libatomic openssl-devel")
 
     def macosx(self):
         r, w, e = popen2.popen3('xcode-select -p')
         if r.readlines() == []:
             fatal("Xcode tools are not installed. Please run xcode-select --install.")
+        self.install("openssl")
 
     def common_last(self):
         self.install("dirmngr gnupg patch pkg-config")

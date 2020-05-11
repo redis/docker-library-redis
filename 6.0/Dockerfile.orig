@@ -5,43 +5,30 @@ RUN groupadd -r -g 999 redis && useradd -r -g redis -u 999 redis
 
 # grab gosu for easy step-down from root
 # https://github.com/tianon/gosu/releases
-ENV GOSU_VERSION 1.11
+ENV GOSU_VERSION 1.12
 RUN set -eux; \
-# save list of currently installed packages for later so we can clean up
 	savedAptMark="$(apt-mark showmanual)"; \
 	apt-get update; \
-	apt-get install -y --no-install-recommends \
-		ca-certificates \
-		dirmngr \
-		gnupg \
-		wget \
-	; \
+	apt-get install -y --no-install-recommends ca-certificates dirmngr gnupg wget; \
 	rm -rf /var/lib/apt/lists/*; \
-	\
 	dpkgArch="$(dpkg --print-architecture | awk -F- '{ print $NF }')"; \
 	wget -O /usr/local/bin/gosu "https://github.com/tianon/gosu/releases/download/$GOSU_VERSION/gosu-$dpkgArch"; \
 	wget -O /usr/local/bin/gosu.asc "https://github.com/tianon/gosu/releases/download/$GOSU_VERSION/gosu-$dpkgArch.asc"; \
-	\
-# verify the signature
 	export GNUPGHOME="$(mktemp -d)"; \
 	gpg --batch --keyserver hkps://keys.openpgp.org --recv-keys B42F6819007F00F88E364FD4036A9C25BF357DD4; \
 	gpg --batch --verify /usr/local/bin/gosu.asc /usr/local/bin/gosu; \
 	gpgconf --kill all; \
 	rm -rf "$GNUPGHOME" /usr/local/bin/gosu.asc; \
-	\
-# clean up fetch dependencies
 	apt-mark auto '.*' > /dev/null; \
 	[ -z "$savedAptMark" ] || apt-mark manual $savedAptMark > /dev/null; \
 	apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false; \
-	\
 	chmod +x /usr/local/bin/gosu; \
-# verify that the binary works
 	gosu --version; \
 	gosu nobody true
 
-ENV REDIS_VERSION 6.0-rc3
-ENV REDIS_DOWNLOAD_URL https://github.com/antirez/redis/archive/6.0-rc3.tar.gz
-ENV REDIS_DOWNLOAD_SHA a81f92ed0aeb2ecab1488ce916725da1283fa86c3ff43828430e77ce8e612534
+ENV REDIS_VERSION 6.0.1
+ENV REDIS_DOWNLOAD_URL http://download.redis.io/releases/redis-6.0.1.tar.gz
+ENV REDIS_DOWNLOAD_SHA b8756e430479edc162ba9c44dc89ac394316cd482f2dc6b91bcd5fe12593f273
 
 RUN set -eux; \
 	\

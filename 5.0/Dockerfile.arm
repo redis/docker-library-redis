@@ -1,6 +1,6 @@
-# BUILD redisfab/redis-${ARCH}-${OSNICK}-xbuild:${REDIS_VER}
+# BUILD redisfab/redis-xbuild:${REDIS_VER}-${ARCH}-${OSNICK}
 
-ARG REDIS_VER=5.0.8
+ARG REDIS_VER=5.0.9
 
 # OS=debian:buster-slim|debian:stretch-slim|ubuntu:bionic
 ARG OS=debian:buster-slim
@@ -10,6 +10,8 @@ ARG OSNICK=buster
 
 # ARCH=arm32v7|arm64v8
 ARG ARCH=arm64v8
+
+ARG UID=999
 
 #----------------------------------------------------------------------------------------------
 FROM redisfab/${ARCH}-xbuild:${OSNICK} as builder
@@ -32,6 +34,7 @@ ADD 5.0/system-setup.py /build/
 # ENV REDIS_DEPENDS "ca-certificates dirmngr gnupg wget gcc libc6-dev make"
 RUN /build/deps/readies/bin/getpy2
 RUN /build/system-setup.py
+RUN gcc --version
 
 ENV GOSU_VERSION 1.11
 RUN set -ex ;\

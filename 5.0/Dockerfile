@@ -1,6 +1,6 @@
-# BUILD redisfab/redis-${ARCH}-${OSNICK}:${REDIS_VER}
+# BUILD redisfab/redis:${REDIS_VER}-${ARCH}-${OSNICK}
 
-ARG REDIS_VER=5.0.8
+ARG REDIS_VER=5.0.9
 
 # OS=debian:buster-slim|debian:stretch-slim|ubuntu:bionic
 ARG OS=debian:buster-slim
@@ -21,6 +21,7 @@ ARG OS
 ARG OSNICK
 ARG ARCH
 RUN echo "Building Redis v${REDIS_VER} on ${OSNICK} (${OS}) for ${ARCH}"
+RUN uname -a; cat /etc/os-release
 
 WORKDIR /build
 ADD deps/ /build/deps/
@@ -30,7 +31,7 @@ ADD 5.0/system-setup.py /build/
 RUN /build/deps/readies/bin/getpy2
 RUN /build/system-setup.py
 
-ENV GOSU_VERSION 1.11
+ENV GOSU_VERSION 1.12
 RUN set -ex ;\
 	/build/deps/readies/bin/getgosu ;\
 	gosu --version; \
