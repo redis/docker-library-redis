@@ -18,7 +18,6 @@ jobs:
           command: |
             git submodule update --init --recursive
             ./deps/readies/bin/getpy2
-            # echo "$DOCKER_REDISFAB_PWD" | docker login --username redisfab --password-stdin
             docker login --username redisfab --password "$DOCKER_REDISFAB_PWD"
       - run:
           name: Build debian:buster
