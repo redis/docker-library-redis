@@ -36,7 +36,7 @@ RUN /build/deps/readies/bin/getpy2
 RUN /build/system-setup.py
 RUN gcc --version
 
-ENV GOSU_VERSION 1.11
+ENV GOSU_VERSION 1.12
 RUN set -ex ;\
 	/build/deps/readies/bin/getgosu ;\
 	gosu --version; \
@@ -91,15 +91,11 @@ ARG UID
 RUN echo "Building redisfab/redis-${ARCH}-${OSNICK}:${REDIS_VER} UID=${UID}"
 RUN uname -a; cat /etc/os-release
 
-RUN set -ex; \
-	apt-get -qq update; \
-	apt-get -qq install -y --no-install-recommends libatomic1
-
 # Add our user and group first to make sure their IDs get assigned consistently, 
 # regardless of whatever dependencies get added
 RUN groupadd -r -g ${UID} redis && useradd -r -g redis -u ${UID} redis
 
-COPY 5.0/setup.${OSNICK} /usr/local/bin/docker-setup
+COPY 5.0/platforms/setup.${OSNICK} /usr/local/bin/docker-setup
 RUN set -xe ;\
 	chmod +x /usr/local/bin/docker-setup ;\
 	/usr/local/bin/docker-setup ;\

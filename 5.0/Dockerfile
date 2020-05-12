@@ -30,6 +30,7 @@ ADD 5.0/system-setup.py /build/
 # ENV REDIS_DEPENDS "ca-certificates dirmngr gnupg wget gcc libc6-dev make"
 RUN /build/deps/readies/bin/getpy2
 RUN /build/system-setup.py
+RUN gcc --version
 
 ENV GOSU_VERSION 1.12
 RUN set -ex ;\
@@ -86,7 +87,7 @@ RUN uname -a; cat /etc/os-release
 # regardless of whatever dependencies get added
 RUN groupadd -r -g ${UID} redis && useradd -r -g redis -u ${UID} redis
 
-COPY 5.0/setup.${OSNICK} /usr/local/bin/docker-setup
+COPY 5.0/platforms/setup.${OSNICK} /usr/local/bin/docker-setup
 RUN set -xe ;\
 	chmod +x /usr/local/bin/docker-setup ;\
 	/usr/local/bin/docker-setup ;\
