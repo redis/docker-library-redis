@@ -1,8 +1,8 @@
 FROM alpine:3.12
 
 # add our user and group first to make sure their IDs get assigned consistently, regardless of whatever dependencies get added
-RUN addgroup -S -g 1000 redis && adduser -S -G redis -u 999 redis
-# alpine already has a gid 999, so we'll use the next id
+RUN addgroup -S -g 998 redis && adduser -S -G redis -u 999 redis
+# alpine already has a gid 999, so we'll use the previous id
 
 RUN apk add --no-cache \
 # grab su-exec for easy step-down from root
