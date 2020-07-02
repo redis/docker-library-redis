@@ -1,7 +1,7 @@
 .NOTPARALLEL:
 
 # 5.0.x|6.0.x|5|6
-VERSION ?= 6.0.1
+VERSION ?= 6.0.5
 # LATEST=1
 # MASTER=1
 
