@@ -5,7 +5,12 @@ import os
 import popen2
 import argparse
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "deps/readies"))
+HERE=os.path.dirname(__file__)
+if os.path.exists(os.path.join(HERE, "deps/readies")):
+    # true within docker
+    sys.path.insert(0, os.path.join(HERE, "deps/readies"))
+else:
+    sys.path.insert(0, os.path.join(HERE, "../deps/readies"))
 import paella
 
 #----------------------------------------------------------------------------------------------
@@ -19,6 +24,10 @@ class RedisSetup(paella.Setup):
 
     def debian_compat(self):
         self.install("build-essential libssl-dev")
+        if self.osnick == 'trusty':
+            self.add_repo("ppa:ubuntu-toolchain-r/test")
+            self.install("gcc-7 g++-7")
+            self.run("update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-7 60 --slave /usr/bin/g++ g++ /usr/bin/g++-7")
 
     def redhat_compat(self):
         self.group_install("'Development Tools'")

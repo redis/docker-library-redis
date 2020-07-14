@@ -7,7 +7,7 @@ VERSION ?= 6.0.5
 
 OS ?= debian:buster-slim
 
-# OSNICK=buster|stretch|xenial|bionic|centos6|centos7|centos8|fedora30
+# OSNICK=buster|stretch|trusty|xenial|bionic|centos6|centos7|centos8|fedora30
 OSNICK ?= buster
 
 ifeq ($(patsubst 4%,4,$(VERSION)),4)
@@ -25,6 +25,7 @@ endif
 
 #----------------------------------------------------------------------------------------------
 
+OS.trusty=ubuntu:trusty
 OS.xenial=ubuntu:xenial
 OS.bionic=ubuntu:bionic
 OS.stretch=debian:stretch-slim

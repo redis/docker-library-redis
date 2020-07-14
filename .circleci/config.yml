@@ -31,6 +31,14 @@ jobs:
           name: Build ubuntu:bionic
           command: make build publish X64=1 OSNICK=bionic STD_VERSIONS=1
           no_output_timeout: 30m
+      - run:
+          name: Build ubuntu:xenial
+          command: make build publish X64=1 OSNICK=xenial STD_VERSIONS=1
+          no_output_timeout: 30m
+      - run:
+          name: Build ubuntu:trusty
+          command: make build publish X64=1 OSNICK=trusty STD_VERSIONS=1
+          no_output_timeout: 30m
 
 workflows:
   version: 2
