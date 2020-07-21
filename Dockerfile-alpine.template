@@ -23,6 +23,11 @@ RUN set -eux; \
 		make \
 		musl-dev \
 		openssl-dev \
+# install real "wget" to avoid:
+#   + wget -O redis.tar.gz http://download.redis.io/releases/redis-6.0.6.tar.gz
+#   Connecting to download.redis.io (45.60.121.1:80)
+#   wget: bad header line:     XxhODalH: btu; path=/; Max-Age=900
+		wget \
 	; \
 	\
 	wget -O redis.tar.gz "$REDIS_DOWNLOAD_URL"; \
