@@ -10,9 +10,9 @@ RUN apk add --no-cache \
 # add tzdata for https://github.com/docker-library/redis/issues/138
 		tzdata
 
-ENV REDIS_VERSION 6.0.5
-ENV REDIS_DOWNLOAD_URL http://download.redis.io/releases/redis-6.0.5.tar.gz
-ENV REDIS_DOWNLOAD_SHA 42cf86a114d2a451b898fcda96acd4d01062a7dbaaad2801d9164a36f898f596
+ENV REDIS_VERSION 6.0.6
+ENV REDIS_DOWNLOAD_URL http://download.redis.io/releases/redis-6.0.6.tar.gz
+ENV REDIS_DOWNLOAD_SHA 12ad49b163af5ef39466e8d2f7d212a58172116e5b441eebecb4e6ca22363d94
 
 RUN set -eux; \
 	\
@@ -23,6 +23,11 @@ RUN set -eux; \
 		make \
 		musl-dev \
 		openssl-dev \
+# install real "wget" to avoid:
+#   + wget -O redis.tar.gz http://download.redis.io/releases/redis-6.0.6.tar.gz
+#   Connecting to download.redis.io (45.60.121.1:80)
+#   wget: bad header line:     XxhODalH: btu; path=/; Max-Age=900
+		wget \
 	; \
 	\
 	wget -O redis.tar.gz "$REDIS_DOWNLOAD_URL"; \
