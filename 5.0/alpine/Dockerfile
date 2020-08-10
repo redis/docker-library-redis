@@ -38,7 +38,7 @@ RUN set -eux; \
 	\
 # disable Redis protected mode [1] as it is unnecessary in context of Docker
 # (ports are not automatically exposed when running inside Docker, but rather explicitly by specifying -p / -P)
-# [1]: https://github.com/antirez/redis/commit/edd4d555df57dc84265fdfb4ef59a4678832f6da
+# [1]: https://github.com/redis/redis/commit/edd4d555df57dc84265fdfb4ef59a4678832f6da
 	grep -q '^#define CONFIG_DEFAULT_PROTECTED_MODE 1$' /usr/src/redis/src/server.h; \
 	sed -ri 's!^(#define CONFIG_DEFAULT_PROTECTED_MODE) 1$!\1 0!' /usr/src/redis/src/server.h; \
 	grep -q '^#define CONFIG_DEFAULT_PROTECTED_MODE 0$' /usr/src/redis/src/server.h; \
@@ -49,7 +49,7 @@ RUN set -eux; \
 	make -C /usr/src/redis -j "$(nproc)" all; \
 	make -C /usr/src/redis install; \
 	\
-# TODO https://github.com/antirez/redis/pull/3494 (deduplicate "redis-server" copies)
+# TODO https://github.com/redis/redis/pull/3494 (deduplicate "redis-server" copies)
 	serverMd5="$(md5sum /usr/local/bin/redis-server | cut -d' ' -f1)"; export serverMd5; \
 	find /usr/local/bin/redis* -maxdepth 0 \
 		-type f -not -name redis-server \
