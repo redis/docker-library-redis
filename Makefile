@@ -1,7 +1,7 @@
 .NOTPARALLEL:
 
 # 5.0.x|6.0.x|5|6
-VERSION ?= 6.0.7
+VERSION ?= 6.0.9
 # LATEST=1
 # MASTER=1
 
@@ -22,6 +22,14 @@ endif
 
 # latest version on 5.0
 # curl -s "https://api.github.com/repos/antirez/redis/tags" | jq '.[].name'  |cut -d\" -f2|grep "^5\.0"|head -1
+
+ARCH:=$(shell ./deps/readies/bin/platform --arch)
+$(info ARCH=$(ARCH))
+ifneq ($(ARCH),x64)
+ifeq ($(CROSS),1)
+$(error Cannot cross-build on ARM)
+endif
+endif
 
 #----------------------------------------------------------------------------------------------
 
@@ -67,35 +75,46 @@ endif
 
 #----------------------------------------------------------------------------------------------
 
+ifneq ($(CROSS),1)
+
 define targets # (1=OP, 2=op)
 $(1)_TARGETS :=
-$(1)_TARGETS += $(if $(findstring $(X64),1),$(2)_x64)
+$(1)_TARGETS += $(2)_native
+endef
+
+else # cross
+
+define targets # (1=OP, 2=op)
+$(1)_TARGETS :=
+$(1)_TARGETS += $(if $(findstring $(X64),1),$(2)_native)
 $(1)_TARGETS += $(if $(findstring $(ARM7),1),$(2)_arm32v7)
 $(1)_TARGETS += $(if $(findstring $(ARM8),1),$(2)_arm64v8)
 
 $(1)_TARGETS += $$(if $$(strip $$($(1)_TARGETS)),,$(2)_arm32v7 $(2)_arm64v8)
 endef
 
+endif # cross
+
 $(eval $(call targets,BUILD,build))
 $(eval $(call targets,PUBLISH,publish))
 
 #----------------------------------------------------------------------------------------------
 
-define build_x64
-build_x64:
+define build_native
+build_native:
 	@$(DOCKER) pull $(OS)
-	@$(DOCKER) build $(BUILD_OPT) -t $(STEM):$(VERSION)-x64-$(OSNICK) -f $(MAJOR)/Dockerfile \
+	@$(DOCKER) build $(BUILD_OPT) -t $(STEM):$(VERSION)-$(ARCH)-$(OSNICK) -f $(MAJOR)/Dockerfile \
 		$(CACHE_ARG) \
-		--build-arg ARCH=x64 \
+		--build-arg ARCH=$(ARCH) \
 		--build-arg OS=$(OS) \
 		--build-arg OSNICK=$(OSNICK) \
 		--build-arg UID=$(UID) \
 		--build-arg REDIS_VER=$(VERSION) \
 		.
 		
-	@$(DOCKER) tag $(STEM):$(VERSION)-x64-$(OSNICK) $(STEM):$(MAJOR)-latest-x64-$(OSNICK)
+	@$(DOCKER) tag $(STEM):$(VERSION)-$(ARCH)-$(OSNICK) $(STEM):$(MAJOR)-latest-$(ARCH)-$(OSNICK)
 
-.PHONY: build_x64
+.PHONY: build_native
 endef
 
 define build_arm # (1=arch)
@@ -113,12 +132,12 @@ endef
 
 #----------------------------------------------------------------------------------------------
 
-define publish_x64
-publish_x64:
-	@$(DOCKER) push $(STEM):$(VERSION)-x64-$(OSNICK)
-	@$(DOCKER) push $(STEM):$(MAJOR)-latest-x64-$(OSNICK)
+define publish_native
+publish_native:
+	@$(DOCKER) push $(STEM):$(VERSION)-$(ARCH)-$(OSNICK)
+	@$(DOCKER) push $(STEM):$(MAJOR)-latest-$(ARCH)-$(OSNICK)
 
-.PHONY: publish_x64
+.PHONY: publish_native
 endef
 
 define publish_arm # (1=arch)
@@ -141,26 +160,31 @@ commons:
 
 build: $(BUILD_TARGETS)
 
-$(eval $(call build_x64))
+$(eval $(call build_native))
+ifeq ($(CROSS),1)
 $(eval $(call build_arm,arm64v8))
 $(eval $(call build_arm,arm32v7))
+endif
 
 publish: $(PUBLISH_TARGETS)
 
-$(eval $(call publish_x64))
+$(eval $(call publish_native))
+ifeq ($(CROSS),1)
 $(eval $(call publish_arm,arm64v8))
 $(eval $(call publish_arm,arm32v7))
+endif
 
 #----------------------------------------------------------------------------------------------
 
 define HELP
-make [build|publish] [X64=1|ARM8=1|ARM7=1] [OSNICK=<nick> | OS=<os>] [VERSION=<ver>] [ARGS...]
+make [build|publish] [CROSS=1] [X64=1|ARM8=1|ARM7=1] [OSNICK=<nick> | OS=<os>] [VERSION=<ver>] [ARGS...]
 
 build    Build image(s)
 publish  Push image(s) to Docker Hub
 commons  Build common versions (with DO="<operations>")
 
 Arguments:
+CROSS=1          Perform cross-platform builds (typically, ARM7/8 on x64)
 OSNICK           buster|stretch|xenial|bionic|centos6|centos7|centos8|fedora30
 OS               (optional) OS Docker image name (e.g., debian:buster-slim)
 VERSION          Redis version (e.g. $(VERSION))
