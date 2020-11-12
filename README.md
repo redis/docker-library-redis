@@ -1,4 +1,4 @@
-[![CircleCI](https://circleci.com/gh/RedisGears/RedisGears/tree/master.svg?style=svg)](https://circleci.com/gh/RedisGears/RedisGears/tree/master)
+[![CircleCI](https://circleci.com/gh/RedisLabsModules/redis-docker/tree/master.svg?style=svg)](https://circleci.com/gh/RedisLabsModules/redis-docker/tree/master)
 
 # Redis Docker container
 
@@ -43,7 +43,7 @@ CACHE=0          Build without cache
 ### Building on x64 (native/cross builds)
 When building on x64, it's possible to build images for x64 (natively), arm64v8 and arm32v7 (via cross-build).
 
-A typical build/publish sessions:
+A typical build/publish session:
 
 ```
 $ make build publish CROSS=1 OSNICK=bionic VERSION=6.0.9
