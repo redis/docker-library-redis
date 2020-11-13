@@ -24,11 +24,11 @@ endif
 # curl -s "https://api.github.com/repos/antirez/redis/tags" | jq '.[].name'  |cut -d\" -f2|grep "^5\.0"|head -1
 
 ARCH:=$(shell ./deps/readies/bin/platform --arch)
-$(info ARCH=$(ARCH))
-ifneq ($(ARCH),x64)
-ifeq ($(CROSS),1)
+
+ifeq ($(ARCH),x64)
+CROSS ?= 1
+else ifeq ($(CROSS),1)
 $(error Cannot cross-build on ARM)
-endif
 endif
 
 #----------------------------------------------------------------------------------------------
