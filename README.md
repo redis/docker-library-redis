@@ -1,4 +1,5 @@
 [![CircleCI](https://circleci.com/gh/RedisLabsModules/redis-docker/tree/master.svg?style=svg)](https://circleci.com/gh/RedisLabsModules/redis-docker/tree/master)
+[![Dockerhub](https://img.shields.io/badge/dockerhub-tags-blue)](https://hub.docker.com/r/redisfab/redis/tags/) 
 
 # Redis Docker container
 
