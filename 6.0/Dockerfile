@@ -24,8 +24,11 @@ RUN echo "Building Redis v${REDIS_VER} on ${OSNICK} (${OS}) for ${ARCH}"
 RUN uname -a; cat /etc/os-release
 
 WORKDIR /build
+
 ADD deps/ /build/deps/
 ADD 6.0/system-setup.py /build/
+ADD 6.0/*.patch /build/
+ADD 6.0/build-fix-* /build/
 
 # ENV REDIS_DEPENDS "ca-certificates dirmngr gnupg wget gcc libc6-dev make"
 RUN /build/deps/readies/bin/getpy2
@@ -39,9 +42,9 @@ RUN set -ex ;\
 	gosu nobody true
 
 ENV REDIS_VERSION ${REDIS_VER}
-ENV REDIS_DOWNLOAD_URL https://github.com/antirez/redis/archive/${REDIS_VER}.tar.gz
+ENV REDIS_DOWNLOAD_URL https://github.com/redis/redis/archive/${REDIS_VER}.tar.gz
 # ENV REDIS_DOWNLOAD_URL http://download.redis.io/releases/redis-${REDIS_VER}.tar.gz
-ENV REDIS_DOWNLOAD_SHA 2139009799d21d8ff94fc40b7f36ac46699b9e1254086299f8d3b223ca54a375
+ENV REDIS_DOWNLOAD_SHA dc2bdcf81c620e9f09cfd12e85d3bc631c897b2db7a55218fd8a65eaa37f86dd
 
 # for redis-sentinel see: http://redis.io/topics/sentinel
 RUN set -ex; \
@@ -49,25 +52,10 @@ RUN set -ex; \
 	mkdir -p /usr/src/redis; \
 	tar -xzf redis.tar.gz -C /usr/src/redis --strip-components=1
 
-#	echo "$REDIS_DOWNLOAD_SHA *redis.tar.gz" | sha256sum -c -;
-
-# Disable Redis protected mode [1] as it is unnecessary in context of Docker
-# (ports are not automatically exposed when running inside Docker, but rather explicitly by specifying -p / -P)
-# [1]: https://github.com/antirez/redis/commit/edd4d555df57dc84265fdfb4ef59a4678832f6da
-
-ADD 6.0/redis-6.0.patch /usr/src/redis/
-RUN set -ex ;\
-	cd /usr/src/redis ;\
-	patch -p1 -i redis-6.0.patch
-
-# For future reference, we modify this directly in the source instead of just supplying a default
-# configuration flag because apparently "if you specify any argument to redis-server, 
-# [it assumes] you are going to specify everything".
-# See also https://github.com/docker-library/redis/issues/4#issuecomment-50780840
-# (more exactly, this makes sure the default behavior of "save on SIGTERM" stays functional by default)
+RUN ./build-fix-1
+RUN ./build-fix-2
 
 # note: ARCH may break build if non-empty
-
 RUN set -ex; \
 	if [ -e /opt/rh/devtoolset-8/enable ]; then \
 		source /opt/rh/devtoolset-8/enable ;\
@@ -93,9 +81,9 @@ RUN groupadd -r -g ${UID} redis && useradd -r -g redis -u ${UID} redis
 
 COPY 6.0/platforms/setup.${OSNICK} /usr/local/bin/docker-setup
 RUN set -xe ;\
-	chmod +x /usr/local/bin/docker-setup ;\
-	/usr/local/bin/docker-setup ;\
-	rm /usr/local/bin/docker-setup
+    chmod +x /usr/local/bin/docker-setup ;\
+    /usr/local/bin/docker-setup ;\
+    rm /usr/local/bin/docker-setup
 
 COPY --from=builder /usr/local/ /usr/local/
 

@@ -36,6 +36,7 @@ endif
 OS.trusty=ubuntu:trusty
 OS.xenial=ubuntu:xenial
 OS.bionic=ubuntu:bionic
+OS.focal=ubuntu:focal
 OS.stretch=debian:stretch-slim
 OS.buster=debian:buster-slim
 OS.centos6=centos:6

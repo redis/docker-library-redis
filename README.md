@@ -1,5 +1,6 @@
 [![CircleCI](https://circleci.com/gh/RedisLabsModules/redis-docker/tree/master.svg?style=svg)](https://circleci.com/gh/RedisLabsModules/redis-docker/tree/master)
-[![Dockerhub](https://img.shields.io/badge/dockerhub-tags-blue)](https://hub.docker.com/r/redisfab/redis/tags/) 
+[![Dockerhub](https://img.shields.io/badge/dockerhub-redisfab%2Fredis-blue)](https://hub.docker.com/r/redisfab/redis/tags/) 
+[![Dockerhub](https://img.shields.io/badge/dockerhub-redisfab%2Fredis--xbuild-blue)](https://hub.docker.com/r/redisfab/redis-xbuild/tags/) 
 
 # Redis Docker container
 
@@ -44,11 +45,21 @@ CACHE=0          Build without cache
 ### Building on x64 (native/cross builds)
 When building on x64, it's possible to build images for x64 (natively), arm64v8 and arm32v7 (via cross-build).
 
-A typical build/publish session:
+#### Typical build/publish sessions:
 
+From a x64 system, build `redis:6.0.9-x64-bionic`, `redis-xbuild:6.0.9-arm64x8-bionic`, `redis-xbuild:6.0.9-arm32x7-bionic`:
 ```
-$ make build publish CROSS=1 OSNICK=bionic VERSION=6.0.9
+$ make build CROSS=1 OSNICK=bionic VERSION=6.0.9
 ```
+From a x64 system, build `redis:6.0.9-x64-bionic`:
+```
+$ make build X64=1 OSNICK=bionic VERSION=6.0.9
+```
+From an arm64v8 (aarch64) system, build `redis:6.0.9-arm64v8-bionic`:
+```
+$ make build OSNICK=bionic VERSION=6.0.9
+```
+
 
 ### Native builds
 
