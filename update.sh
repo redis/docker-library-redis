@@ -74,7 +74,7 @@ for version in "${versions[@]}"; do
 		fi
 
 		case "$version" in
-			4.0 | 5.0)
+			5)
 				gawk -i inplace '
 					$1 == "##</protected-mode-sed>##" { ia = 0 }
 					!ia { print }
@@ -87,7 +87,7 @@ for version in "${versions[@]}"; do
 		sed -ri -e '/protected-mode-sed/d' "$dir/Dockerfile"
 
 		# TLS support was added in 6.0, and we can't link 32bit Redis against 64bit OpenSSL (and it isn't worth going to a full foreign architecture -- just use i386/redis instead)
-		if [ "$version" = '4.0' ] || [ "$version" = '5.0' ] || [ "$variant" = '32bit' ]; then
+		if [ "$version" = '4.0' ] || [ "$version" = '5' ] || [ "$variant" = '32bit' ]; then
 			sed -ri \
 				-e '/libssl/d' \
 				-e '/BUILD_TLS/d' \
