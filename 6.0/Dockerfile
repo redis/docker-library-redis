@@ -1,6 +1,6 @@
 # BUILD redisfab/redis:${REDIS_VER}-${ARCH}-${OSNICK}
 
-ARG REDIS_VER=6.0.9
+ARG REDIS_VER=6.0.10
 
 # OS=debian:buster-slim|debian:stretch-slim|ubuntu:bionic
 ARG OS=debian:buster-slim
@@ -31,7 +31,7 @@ ADD 6.0/*.patch /build/
 ADD 6.0/build-fix-* /build/
 
 # ENV REDIS_DEPENDS "ca-certificates dirmngr gnupg wget gcc libc6-dev make"
-RUN /build/deps/readies/bin/getpy2
+RUN /build/deps/readies/bin/getpy3
 RUN /build/system-setup.py
 RUN gcc --version
 
@@ -57,8 +57,8 @@ RUN ./build-fix-2
 
 # note: ARCH may break build if non-empty
 RUN set -ex; \
-	if [ -e /opt/rh/devtoolset-8/enable ]; then \
-		source /opt/rh/devtoolset-8/enable ;\
+	if [ -e /opt/rh/devtoolset-9/enable ]; then \
+		source /opt/rh/devtoolset-9/enable ;\
 	fi ;\
 	export BUILD_TLS=yes; \
 	ARCH= make V=1 -C /usr/src/redis -j $(nproc) all; \

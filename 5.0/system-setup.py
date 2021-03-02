@@ -1,11 +1,15 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 
 import sys
 import os
-import popen2
 import argparse
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "deps/readies"))
+HERE=os.path.dirname(__file__)
+READIES = os.path.join(HERE, "deps/readies")
+if not os.path.exists(READIES):
+    # not in docker
+    READIES = os.path.join(HERE, "../deps/readies")
+sys.path.insert(0, READIES)
 import paella
 
 #----------------------------------------------------------------------------------------------
@@ -28,10 +32,8 @@ class RedisSetup(paella.Setup):
         self.group_install("'Development Tools'")
         self.install("libatomic")
 
-    def macosx(self):
-        r, w, e = popen2.popen3('xcode-select -p')
-        if r.readlines() == []:
-            fatal("Xcode tools are not installed. Please run xcode-select --install.")
+    def macos(self):
+        self.install("openssl")
 
     def common_last(self):
         self.install("dirmngr gnupg patch")

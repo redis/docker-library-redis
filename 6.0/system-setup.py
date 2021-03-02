@@ -1,16 +1,15 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 
 import sys
 import os
-import popen2
 import argparse
 
 HERE=os.path.dirname(__file__)
-if os.path.exists(os.path.join(HERE, "deps/readies")):
-    # true within docker
-    sys.path.insert(0, os.path.join(HERE, "deps/readies"))
-else:
-    sys.path.insert(0, os.path.join(HERE, "../deps/readies"))
+READIES = os.path.join(HERE, "deps/readies")
+if not os.path.exists(READIES):
+    # not in docker
+    READIES = os.path.join(HERE, "../deps/readies")
+sys.path.insert(0, READIES)
 import paella
 
 #----------------------------------------------------------------------------------------------
@@ -23,28 +22,21 @@ class RedisSetup(paella.Setup):
         self.install_downloaders()
 
     def debian_compat(self):
-        self.install("build-essential libssl-dev")
         if self.osnick == 'trusty':
-            self.add_repo("ppa:ubuntu-toolchain-r/test")
-            self.install("gcc-7 g++-7")
-            self.run("update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-7 60 --slave /usr/bin/g++ g++ /usr/bin/g++-7")
+            self.run("%s/bin/getgcc --modern" % READIES)
+        else:
+            self.run("%s/bin/getgcc" % READIES)
+        self.install("libssl-dev")
 
     def redhat_compat(self):
-        self.group_install("'Development Tools'")
-        self.install("centos-release-scl")
-        self.install("devtoolset-8")
-        self.run("cp /opt/rh/devtoolset-8/enable /etc/profile.d/scl-devtoolset-8.sh")
-        # self.run("scl enable devtoolset-8 bash")
-        self.install("libatomic openssl-devel")
+        self.run("%s/bin/getgcc --modern" % READIES)
+        self.install("libatomic openssl-devel devtoolset-9-libatomic-devel")
 
     def fedora(self):
-        self.group_install("'Development Tools'")
+        self.run("%s/bin/getgcc" % READIES)
         self.install("libatomic openssl-devel")
 
-    def macosx(self):
-        r, w, e = popen2.popen3('xcode-select -p')
-        if r.readlines() == []:
-            fatal("Xcode tools are not installed. Please run xcode-select --install.")
+    def macos(self):
         self.install("openssl")
 
     def common_last(self):
