@@ -1,0 +1,3 @@
+#!/bin/bash
+
+dnf install -y findutils libatomic openssl-libs

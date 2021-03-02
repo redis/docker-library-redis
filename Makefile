@@ -1,27 +1,70 @@
 .NOTPARALLEL:
 
-# 5.0.x|6.0.x|5|6
-VERSION ?= 6.0.11
-# LATEST=1
-# MASTER=1
+MAKEFLAGS += --no-builtin-rules  --no-print-directory
 
-OS ?= debian:buster-slim
+ifeq ($(NOP),1)
+override NOP:=echo
+endif
 
-# OSNICK=buster|stretch|trusty|xenial|bionic|centos6|centos7|centos8|fedora30
-OSNICK ?= buster
+ifeq ($(filter help,$(MAKECMDGOALS)),help)
+_HELP:=1
+
+help:
+	$(file >/tmp/help,$(HELP))
+	@cat /tmp/help
+	@rm -f /tmp/help
+endif
+
+#----------------------------------------------------------------------------------------------
+
+STD_MAJORS=6.2 6.0 5.0
+
+ifeq ($(VERSION),)
+ifeq ($(VERSIONS),)
+ifeq ($(STD_VERSIONS),)
+STD_VERSIONS=1
+endif
+endif
+endif
+
+ifeq ($(STD_VERSIONS),1)
+override VERSIONS:=$(foreach V,$(STD_MAJORS),$(shell ./deps/readies/bin/github-lastver -r redis/redis -v $(V)))
+
+$(info VERSIONS=$(VERSIONS))
+endif
+
+ifneq ($(VERSIONS),)
+
+ifeq ($(word 2,$(VERSIONS)),)
+override VERSION:=$(VERSIONS)
+override VERSIONS:=
+else
+VERSIONS += $(VERSION)
+override VERSION:=
+endif
+
+else # ! VERSIONS
 
 ifeq ($(patsubst 4%,4,$(VERSION)),4)
 MAJOR=6.0
 else ifeq ($(patsubst 5%,5,$(VERSION)),5)
 MAJOR=5.0
-else ifeq ($(patsubst 6%,6,$(VERSION)),6)
+else ifeq ($(patsubst 6.0%,6.0,$(VERSION)),6.0)
 MAJOR=6.0
+else ifeq ($(patsubst 6.2%,6.2,$(VERSION)),6.2)
+MAJOR=6.2
 else
+ifneq ($(_HELP),1)
 $(info Strange Redis version: $(VERSION))
 endif
+endif
 
-# latest version on 5.0
-# curl -s "https://api.github.com/repos/antirez/redis/tags" | jq '.[].name'  |cut -d\" -f2|grep "^5\.0"|head -1
+endif
+
+# LATEST=1
+# MASTER=1
+
+#----------------------------------------------------------------------------------------------
 
 ARCH:=$(shell ./deps/readies/bin/platform --arch)
 
@@ -33,6 +76,11 @@ endif
 
 #----------------------------------------------------------------------------------------------
 
+OS ?= debian:buster-slim
+
+# OSNICK=buster|stretch|trusty|xenial|bionic|centos6|centos7|centos8|fedora30
+OSNICK ?= buster
+
 OS.trusty=ubuntu:trusty
 OS.xenial=ubuntu:xenial
 OS.bionic=ubuntu:bionic
@@ -42,7 +90,7 @@ OS.buster=debian:buster-slim
 OS.centos6=centos:6
 OS.centos7=centos:7
 OS.centos8=centos:8
-OS.fedora=fedora:30
+OS.fedora=fedora:33
 OS.fedora30=fedora:30
 OS.rhel7.4=rhel:7.4
 OS=$(OS.$(OSNICK))
@@ -100,37 +148,73 @@ endef
 
 endif # cross
 
+#----------------------------------------------------------------------------------------------
+
+ifneq ($(VERSIONS),)
+
+GOALS:=$(filter $(MAKECMDGOALS),build publish)
+
+versions: $(foreach V,$(VERSIONS),version_$(V))
+
+build: versions
+
+publish: build
+	@#
+
+.PHONY: build publish
+
+define make_version
+version_$(1):
+	@$(MAKE) VERSION=$(1) STD_VERSIONS="" VERSIONS="" $(GOALS)
+.PHONY: version_$(1)
+endef
+
+$(foreach V,$(VERSIONS),$(eval $(call make_version,$(V))))
+
+else # ! VERSIONS
+
+ifneq ($(_HELP),1)
+ifeq ($(VERSION),)
+$(error VERSION not specified)
+endif
+endif
+
 $(eval $(call targets,BUILD,build))
 $(eval $(call targets,PUBLISH,publish))
+
+endif
 
 #----------------------------------------------------------------------------------------------
 
 define build_native
 build_native:
-	@$(DOCKER) pull $(OS)
-	@$(DOCKER) build $(BUILD_OPT) -t $(STEM):$(VERSION)-$(ARCH)-$(OSNICK) -f $(MAJOR)/Dockerfile \
+	@echo "Building $(STEM):$(VERSION)-$(ARCH)-$(OSNICK) ..."
+	@$(NOP) $(DOCKER) pull $(OS)
+	@$(NOP) $(DOCKER) build $(BUILD_OPT) -t $(STEM):$(VERSION)-$(ARCH)-$(OSNICK) -f $(MAJOR)/Dockerfile \
 		$(CACHE_ARG) \
 		--build-arg ARCH=$(ARCH) \
 		--build-arg OS=$(OS) \
 		--build-arg OSNICK=$(OSNICK) \
 		--build-arg UID=$(UID) \
 		--build-arg REDIS_VER=$(VERSION) \
+		--build-arg REDIS_MAJOR=$(MAJOR) \
 		.
-		
-	@$(DOCKER) tag $(STEM):$(VERSION)-$(ARCH)-$(OSNICK) $(STEM):$(MAJOR)-latest-$(ARCH)-$(OSNICK)
+	@$(NOP) $(DOCKER) tag $(STEM):$(VERSION)-$(ARCH)-$(OSNICK) $(STEM):$(MAJOR)-latest-$(ARCH)-$(OSNICK)
 
 .PHONY: build_native
 endef
 
 define build_arm # (1=arch)
 build_$(1): 
-	@$(DOCKER) build $(BUILD_OPT) -t $(STEM)-xbuild:$(VERSION)-$(1)-$(OSNICK) -f $(MAJOR)/Dockerfile.arm \
+	@echo "Building $(STEM):$(VERSION)-$(ARCH)-$(OSNICK) ..."
+	@$(NOP) $(DOCKER) build $(BUILD_OPT) -t $(STEM)-xbuild:$(VERSION)-$(1)-$(OSNICK) -f $(MAJOR)/Dockerfile.arm \
 		--build-arg ARCH=$(1) \
 		--build-arg OSNICK=$(OSNICK) \
 		--build-arg UID=$(UID) \
 		--build-arg REDIS_VER=$(VERSION) \
+		--build-arg REDIS_MAJOR=$(MAJOR) \
 		.
-	@$(DOCKER) tag $(STEM)-xbuild:$(VERSION)-$(1)-$(OSNICK) $(STEM)-xbuild:$(MAJOR)-latest-$(1)-$(OSNICK)
+	@$(NOP) $(DOCKER) tag $(STEM)-xbuild:$(VERSION)-$(1)-$(OSNICK) $(STEM)-xbuild:$(MAJOR)-latest-$(1)-$(OSNICK)
 
 .PHONY: build_$(1)
 endef
@@ -139,29 +223,21 @@ endef
 
 define publish_native
 publish_native:
-	@$(DOCKER) push $(STEM):$(VERSION)-$(ARCH)-$(OSNICK)
-	@$(DOCKER) push $(STEM):$(MAJOR)-latest-$(ARCH)-$(OSNICK)
+	@$(NOP) $(DOCKER) push $(STEM):$(VERSION)-$(ARCH)-$(OSNICK)
+	@$(NOP) $(DOCKER) push $(STEM):$(MAJOR)-latest-$(ARCH)-$(OSNICK)
 
 .PHONY: publish_native
 endef
 
 define publish_arm # (1=arch)
 publish_$(1):
-	@$(DOCKER) push $(STEM)-xbuild:$(VERSION)-$(1)-$(OSNICK)
-	@$(DOCKER) push $(STEM)-xbuild:$(MAJOR)-latest-$(1)-$(OSNICK)
+	@$(NOP) $(DOCKER) push $(STEM)-xbuild:$(VERSION)-$(1)-$(OSNICK)
+	@$(NOP) $(DOCKER) push $(STEM)-xbuild:$(MAJOR)-latest-$(1)-$(OSNICK)
 
 .PHONY: publish_$(1)
 endef
 
 #----------------------------------------------------------------------------------------------
-
-all: build publish commons
-
-commons:
-	$(MAKE) $(DO) VERSION=5.0 LATEST=1
-	$(MAKE) $(DO) VERSION=5.0 MASTER=1
-	$(MAKE) $(DO) VERSION=6.0 LATEST=1
-	$(MAKE) $(DO) VERSION=6.0 MASTER=1
 
 build: $(BUILD_TARGETS)
 
@@ -182,29 +258,28 @@ endif
 #----------------------------------------------------------------------------------------------
 
 define HELP
-make [build|publish] [CROSS=1] [X64=1|ARM8=1|ARM7=1] [OSNICK=<nick> | OS=<os>] [VERSION=<ver>] [ARGS...]
+make [build|publish] [X64=1|ARM8=1|ARM7=1] [OSNICK=<nick> | OS=<os>]
+     [VERSION=<ver> | VERSIONS="<ver>..."]
+     [STD_VERSIONS=1]
+     [CROSS=1] 
 
 build    Build image(s)
 publish  Push image(s) to Docker Hub
-commons  Build common versions (with DO="<operations>")
 
 Arguments:
-CROSS=1       Perform cross-platform builds (typically, ARM7/8 on x64)
-OSNICK=nick   nick=buster|stretch|xenial|bionic|centos6|centos7|centos8|fedora30
-OS=os         (optional) OS Docker image name (e.g., debian:buster-slim)
-VERSION=ver   Redis version (e.g. $(VERSION))
-MASTER=1      Build sources from master branch ("edge" version)
-LATEST=1      Build the latest version of branch given by VERSION
-TEST=1        Run tests after build
-CACHE=0       Build without cache
+OSNICK=nick         nick=buster|stretch|xenial|bionic|centos6|centos7|centos8|fedora30
+OS=os               (optional) OS Docker image name (e.g., debian:buster-slim)
+VERSION=ver         Redis version
+VERSIONS="vers..."  Multiple Redis versions  
+STD_VERSIONS=1      Build latest versions of 6.0 and 6.2 branches
+MASTER=1            Build sources from master branch ("edge" version)
+LATEST=1            Build the latest version of branch given by VERSION
+TEST=1              Run tests after build
+CACHE=0             Build without cache
+CROSS=1             Perform cross-platform builds (typically, ARM7/8 on x64)
 
 
 endef
-
-help:
-	$(file >/tmp/help,$(HELP))
-	@cat /tmp/help
-	@rm -f /tmp/help
 
 #----------------------------------------------------------------------------------------------
 
