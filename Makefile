@@ -87,6 +87,7 @@ OS.bionic=ubuntu:bionic
 OS.focal=ubuntu:focal
 OS.stretch=debian:stretch-slim
 OS.buster=debian:buster-slim
+OS.bullseye=debian:bullseye-slim
 OS.centos6=centos:6
 OS.centos7=centos:7
 OS.centos8=centos:8
