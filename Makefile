@@ -27,8 +27,10 @@ endif
 endif
 endif
 
+ifneq ($(filter help,$(MAKECMDGOALS)),help)
 ifeq ($(STD_VERSIONS),1)
 override VERSIONS:=$(foreach V,$(STD_MAJORS),$(shell ./deps/readies/bin/github-lastver -r redis/redis -v $(V)))
+endif
 endif
 
 ifneq ($(VERSIONS),)
@@ -157,7 +159,6 @@ versions: $(foreach V,$(VERSIONS),version_$(V))
 build: versions
 
 publish: build
-	@#
 
 .PHONY: build publish
 
