@@ -30,7 +30,7 @@ class RedisSetup(paella.Setup):
 
     def redhat_compat(self):
         self.run("%s/bin/getgcc --modern" % READIES)
-        self.install("libatomic openssl-devel devtoolset-9-libatomic-devel")
+        self.install("libatomic openssl-devel")
 
     def fedora(self):
         self.run("%s/bin/getgcc" % READIES)

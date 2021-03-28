@@ -29,8 +29,6 @@ endif
 
 ifeq ($(STD_VERSIONS),1)
 override VERSIONS:=$(foreach V,$(STD_MAJORS),$(shell ./deps/readies/bin/github-lastver -r redis/redis -v $(V)))
-
-$(info VERSIONS=$(VERSIONS))
 endif
 
 ifneq ($(VERSIONS),)
@@ -90,8 +88,8 @@ OS.buster=debian:buster-slim
 OS.centos6=centos:6
 OS.centos7=centos:7
 OS.centos8=centos:8
-OS.fedora=fedora:33
-OS.fedora30=fedora:30
+OS.fedora=fedora:latest
+OS.fedora33=fedora:33
 OS.rhel7.4=rhel:7.4
 OS=$(OS.$(OSNICK))
 
@@ -102,9 +100,9 @@ endif
 #----------------------------------------------------------------------------------------------
 
 UID.centos7=997
-UID.centos8=997
+UID.centos8=996
 UID.fedora=989
-UID.fedora30=989
+UID.fedora33=989
 UID.rhel7.4=800
 ifeq ($(UID.$(OSNICK)),)
 UID=999
