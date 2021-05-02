@@ -58,7 +58,7 @@ workflows:
           <<: *on-any-branch
           matrix:
             parameters:
-              platform: [centos7, centos8, focal, bionic, xenial, trusty, buster, bullseye]
+              platform: [centos7, centos8, focal, bionic, xenial, trusty, buster]
 
   weekly:
     triggers:
@@ -73,4 +73,4 @@ workflows:
       - build:
           matrix:
             parameters:
-              platform: [centos7, centos8, focal, bionic, xenial, trusty, buster, bullseye]
+              platform: [centos7, centos8, focal, bionic, xenial, trusty, buster]
