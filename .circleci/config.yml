@@ -10,7 +10,8 @@ commands:
             apt-get -q install -y git openssh-client curl ca-certificates make tar gzip
             bash <(curl -fsSL https://get.docker.com)
       - checkout
-      - setup_remote_docker
+      - setup_remote_docker:
+          version: 20.10.2
       - run:
           name: Setup
           command: |
