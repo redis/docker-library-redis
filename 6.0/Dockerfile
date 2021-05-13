@@ -31,6 +31,7 @@ ADD 6.0/*.patch /build/
 ADD 6.0/build-fix-* /build/
 
 # ENV REDIS_DEPENDS "ca-certificates dirmngr gnupg wget gcc libc6-dev make"
+RUN /build/deps/readies/bin/getbash
 RUN /build/deps/readies/bin/getpy3
 RUN /build/system-setup.py
 RUN gcc --version
@@ -61,7 +62,7 @@ RUN set -ex; \
 		source /opt/rh/devtoolset-9/enable ;\
 	fi ;\
 	export BUILD_TLS=yes; \
-	ARCH= make V=1 -C /usr/src/redis -j $(nproc) all; \
+	ARCH= make V=1 -C /usr/src/redis all; \
 	make -C /usr/src/redis install
 
 #----------------------------------------------------------------------------------------------
@@ -75,15 +76,20 @@ ARG UID
 RUN echo "Building redisfab/redis-${ARCH}-${OSNICK}:${REDIS_VER} UID=${UID}"
 RUN uname -a; cat /etc/os-release
 
-# Add our user and group first to make sure their IDs get assigned consistently, 
+# Add our user and group first to make sure their IDs get assigned consistently,
 # regardless of whatever dependencies get added
-RUN groupadd -r -g ${UID} redis && useradd -r -g redis -u ${UID} redis
+RUN set -xe; \
+    if [ -f /sbin/groupadd ] || [ -f /usr/sbin/groupadd ]; then\
+        groupadd -r -g ${UID} redis && useradd -r -g redis -u ${UID} redis ;\
+    else\
+        addgroup --gid ${UID} redis && adduser --system --uid ${UID} redis ;\
+    fi
+
 
 COPY 6.0/platforms/setup.${OSNICK} /usr/local/bin/docker-setup
-RUN set -xe ;\
-    chmod +x /usr/local/bin/docker-setup ;\
-    /usr/local/bin/docker-setup ;\
-    rm /usr/local/bin/docker-setup
+RUN chmod +x /usr/local/bin/docker-setup
+RUN /usr/local/bin/docker-setup
+RUN rm /usr/local/bin/docker-setup
 
 COPY --from=builder /usr/local/ /usr/local/
 

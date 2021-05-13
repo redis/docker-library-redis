@@ -59,7 +59,9 @@ workflows:
           <<: *on-any-branch
           matrix:
             parameters:
-              platform: [centos7, centos8, hirsute, focal, bionic, xenial, trusty, bullseye, buster]
+              platform: [centos7, centos8, focal, bionic, xenial, trusty, bullseye, buster, fedora33, alpine3]
+              # below has the broken platforms
+            # platform: [centos7, centos8, hirsute, focal, bionic, xenial, trusty, bullseye, buster, fedora33, fedora34, fedora35, alpine3, alpineedge]
 
   weekly:
     triggers:
@@ -74,5 +76,5 @@ workflows:
       - build:
           matrix:
             parameters:
-              platform: [centos7, centos8, hirsute, focal, bionic, xenial, trusty, bullseye, buster]
-
+              platform: [centos7, centos8, focal, bionic, xenial, trusty, bullseye, buster, fedora33, alpine3]
+            # platform: [centos7, centos8, hirsute, focal, bionic, xenial, trusty, bullseye, buster, fedora33, fedora34, fedora35, alpine3, alpineedge]

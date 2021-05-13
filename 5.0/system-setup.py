@@ -30,13 +30,20 @@ class RedisSetup(paella.Setup):
 
     def fedora(self):
         self.group_install("'Development Tools'")
-        self.install("libatomic")
+        self.install("libatomic jemalloc-devel")
 
     def macos(self):
         self.install("openssl")
 
+    def alpine(self):
+        self.install("gcc make openssl openssl-dev libatomic dev86 musl-dev")
+
     def common_last(self):
-        self.install("dirmngr gnupg patch")
+        if self.dist != "alpine":
+            self.install("dirmngr gnupg patch")
+        else:
+            self.install("patch gnupg linux-headers")
+
 
 #----------------------------------------------------------------------------------------------
 
