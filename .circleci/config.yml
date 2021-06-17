@@ -12,11 +12,13 @@ commands:
       - checkout
       - setup_remote_docker:
           version: 20.10.2
+          docker_layer_caching: true
       - run:
           name: Setup
           command: |
             git submodule update --init --recursive
             ./deps/readies/bin/getpy3
+            docker version
             docker login --username redisfab --password "$DOCKER_REDISFAB_PWD"
 
 jobs:
@@ -32,7 +34,6 @@ jobs:
           name: Build
           command: |
             make build publish OSNICK=<<parameters.platform>> X64=1 STD_VERSIONS=1
-            # make build publish CROSS=1 OSNICK=<<parameters.platform>> STD_VERSIONS=1
           no_output_timeout: 30m
 
 
@@ -75,4 +76,3 @@ workflows:
           matrix:
             parameters:
               platform: [centos7, centos8, hirsute, focal, bionic, xenial, trusty, bullseye, buster]
-
