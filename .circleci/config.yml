@@ -1,7 +1,7 @@
 version: 2.1
 
 commands:
-  prebuild:
+  setup-executor:
     steps:
       - run:
           name: Setup executor
@@ -9,20 +9,48 @@ commands:
             apt-get -qq update
             apt-get -q install -y git openssh-client curl ca-certificates make tar gzip
             bash <(curl -fsSL https://get.docker.com)
-      - checkout
       - setup_remote_docker:
           version: 20.10.2
           docker_layer_caching: true
+
+  checkout-all:
+    steps:
+      - checkout
       - run:
-          name: Setup
+          name: Checkout submodules
+          command: git submodule update --init --recursive
+
+  setup-automation:
+    steps:
+      - run:
+          name: Setup automation
           command: |
-            git submodule update --init --recursive
+            git submodule update --init deps/readies
             ./deps/readies/bin/getpy3
+
+  prebuild:
+    steps:
+      - setup-executor
+      - checkout-all
+      - setup-automation
+      - run:
+          name: Setup Docker
+          command: |
+            docker login --username redisfab --password "$DOCKER_REDISFAB_PWD"
+
+  vm-prebuild:
+    steps:
+      - checkout-all
+      - setup-automation
+      - run:
+          name: Setup Docker
+          command: |
+            bash <(curl -fsSL https://get.docker.com)
             docker version
             docker login --username redisfab --password "$DOCKER_REDISFAB_PWD"
 
 jobs:
-  build:
+  build-x64:
     parameters:
       platform:
         type: string
@@ -33,7 +61,22 @@ jobs:
       - run:
           name: Build
           command: |
-            make build publish OSNICK=<<parameters.platform>> X64=1 STD_VERSIONS=1
+            make build publish OSNICK=<<parameters.platform>> STD_VERSIONS=1
+          no_output_timeout: 30m
+
+  build-arm8:
+    parameters:
+      platform:
+        type: string
+    machine:
+      image: ubuntu-2004:202101-01
+    resource_class: arm.medium
+    steps:
+      - vm-prebuild
+      - run:
+          name: Build
+          command: |
+            make build publish OSNICK=<<parameters.platform>> STD_VERSIONS=1
           no_output_timeout: 30m
 
 
@@ -56,14 +99,18 @@ workflows:
   version: 2
   general:
     jobs:
-      - build:
-          context: common
+      - build-x64:
           <<: *on-any-branch
           matrix:
             parameters:
-              platform: [centos7, centos8, focal, bionic, xenial, trusty, bullseye, buster, fedora33, alpine3]
-              # below has the broken platforms
-            # platform: [centos7, centos8, hirsute, focal, bionic, xenial, trusty, bullseye, buster, fedora33, fedora34, fedora35, alpine3, alpineedge]
+              platform: [centos8, centos7, focal, bionic, xenial, trusty, bullseye, buster, fedora33] # hirsute, fedora34, fedora35, alpine3, alpineedge
+          context: common
+      - build-arm8:
+          <<: *on-any-branch
+          matrix:
+            parameters:
+              platform: [centos8, centos7, focal, bionic, xenial, trusty, bullseye, buster, fedora33] # hirsute, fedora34, fedora35, alpine3, alpineedge
+          context: common
 
   weekly:
     triggers:
@@ -72,12 +119,15 @@ workflows:
           cron: "21 17 * * 0"
           filters:
              branches:
-               only:
-                 - master
+               only: master
     jobs:
-      - build:
-          context: common
+      - build-x64:
           matrix:
             parameters:
-              platform: [centos7, centos8, focal, bionic, xenial, trusty, bullseye, buster, fedora33, alpine3]
-            # platform: [centos7, centos8, hirsute, focal, bionic, xenial, trusty, bullseye, buster, fedora33, fedora34, fedora35, alpine3, alpineedge]
+              platform: [centos8, centos7, focal, bionic, xenial, trusty, bullseye, buster, fedora33] # hirsute, fedora34, fedora35, alpine3, alpineedge
+          context: common
+      - build-arm8:
+          matrix:
+            parameters:
+              platform: [centos8, centos7, focal, bionic, xenial, trusty, bullseye, buster, fedora33] # hirsute, fedora34, fedora35, alpine3, alpineedge
+          context: common

@@ -27,6 +27,7 @@ class RedisSetup(paella.Setup):
     def redhat_compat(self):
         self.group_install("'Development Tools'")
         self.install("libatomic")
+        self.run("[[ ! -e /usr/lib64/libatomic.so ]] && ln -s /usr/lib64/libatomic.so.1 /usr/lib64/libatomic.so")
 
     def fedora(self):
         self.group_install("'Development Tools'")
