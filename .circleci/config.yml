@@ -10,7 +10,7 @@ commands:
             apt-get -q install -y git openssh-client curl ca-certificates make tar gzip
             bash <(curl -fsSL https://get.docker.com)
       - setup_remote_docker:
-          version: 20.10.2
+          version: 20.10.6
           docker_layer_caching: true
 
   checkout-all:
@@ -61,6 +61,7 @@ jobs:
       - run:
           name: Build
           command: |
+            docker version
             make build publish OSNICK=<<parameters.platform>> STD_VERSIONS=1
           no_output_timeout: 30m
 
@@ -76,6 +77,7 @@ jobs:
       - run:
           name: Build
           command: |
+            docker version
             make build publish OSNICK=<<parameters.platform>> STD_VERSIONS=1
           no_output_timeout: 30m
 
@@ -103,7 +105,7 @@ workflows:
           <<: *on-any-branch
           matrix:
             parameters:
-              platform: [centos8, centos7, focal, bionic, xenial, trusty, bullseye, buster, fedora33] # hirsute, fedora34, fedora35, alpine3, alpineedge
+              platform: [centos8, centos7, hirsute, focal, bionic, xenial, trusty, bullseye, buster, fedora33] # fedora34, fedora35, alpine3, alpineedge
           context: common
       - build-arm8:
           <<: *on-any-branch
