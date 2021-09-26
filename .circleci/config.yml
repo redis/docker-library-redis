@@ -105,7 +105,7 @@ workflows:
           <<: *on-any-branch
           matrix:
             parameters:
-              platform: [centos8, centos7, hirsute, focal, bionic, xenial, trusty, bullseye, buster, fedora33] # fedora34, fedora35, alpine3, alpineedge
+              platform: [centos8, centos7, hirsute, focal, bionic, xenial, trusty, bullseye, buster, fedora33, alpine3] # fedora34, fedora35, alpine3, alpineedge
           context: common
       - build-arm8:
           <<: *on-any-branch
