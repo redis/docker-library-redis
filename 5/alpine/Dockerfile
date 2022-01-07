@@ -5,8 +5,6 @@ RUN addgroup -S -g 1000 redis && adduser -S -G redis -u 999 redis
 # alpine already has a gid 999, so we'll use the next id
 
 RUN apk add --no-cache \
-# grab su-exec for easy step-down from root
-		'su-exec>=0.2' \
 # add tzdata for https://github.com/docker-library/redis/issues/138
 		tzdata
 
@@ -97,5 +95,6 @@ WORKDIR /data
 COPY docker-entrypoint.sh /usr/local/bin/
 ENTRYPOINT ["docker-entrypoint.sh"]
 
+USER redis
 EXPOSE 6379
 CMD ["redis-server"]

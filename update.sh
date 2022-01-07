@@ -54,6 +54,8 @@ for version in "${versions[@]}"; do
 	; do
 		dir="$version${variant:+/$variant}"
 		[ -d "$dir" ] || continue
+		cp "docker-entrypoint.sh" "$dir/"
+
 		case "$variant" in
 			32bit) template='Dockerfile.template' ;;
 			*) template="Dockerfile${variant:+-$variant}.template" ;;
