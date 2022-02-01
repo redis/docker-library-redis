@@ -2,9 +2,7 @@
 set -eu
 
 declare -A aliases=(
-	[7.0-rc]='rc'
-	[6.0]='6 latest'
-	[5.0]='5'
+	[6.2]='6 latest'
 )
 
 self="$(basename "$BASH_SOURCE")"
@@ -81,8 +79,13 @@ for version in "${versions[@]}"; do
 		commit="$(dirCommit "$dir")"
 
 		fullVersion="$(git show "$commit":"$dir/Dockerfile" | awk '$1 == "ENV" && $2 == "REDIS_VERSION" { print $3; exit }')"
-		versionAliases=(
-			$fullVersion
+
+		versionAliases=()
+		while [ "$fullVersion" != "$version" -a "${fullVersion%[.-]*}" != "$fullVersion" ]; do
+			versionAliases+=( $fullVersion )
+			fullVersion="${fullVersion%[.-]*}"
+		done
+		versionAliases+=(
 			$version
 			${aliases[$version]:-}
 		)

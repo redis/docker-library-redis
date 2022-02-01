@@ -1,4 +1,4 @@
-FROM debian:buster-slim
+FROM debian:bullseye-slim
 
 # add our user and group first to make sure their IDs get assigned consistently, regardless of whatever dependencies get added
 RUN groupadd -r -g 999 redis && useradd -r -g redis -u 999 redis
@@ -26,9 +26,9 @@ RUN set -eux; \
 	gosu --version; \
 	gosu nobody true
 
-ENV REDIS_VERSION 6.2.0
-ENV REDIS_DOWNLOAD_URL http://download.redis.io/releases/redis-6.2.0.tar.gz
-ENV REDIS_DOWNLOAD_SHA 67d624c25d962bd68aff8812a135df85bad07556b8825f3bcd5b522a9932dbca
+ENV REDIS_VERSION 6.2.6
+ENV REDIS_DOWNLOAD_URL http://download.redis.io/releases/redis-6.2.6.tar.gz
+ENV REDIS_DOWNLOAD_SHA 5b2b8b7a50111ef395bf1c1d5be11e6e167ac018125055daa8b5c2317ae131ab
 
 RUN set -eux; \
 	\

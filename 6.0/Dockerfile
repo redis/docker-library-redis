@@ -1,12 +1,9 @@
 # BUILD redisfab/redis:${REDIS_VER}-${ARCH}-${OSNICK}
 
-ARG REDIS_VER=6.0.14
-
-# OS=debian:buster-slim|debian:stretch-slim|ubuntu:bionic
-ARG OS=debian:buster-slim
-
-# OSNICK=stretch|bionic|buster
-ARG OSNICK=buster
+ARG REDIS_VER=6.0.16
+ARG REDIS_MAJOR=6.0
+ARG OS=debian:bullseye-slim
+ARG OSNICK=bullseye
 
 # ARCH=x64|arm64v8|arm32v7
 ARG ARCH=x64
@@ -17,18 +14,22 @@ ARG UID=999
 FROM ${OS} as builder
 
 ARG REDIS_VER
+ARG REDIS_MAJOR
 ARG OS
 ARG OSNICK
 ARG ARCH
 RUN echo "Building Redis v${REDIS_VER} on ${OSNICK} (${OS}) for ${ARCH}"
 RUN uname -a; cat /etc/os-release
 
+RUN if [ -f /root/.profile ]; then sed -ie 's/mesg n/tty -s \&\& mesg -n/g' /root/.profile; fi
+SHELL ["/bin/bash", "-l", "-c"]
+
 WORKDIR /build
 
 ADD deps/ /build/deps/
-ADD 6.0/system-setup.py /build/
-ADD 6.0/*.patch /build/
-ADD 6.0/build-fix-* /build/
+ADD ${REDIS_MAJOR}/system-setup.py /build/
+ADD ${REDIS_MAJOR}/*.patch /build/
+ADD ${REDIS_MAJOR}/build-fix-* /build/
 
 # ENV REDIS_DEPENDS "ca-certificates dirmngr gnupg wget gcc libc6-dev make"
 RUN /build/deps/readies/bin/getbash
@@ -58,9 +59,6 @@ RUN ./build-fix-2
 
 # note: ARCH may break build if non-empty
 RUN set -ex; \
-	if [ -e /opt/rh/devtoolset-9/enable ]; then \
-		source /opt/rh/devtoolset-9/enable ;\
-	fi ;\
 	export BUILD_TLS=yes; \
 	ARCH= make V=1 -C /usr/src/redis all; \
 	make -C /usr/src/redis install
@@ -69,6 +67,7 @@ RUN set -ex; \
 FROM ${OS}
 
 ARG REDIS_VER
+ARG REDIS_MAJOR
 ARG ARCH
 ARG OSNICK
 ARG UID
@@ -86,7 +85,7 @@ RUN set -xe; \
     fi
 
 
-COPY 6.0/platforms/setup.${OSNICK} /usr/local/bin/docker-setup
+COPY ${REDIS_MAJOR}/platforms/setup.${OSNICK} /usr/local/bin/docker-setup
 RUN chmod +x /usr/local/bin/docker-setup
 RUN /usr/local/bin/docker-setup
 RUN rm /usr/local/bin/docker-setup
@@ -97,7 +96,7 @@ RUN mkdir /data && chown redis:redis /data
 VOLUME /data
 WORKDIR /data
 
-COPY 6.0/docker-entrypoint.sh /usr/local/bin/
+COPY ${REDIS_MAJOR}/docker-entrypoint.sh /usr/local/bin/
 RUN chmod 755 /usr/local/bin/docker-entrypoint.sh
 
 ENTRYPOINT ["docker-entrypoint.sh"]
