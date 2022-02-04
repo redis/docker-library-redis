@@ -81,9 +81,9 @@ for version in "${versions[@]}"; do
 		fullVersion="$(git show "$commit":"$dir/Dockerfile" | awk '$1 == "ENV" && $2 == "REDIS_VERSION" { print $3; exit }')"
 
 		versionAliases=()
-		while [ "$fullVersion" != "$version" -a "${fullVersion%[.-]*}" != "$fullVersion" ]; do
+		while [ "$fullVersion" != "$version" -a "${fullVersion%[.]*}" != "$fullVersion" ]; do
 			versionAliases+=( $fullVersion )
-			fullVersion="${fullVersion%[.-]*}"
+			fullVersion="${fullVersion%[.]*}"
 		done
 		versionAliases+=(
 			$version
@@ -97,7 +97,7 @@ for version in "${versions[@]}"; do
 			variantAliases=( "${versionAliases[@]}" )
 		fi
 
-		variantParent="$(awk 'toupper($1) == "FROM" { print $2 }' "$version/$variant/Dockerfile")"
+		variantParent="$(awk 'toupper($1) == "FROM" { print $2 }' "$dir/Dockerfile")"
 
 		suite="${variantParent#*:}" # "jessie-slim", "stretch"
 		suite="${suite%-slim}" # "jessie", "stretch"
