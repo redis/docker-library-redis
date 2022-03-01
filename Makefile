@@ -91,9 +91,13 @@ OS.buster=debian:buster-slim
 OS.bullseye=debian:bullseye-slim
 OS.centos6=centos:6
 OS.centos7=centos:7
-OS.centos8=centos:8
+OS.centos8.4=centos:8.4
+OS.centos8=quay.io/centos/centos:stream8
+OS.centos9=quay.io/centos/centos:stream9
 OS.ol7=oraclelinux:7
 OS.ol8=oraclelinux:8
+OS.alma8=almalinux:8
+OS.rocky8=rockylinux:8
 OS.fedora=fedora:latest
 OS.fedora33=fedora:33
 OS.fedora34=fedora:34
@@ -113,9 +117,13 @@ endif
 #----------------------------------------------------------------------------------------------
 
 UID.centos7=997
+UID.centos8.4=996
 UID.centos8=996
+UID.centos9=999
 UID.ol7=995
 UID.ol8=995
+UID.alma8=996
+UID.rocky8=994
 UID.fedora=989
 UID.fedora33=989
 UID.fedora34=989

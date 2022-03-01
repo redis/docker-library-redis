@@ -1,0 +1,4 @@
+#!/bin/bash
+
+apt-get -qq update
+apt-get install -q -y libssl1.0.0

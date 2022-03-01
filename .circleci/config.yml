@@ -49,6 +49,8 @@ commands:
             docker version
             docker login --username redisfab --password "$DOCKER_REDISFAB_PWD"
 
+#----------------------------------------------------------------------------------------------------------------------------------
+
 jobs:
   build-x64:
     parameters:
@@ -62,8 +64,16 @@ jobs:
           name: Build
           command: |
             docker version
-            make build publish OSNICK=<<parameters.platform>> STD_VERSIONS=1
+            make build OSNICK=<<parameters.platform>> STD_VERSIONS=1
           no_output_timeout: 30m
+      - run:
+          name: Publish
+          command: |
+            if [[ $CIRCLE_BRANCH == master ]]; then
+                make publish OSNICK=<<parameters.platform>> STD_VERSIONS=1
+            else
+                echo "Not master branch: skipped publish"
+            fi
 
   build-arm8:
     parameters:
@@ -78,9 +88,18 @@ jobs:
           name: Build
           command: |
             docker version
-            make build publish OSNICK=<<parameters.platform>> STD_VERSIONS=1
+            make build OSNICK=<<parameters.platform>> STD_VERSIONS=1
           no_output_timeout: 30m
+      - run:
+          name: Publish
+          command: |
+            if [[ $CIRCLE_BRANCH == master ]]; then
+                make publish OSNICK=<<parameters.platform>> STD_VERSIONS=1
+            else
+                echo "Not master branch: skipped publish"
+            fi
 
+#----------------------------------------------------------------------------------------------------------------------------------
 
 on-any-branch: &on-any-branch
   filters:
@@ -96,6 +115,7 @@ never: &never
     tags:
       ignore: /.*/
 
+#----------------------------------------------------------------------------------------------------------------------------------
 
 workflows:
   version: 2
@@ -105,13 +125,13 @@ workflows:
           <<: *on-any-branch
           matrix:
             parameters:
-              platform: [ol8, centos7, hirsute, focal, bionic, xenial, trusty, bullseye, buster, fedora33] # centos8, alpine3, alpineedge
+              platform: [rocky8, ol8, centos7, hirsute, focal, bionic, xenial, trusty, bullseye, buster, fedora33] # centos8, alpine3, alpineedge
           context: common
       - build-arm8:
           <<: *on-any-branch
           matrix:
             parameters:
-              platform: [centos7, hirsute, focal, bionic, xenial, trusty, bullseye, buster, fedora33] # centos8, alpine3, alpineedge
+              platform: [centos7, focal, bionic, bullseye, buster, fedora33] # hirsute, centos8, alpine3, alpineedge
           context: common
 
   weekly:
@@ -126,10 +146,10 @@ workflows:
       - build-x64:
           matrix:
             parameters:
-              platform: [ol8, centos7, hirsute, focal, bionic, xenial, trusty, bullseye, buster, fedora33] # centos8, alpine3, alpineedge
+              platform: [rocky8, ol8, centos7, hirsute, focal, bionic, xenial, trusty, bullseye, buster, fedora33] # centos8, alpine3, alpineedge
           context: common
       - build-arm8:
           matrix:
             parameters:
-              platform: [centos7, hirsute, focal, bionic, xenial, trusty, bullseye, buster, fedora33] # centos8, alpine3, alpineedge
+              platform: [centos7, focal, bionic, bullseye, buster, fedora33] # hirsute, centos8, alpine3, alpineedge
           context: common
