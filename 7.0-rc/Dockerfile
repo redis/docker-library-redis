@@ -26,9 +26,9 @@ RUN set -eux; \
 	gosu --version; \
 	gosu nobody true
 
-ENV REDIS_VERSION 7.0-rc2
-ENV REDIS_DOWNLOAD_URL https://github.com/redis/redis/archive/7.0-rc2.tar.gz
-ENV REDIS_DOWNLOAD_SHA 485300dceb36f5cc4854a1a7ea03502c2689fff79626987e23e6017906cc430f
+ENV REDIS_VERSION 7.0-rc3
+ENV REDIS_DOWNLOAD_URL https://github.com/redis/redis/archive/7.0-rc3.tar.gz
+ENV REDIS_DOWNLOAD_SHA a3775c84e2c57d78b8dbef539db4340f69d9af35ebfea7bba5ca528509338975
 
 RUN set -eux; \
 	\
