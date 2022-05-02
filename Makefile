@@ -17,7 +17,7 @@ endif
 
 #----------------------------------------------------------------------------------------------
 
-STD_MAJORS=6.2 6.0 5.0
+STD_MAJORS=7.0 6.2 6.0 5.0
 
 ifeq ($(VERSION),)
 ifeq ($(VERSIONS),)
@@ -53,6 +53,8 @@ else ifeq ($(patsubst 6.0%,6.0,$(VERSION)),6.0)
 MAJOR=6.0
 else ifeq ($(patsubst 6.2%,6.2,$(VERSION)),6.2)
 MAJOR=6.2
+else ifeq ($(patsubst 7%,7,$(VERSION)),7)
+MAJOR=7.0
 else
 ifneq ($(_HELP),1)
 $(info Strange Redis version: $(VERSION))
