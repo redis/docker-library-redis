@@ -86,6 +86,7 @@ OSNICK ?= buster
 OS.trusty=ubuntu:trusty
 OS.xenial=ubuntu:xenial
 OS.bionic=ubuntu:bionic
+OS.jammy=ubuntu:jammy
 OS.focal=ubuntu:focal
 OS.hirsute=ubuntu:hirsute
 OS.stretch=debian:stretch-slim
