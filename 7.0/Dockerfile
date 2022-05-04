@@ -47,7 +47,7 @@ RUN /build/deps/readies/bin/getpy3
 RUN /build/system-setup.py
 RUN gcc --version
 
-ENV GOSU_VERSION 1.12
+ENV GOSU_VERSION 1.14
 RUN set -ex ;\
 	/build/deps/readies/bin/getgosu ;\
 	gosu --version; \
