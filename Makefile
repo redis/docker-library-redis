@@ -111,6 +111,7 @@ OS.alpineedge=alpine:edge
 OS.rhel7.4=rhel:7.4
 OS.alpine3=alpine:3
 OS.alpineedge=alpine:edge
+OS.jammy=ubuntu:jammy
 OS=$(OS.$(OSNICK))
 
 ifeq ($(OS),)

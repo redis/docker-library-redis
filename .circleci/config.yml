@@ -146,7 +146,7 @@ workflows:
       - build-x64:
           matrix:
             parameters:
-              platform: [rocky8, centos7, jammy, focal, bionic, xenial, trusty, bullseye, buster, fedora33] # alpine3, alpineedge
+              platform: [rocky8, ol8, centos7, hirsute, focal, bionic, xenial, trusty, bullseye, buster, fedora33, jammy] # centos8, alpine3, alpineedge
           context: common
       - build-arm8:
           matrix:
