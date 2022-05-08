@@ -32,6 +32,8 @@ ADD ${REDIS_MAJOR}/*.patch /build/
 ADD ${REDIS_MAJOR}/build-fix-* /build/
 
 # ENV REDIS_DEPENDS "ca-certificates dirmngr gnupg wget gcc libc6-dev make"
+
+RUN /build/deps/readies/bin/getupdates
 RUN /build/deps/readies/bin/getbash
 RUN /build/deps/readies/bin/getpy3
 RUN /build/system-setup.py
