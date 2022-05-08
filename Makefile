@@ -148,8 +148,12 @@ STEM=$(REPO)/redis
 
 DOCKER ?= docker
 
-BUILD_OPT=--rm --allow security.insecure
+BUILD_OPT=--rm --load --progress=plain
 # --squash
+
+ifeq ($(ARCH),arm64v8)
+BUILD_OPT += --allow security.insecure
+endif
 
 ifeq ($(CACHE),0)
 CACHE_ARG=--no-cache
@@ -267,10 +271,14 @@ endef
 
 #----------------------------------------------------------------------------------------------
 
+build: insecure-build $(BUILD_TARGETS)
+
+ifeq ($(ARCH),arm64v8)
 insecure-build:
 	@$(NOP) $(DOCKER) buildx create --use --name insecure-builder --buildkitd-flags '--allow-insecure-entitlement security.insecure' || true
-
-build: insecure-build $(BUILD_TARGETS)
+else
+insecure-build: ;
+endif
 
 $(eval $(call build_native))
 ifeq ($(CROSS),1)
