@@ -93,5 +93,10 @@ for version in "${versions[@]}"; do
 				-e '/BUILD_TLS/d' \
 				"$dir/Dockerfile"
 		fi
+
+		cp -a docker-entrypoint.sh "$dir/"
+		if [ "$variant" = 'alpine' ]; then
+			sed -i -e 's/gosu/su-exec/g' "$dir/docker-entrypoint.sh"
+		fi
 	done
 done
