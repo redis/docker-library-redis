@@ -1,4 +1,0 @@
-# this changes in Redis 6.0+: https://github.com/docker-library/redis/pull/212#issuecomment-567705694 (see "update.sh" for where this template gets injected)
-	grep -q '^#define CONFIG_DEFAULT_PROTECTED_MODE 1$' /usr/src/redis/src/server.h; \
-	sed -ri 's!^(#define CONFIG_DEFAULT_PROTECTED_MODE) 1$!\1 0!' /usr/src/redis/src/server.h; \
-	grep -q '^#define CONFIG_DEFAULT_PROTECTED_MODE 0$' /usr/src/redis/src/server.h; \
