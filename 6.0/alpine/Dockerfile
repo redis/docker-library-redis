@@ -10,9 +10,9 @@ RUN apk add --no-cache \
 # add tzdata for https://github.com/docker-library/redis/issues/138
 		tzdata
 
-ENV REDIS_VERSION 6.0.16
-ENV REDIS_DOWNLOAD_URL http://download.redis.io/releases/redis-6.0.16.tar.gz
-ENV REDIS_DOWNLOAD_SHA 3639bbf29aca1a1670de1ab2ce224d6511c63969e7e590d3cdf8f7888184fa19
+ENV REDIS_VERSION 6.0.17
+ENV REDIS_DOWNLOAD_URL http://download.redis.io/releases/redis-6.0.17.tar.gz
+ENV REDIS_DOWNLOAD_SHA ad50bf7c6bf98d7bf3c626bdd5588368f52c82c8d41869cca024455f651e7bfc
 
 RUN set -eux; \
 	\
