@@ -77,6 +77,11 @@ ARG UID
 RUN echo "Building redisfab/redis-${ARCH}-${OSNICK}:${REDIS_VER} UID=${UID}"
 RUN uname -a; cat /etc/os-release
 
+COPY ${REDIS_MAJOR}/platforms/setup.${OSNICK} /usr/local/bin/docker-setup
+RUN chmod +x /usr/local/bin/docker-setup
+RUN /usr/local/bin/docker-setup
+RUN rm /usr/local/bin/docker-setup
+
 # Add our user and group first to make sure their IDs get assigned consistently,
 # regardless of whatever dependencies get added
 RUN set -xe; \
@@ -85,12 +90,6 @@ RUN set -xe; \
     else\
         addgroup --gid ${UID} redis && adduser --system --uid ${UID} redis ;\
     fi
-
-
-COPY ${REDIS_MAJOR}/platforms/setup.${OSNICK} /usr/local/bin/docker-setup
-RUN chmod +x /usr/local/bin/docker-setup
-RUN /usr/local/bin/docker-setup
-RUN rm /usr/local/bin/docker-setup
 
 COPY --from=builder /usr/local/ /usr/local/
 
