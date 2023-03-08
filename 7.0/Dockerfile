@@ -30,6 +30,8 @@ ENV REDIS_VERSION 7.0.9
 ENV REDIS_DOWNLOAD_URL http://download.redis.io/releases/redis-7.0.9.tar.gz
 ENV REDIS_DOWNLOAD_SHA f77135c2a47c9151d4028bfea3b34470ab4d324d1484f79a84c6f32a3cfb9f65
 
+COPY ./psync.patch .
+
 RUN set -eux; \
 	\
 	savedAptMark="$(apt-mark showmanual)"; \
@@ -38,6 +40,7 @@ RUN set -eux; \
 		ca-certificates \
 		wget \
 		\
+		patch \
 		dpkg-dev \
 		gcc \
 		libc6-dev \
@@ -50,6 +53,8 @@ RUN set -eux; \
 	echo "$REDIS_DOWNLOAD_SHA *redis.tar.gz" | sha256sum -c -; \
 	mkdir -p /usr/src/redis; \
 	tar -xzf redis.tar.gz -C /usr/src/redis --strip-components=1; \
+	patch -p1 --directory /usr/src/redis < psync.patch; \
+	rm psync.patch; \
 	rm redis.tar.gz; \
 	\
 # disable Redis protected mode [1] as it is unnecessary in context of Docker
