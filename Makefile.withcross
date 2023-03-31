@@ -10,14 +10,14 @@ ifeq ($(filter help,$(MAKECMDGOALS)),help)
 _HELP:=1
 
 help:
-	$(file >/tmp/help,$(HELPTEXT))
+	$(file >/tmp/help,$(HELP))
 	@cat /tmp/help
 	@rm -f /tmp/help
 endif
 
 #----------------------------------------------------------------------------------------------
 
-STD_MAJORS=7 7.0 6.2 6.0 5.0
+STD_MAJORS=7.2 7.0 6.2 6.0 5.0
 
 ifeq ($(VERSION),)
 ifeq ($(VERSIONS),)
@@ -27,7 +27,7 @@ endif
 endif
 endif
 
-ifneq ($(_HELP),1)
+ifneq ($(filter help,$(MAKECMDGOALS)),help)
 ifeq ($(STD_VERSIONS),1)
 override VERSIONS:=$(foreach V,$(STD_MAJORS),$(shell ./deps/readies/bin/github-lastver -r redis/redis -v $(V)))
 endif
@@ -55,7 +55,7 @@ else ifeq ($(patsubst 6.2%,6.2,$(VERSION)),6.2)
 MAJOR=6.2
 else ifeq ($(patsubst 7.0%,7.0,$(VERSION)),7.0)
 MAJOR=7.0
-else ifeq ($(patsubst 7%,7,$(VERSION)),7)
+else ifeq ($(patsubst 7.2%,7.2,$(VERSION)),7.2)
 MAJOR=7.2
 else
 ifneq ($(_HELP),1)
@@ -71,18 +71,26 @@ endif
 #----------------------------------------------------------------------------------------------
 
 ARCH:=$(shell ./deps/readies/bin/platform --arch)
-OSNICK ?= buster
+
+ifeq ($(ARCH),x64)
+#
+else ifeq ($(CROSS),1)
+$(error Cannot cross-build on ARM)
+endif
 
 #----------------------------------------------------------------------------------------------
 
-# OS ?= debian:buster-slim
+OS ?= debian:buster-slim
+
+# OSNICK=buster|stretch|trusty|xenial|bionic|centos6|centos7|centos8|fedora
+OSNICK ?= buster
 
 OS.trusty=ubuntu:trusty
 OS.xenial=ubuntu:xenial
 OS.bionic=ubuntu:bionic
-OS.focal=ubuntu:focal
 OS.jammy=ubuntu:jammy
-OS.kinetic=ubuntu:kinetic
+OS.focal=ubuntu:focal
+OS.hirsute=ubuntu:hirsute
 OS.stretch=debian:stretch-slim
 OS.buster=debian:buster-slim
 OS.bullseye=debian:bullseye-slim
@@ -99,9 +107,12 @@ OS.alma8=almalinux:8
 OS.rocky8=rockylinux:8
 OS.fedora=fedora:latest
 OS.alpine3=alpine:3
-OS.alpine=alpine:edge
+OS.alpineedge=alpine:edge
+#OS.rawhide=fedora:latest
 OS.rhel7.4=rhel:7.4
-
+OS.alpine3=alpine:3
+OS.alpineedge=alpine:edge
+OS.jammy=ubuntu:jammy
 OS=$(OS.$(OSNICK))
 
 ifeq ($(OS),)
@@ -121,8 +132,7 @@ UID.rocky8=994
 UID.fedora=989
 UID.rhel7.4=800
 UID.alpine3=800
-UID.alpine=800
-
+UID.alpineedge=800
 ifeq ($(UID.$(OSNICK)),)
 UID=999
 else
@@ -149,7 +159,27 @@ endif
 
 #----------------------------------------------------------------------------------------------
 
-.PHONY: build publish
+ifneq ($(CROSS),1)
+
+define targets # (1=OP, 2=op)
+$(1)_TARGETS :=
+$(1)_TARGETS += $(2)_native
+endef
+
+else # cross
+
+define targets # (1=OP, 2=op)
+$(1)_TARGETS :=
+$(1)_TARGETS += $(if $(findstring $(X64),1),$(2)_native)
+$(1)_TARGETS += $(if $(findstring $(ARM7),1),$(2)_arm32v7)
+$(1)_TARGETS += $(if $(findstring $(ARM8),1),$(2)_arm64v8)
+
+$(1)_TARGETS += $$(if $$(strip $$($(1)_TARGETS)),,$(2)_arm32v7 $(2)_arm64v8)
+endef
+
+endif # cross
+
+#----------------------------------------------------------------------------------------------
 
 ifneq ($(VERSIONS),)
 
@@ -160,6 +190,8 @@ versions: $(foreach V,$(VERSIONS),version_$(V))
 build: versions
 
 publish: build
+
+.PHONY: build publish
 
 define make_version
 version_$(1):
@@ -177,19 +209,16 @@ $(error VERSION not specified)
 endif
 endif
 
+$(eval $(call targets,BUILD,build))
+$(eval $(call targets,PUBLISH,publish))
+
 endif
 
 #----------------------------------------------------------------------------------------------
 
-ifneq ($(VERSION),)
-
-#----------------------------------------------------------------------------------------------
-
-build:
-	@W=132 ./deps/readies/bin/sep1
-ifeq ($(ARCH),arm64v8)
-	@$(NOP) $(DOCKER) buildx create --use --name insecure-builder --buildkitd-flags '--allow-insecure-entitlement security.insecure' || true
-endif
+define build_native
+build_native:
+	@./deps/readies/bin/sep
 	@echo "Building $(STEM):$(VERSION)-$(ARCH)-$(OSNICK) ..."
 	@$(NOP) $(DOCKER) pull $(OS)
 	@$(NOP) $(DOCKER) buildx build $(BUILD_OPT) -t $(STEM):$(VERSION)-$(ARCH)-$(OSNICK) -f $(MAJOR)/Dockerfile \
@@ -203,29 +232,81 @@ endif
 		.
 	@$(NOP) $(DOCKER) tag $(STEM):$(VERSION)-$(ARCH)-$(OSNICK) $(STEM):$(MAJOR)-latest-$(ARCH)-$(OSNICK)
 
+.PHONY: build_native
+endef
+
+define build_arm # (1=arch)
+build_$(1):
+	@./deps/readies/bin/sep
+	@echo "Building $(STEM):$(VERSION)-$(ARCH)-$(OSNICK) ..."
+	@$(NOP) $(DOCKER) build $(BUILD_OPT) -t $(STEM)-xbuild:$(VERSION)-$(1)-$(OSNICK) -f $(MAJOR)/Dockerfile.arm \
+		--build-arg ARCH=$(1) \
+		--build-arg OSNICK=$(OSNICK) \
+		--build-arg UID=$(UID) \
+		--build-arg REDIS_VER=$(VERSION) \
+		--build-arg REDIS_MAJOR=$(MAJOR) \
+		.
+	@$(NOP) $(DOCKER) tag $(STEM)-xbuild:$(VERSION)-$(1)-$(OSNICK) $(STEM)-xbuild:$(MAJOR)-latest-$(1)-$(OSNICK)
+
+.PHONY: build_$(1)
+endef
+
 #----------------------------------------------------------------------------------------------
 
-publish:
-	@W=132 ./deps/readies/bin/sep1
+define publish_native
+publish_native:
 	@$(NOP) $(DOCKER) push $(STEM):$(VERSION)-$(ARCH)-$(OSNICK)
 	@$(NOP) $(DOCKER) push $(STEM):$(MAJOR)-latest-$(ARCH)-$(OSNICK)
 
+.PHONY: publish_native
+endef
+
+define publish_arm # (1=arch)
+publish_$(1):
+	@$(NOP) $(DOCKER) push $(STEM)-xbuild:$(VERSION)-$(1)-$(OSNICK)
+	@$(NOP) $(DOCKER) push $(STEM)-xbuild:$(MAJOR)-latest-$(1)-$(OSNICK)
+
+.PHONY: publish_$(1)
+endef
+
 #----------------------------------------------------------------------------------------------
 
-endif # VERSION
+build: insecure-build $(BUILD_TARGETS)
+
+ifeq ($(ARCH),arm64v8)
+insecure-build:
+	@$(NOP) $(DOCKER) buildx create --use --name insecure-builder --buildkitd-flags '--allow-insecure-entitlement security.insecure' || true
+else
+insecure-build: ;
+endif
+
+$(eval $(call build_native))
+ifeq ($(CROSS),1)
+$(eval $(call build_arm,arm64v8))
+$(eval $(call build_arm,arm32v7))
+endif
+
+publish: $(PUBLISH_TARGETS)
+
+$(eval $(call publish_native))
+ifeq ($(CROSS),1)
+$(eval $(call publish_arm,arm64v8))
+$(eval $(call publish_arm,arm32v7))
+endif
 
 #----------------------------------------------------------------------------------------------
 
-define HELPTEXT
-make [build|publish] [OSNICK=<nick> | OS=<os>]
+define HELP
+make [build|publish] [X64=1|ARM8=1|ARM7=1] [OSNICK=<nick> | OS=<os>]
      [VERSION=<ver> | VERSIONS="<ver>..."]
      [STD_VERSIONS=1]
+     [CROSS=1]
 
 build    Build image(s)
 publish  Push image(s) to Docker Hub
 
 Arguments:
-OSNICK=nick         nick=jammy|focal|bionic|xenial|bullseye|buster|rocky8|centos7|amzn2|fedora|alpine
+OSNICK=nick         nick=buster|stretch|xenial|bionic|centos6|centos7|centos8|fedora
 OS=os               (optional) OS Docker image name (e.g., debian:buster-slim)
 VERSION=ver         Redis version
 VERSIONS="vers..."  Multiple Redis versions
@@ -234,6 +315,8 @@ MASTER=1            Build sources from master branch ("edge" version)
 LATEST=1            Build the latest version of branch given by VERSION
 TEST=1              Run tests after build
 CACHE=0             Build without cache
+CROSS=1             Perform cross-platform builds (typically, ARM7/8 on x64)
+
 
 endef
 

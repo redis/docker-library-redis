@@ -5,7 +5,7 @@ RUN groupadd -r -g 999 redis && useradd -r -g redis -u 999 redis
 
 # grab gosu for easy step-down from root
 # https://github.com/tianon/gosu/releases
-ENV GOSU_VERSION 1.14
+ENV GOSU_VERSION 1.16
 RUN set -eux; \
 	savedAptMark="$(apt-mark showmanual)"; \
 	apt-get update; \
@@ -26,9 +26,9 @@ RUN set -eux; \
 	gosu --version; \
 	gosu nobody true
 
-ENV REDIS_VERSION 6.2.7
-ENV REDIS_DOWNLOAD_URL http://download.redis.io/releases/redis-6.2.7.tar.gz
-ENV REDIS_DOWNLOAD_SHA b7a79cc3b46d3c6eb52fa37dde34a4a60824079ebdfb3abfbbfa035947c55319
+ENV REDIS_VERSION 6.2.11
+ENV REDIS_DOWNLOAD_URL http://download.redis.io/releases/redis-6.2.11.tar.gz
+ENV REDIS_DOWNLOAD_SHA 8c75fb9cdd01849e92c23f30cb7fe205ea0032a38d11d46af191014e9acc3098
 
 RUN set -eux; \
 	\

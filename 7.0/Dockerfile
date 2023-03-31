@@ -21,6 +21,7 @@ ARG OS
 ARG OSNICK
 ARG ARCH
 ARG JEMALLOC
+
 RUN echo "Building Redis v${REDIS_VER} on ${OSNICK} (${OS}) for ${ARCH}"
 RUN uname -a; cat /etc/os-release
 
@@ -46,10 +47,11 @@ ADD ${REDIS_MAJOR}/build-fix-* /build/
 RUN /build/deps/readies/bin/getbash
 RUN /build/deps/readies/bin/getupdates
 RUN /build/deps/readies/bin/getpy3
-RUN /build/system-setup.py
+RUN	/build/system-setup.py
+
 RUN gcc --version
 
-ENV GOSU_VERSION 1.14
+ENV GOSU_VERSION 1.16
 RUN set -ex ;\
 	/build/deps/readies/bin/getgosu ;\
 	gosu --version; \
@@ -73,8 +75,8 @@ RUN ./build-fix-2
 # note: ARCH may break build if non-empty
 RUN set -ex; \
 	export BUILD_TLS=yes; \
-	ARCH= make REDIS_CFLAGS=-DUSE_JEMALLOC=${JEMALLOC} V=1 -C /usr/src/redis all; \
-	make -C /usr/src/redis install
+	/build/deps/readies/bin/runn ARCH= make REDIS_CFLAGS=-DUSE_JEMALLOC=${JEMALLOC} V=1 -C /usr/src/redis all; \
+	/build/deps/readies/bin/runn make -C /usr/src/redis install
 
 #----------------------------------------------------------------------------------------------
 FROM ${OS}
@@ -86,9 +88,8 @@ ARG OSNICK
 ARG UID
 
 RUN echo "Building redisfab/redis-${ARCH}-${OSNICK}:${REDIS_VER} UID=${UID}"
-RUN uname -a; cat /etc/os-release
 
-COPY ${REDIS_MAJOR}/platforms/setup.${OSNICK} /usr/local/bin/docker-setup
+COPY platforms/setup.${OSNICK} /usr/local/bin/docker-setup
 RUN chmod +x /usr/local/bin/docker-setup
 RUN /usr/local/bin/docker-setup
 RUN rm /usr/local/bin/docker-setup
@@ -96,9 +97,9 @@ RUN rm /usr/local/bin/docker-setup
 # Add our user and group first to make sure their IDs get assigned consistently,
 # regardless of whatever dependencies get added
 RUN set -xe; \
-    if [ -f /sbin/groupadd ] || [ -f /usr/sbin/groupadd ]; then\
+    if [ -f /sbin/groupadd ] || [ -f /usr/sbin/groupadd ]; then \
         groupadd -r -g ${UID} redis && useradd -r -g redis -u ${UID} redis ;\
-    else\
+    else \
         addgroup --gid ${UID} redis && adduser --system --uid ${UID} redis ;\
     fi
 

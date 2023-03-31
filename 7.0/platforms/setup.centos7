@@ -1,4 +1,0 @@
-#!/bin/bash
-
-yum install -y findutils libatomic openssl-libs
-# rpm -i http://mirror.centos.org/centos/7/sclo/x86_64/rh/devtoolset-8/devtoolset-8-runtime-8.1-1.el7.x86_64.rpm

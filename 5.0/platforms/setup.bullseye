@@ -1,4 +1,0 @@
-#!/bin/bash
-
-apt-get -qq update
-apt-get install -q -y libatomic1

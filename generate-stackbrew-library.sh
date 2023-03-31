@@ -70,7 +70,7 @@ join() {
 
 for version in "${versions[@]}"; do
 	for v in \
-		'' 32bit alpine \
+		'' alpine \
 	; do
 		dir="$version${v:+/$v}"
 		variant="$(basename "$v")"
@@ -111,11 +111,7 @@ for version in "${versions[@]}"; do
 		fi
 		suiteAliases=( "${suiteAliases[@]//latest-/}" )
 		variantAliases+=( "${suiteAliases[@]}" )
-
-		case "$v" in
-			32bit) variantArches='amd64' ;;
-			*) variantArches="${parentRepoToArches[$variantParent]}" ;;
-		esac
+		variantArches="${parentRepoToArches[$variantParent]}"
 
 		echo
 		cat <<-EOE

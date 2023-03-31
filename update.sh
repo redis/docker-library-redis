@@ -50,14 +50,11 @@ for version in "${versions[@]}"; do
 	echo "$version: $fullVersion"
 
 	for variant in \
-		alpine 32bit '' \
+		alpine '' \
 	; do
 		dir="$version${variant:+/$variant}"
 		[ -d "$dir" ] || continue
-		case "$variant" in
-			32bit) template='Dockerfile.template' ;;
-			*) template="Dockerfile${variant:+-$variant}.template" ;;
-		esac
+		template="Dockerfile${variant:+-$variant}.template"
 
 		sed -r \
 			-e 's/^(ENV REDIS_VERSION) .*/\1 '"$fullVersion"'/' \
@@ -66,32 +63,9 @@ for version in "${versions[@]}"; do
 			-e 's!sha[0-9]+sum!'"$shaType"'sum!g' \
 			"$template" > "$dir/Dockerfile"
 
-		if [ "$variant" = '32bit' ]; then
-			sed -ri \
-				-e 's/(make.*) all;/\1 32bit;/' \
-				-e 's/libc6-dev/libc6-dev-i386 gcc-multilib/' \
-				"$dir/Dockerfile"
-		fi
-
-		case "$version" in
-			5)
-				gawk -i inplace '
-					$1 == "##</protected-mode-sed>##" { ia = 0 }
-					!ia { print }
-					$1 == "##<protected-mode-sed>##" { ia = 1; ac = 0 }
-					ia { ac++ }
-					ia && ac == 1 { system("grep -vE \"^#\" old-protected-mode-sed.template") }
-				' "$dir/Dockerfile"
-				;;
-		esac
-		sed -ri -e '/protected-mode-sed/d' "$dir/Dockerfile"
-
-		# TLS support was added in 6.0, and we can't link 32bit Redis against 64bit OpenSSL (and it isn't worth going to a full foreign architecture -- just use i386/redis instead)
-		if [ "$version" = '4.0' ] || [ "$version" = '5' ] || [ "$variant" = '32bit' ]; then
-			sed -ri \
-				-e '/libssl/d' \
-				-e '/BUILD_TLS/d' \
-				"$dir/Dockerfile"
+		cp -a docker-entrypoint.sh "$dir/"
+		if [ "$variant" = 'alpine' ]; then
+			sed -i -e 's/gosu/su-exec/g' "$dir/docker-entrypoint.sh"
 		fi
 	done
 done
