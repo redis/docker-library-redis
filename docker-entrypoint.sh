@@ -7,6 +7,14 @@ if [ "${1#-}" != "$1" ] || [ "${1%.conf}" != "$1" ]; then
 	set -- redis-server "$@"
 fi
 
+# if secret REDIS_PASSWORD exists or REDIS_PASSWORD_FILE is set use content for requirepass
+if [ "$1" = 'redis-server' -a -s "${REDIS_PASSWORD_FILE:=/run/secrets/REDIS_PASSWORD}" ]; then
+	if ! printf '%s\n' "$@" | grep -Fqe "--requirepass"; then
+		REDIS_PASSWORD=$(cat "${REDIS_PASSWORD_FILE}")
+		set -- "$@" --requirepass "${REDIS_PASSWORD}"
+	fi
+fi
+
 # allow the container to be started with `--user`
 if [ "$1" = 'redis-server' -a "$(id -u)" = '0' ]; then
 	find . \! -user redis -exec chown redis '{}' +
