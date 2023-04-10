@@ -12,6 +12,25 @@ For more information about the full official images change lifecycle, see [the "
 
 For outstanding `redis` image PRs, check [PRs with the "library/redis" label on the official-images repository](https://github.com/docker-library/official-images/labels/library%2Fredis). For the current "source of truth" for [`redis`](https://hub.docker.com/_/redis/), see [the `library/redis` file in the official-images repository](https://github.com/docker-library/official-images/blob/master/library/redis).
 
+## Docker secrets
+To pass the value for `--requirepass` password in a secure way docker secrets can be used.
+
+```
+version: '3'
+services:
+  redis:
+    image: redis:alpine
+    environment:
+      - REDIS_PASSWORD_FILE=/run/secrets/REDIS_PASSWORD 
+    secrets: 
+      - REDIS_PASSWORD
+
+secrets:
+  REDIS_PASSWORD:
+    file: ./.secrets/REDIS_PASSWORD
+```
+Default for REDIS_PASSWORD_FILE is already `/run/secrets/REDIS_PASSWORD`. It is therefore here optional if the secret is named `REDIS_PASSWORD`
+
 ---
 
 -	[![build status badge](https://img.shields.io/github/actions/workflow/status/docker-library/redis/ci.yml?branch=master&label=GitHub%20CI)](https://github.com/docker-library/redis/actions?query=workflow%3A%22GitHub+CI%22+branch%3Amaster)
