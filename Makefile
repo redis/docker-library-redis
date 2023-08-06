@@ -30,6 +30,8 @@ endif
 ifneq ($(_HELP),1)
 ifeq ($(STD_VERSIONS),1)
 override VERSIONS:=$(foreach V,$(STD_MAJORS),$(shell ./deps/readies/bin/github-lastver -r redis/redis -v $(V)))
+override VERSIONS+=unstable
+# $(info VERSIONS=$(VERSIONS))
 endif
 endif
 
@@ -57,6 +59,8 @@ else ifeq ($(patsubst 7.0%,7.0,$(VERSION)),7.0)
 MAJOR=7.0
 else ifeq ($(patsubst 7%,7,$(VERSION)),7)
 MAJOR=7.2
+else ifeq ($(VERSION),unstable)
+MAJOR=unstable
 else
 ifneq ($(_HELP),1)
 $(info Strange Redis version: $(VERSION))
@@ -186,7 +190,7 @@ ifneq ($(VERSION),)
 #----------------------------------------------------------------------------------------------
 
 build:
-	@W=132 ./deps/readies/bin/sep1
+	@./deps/readies/bin/sep1
 ifeq ($(ARCH),arm64v8)
 	@$(NOP) $(DOCKER) buildx create --use --name insecure-builder --buildkitd-flags '--allow-insecure-entitlement security.insecure' || true
 endif
@@ -201,12 +205,14 @@ endif
 		--build-arg REDIS_VER=$(VERSION) \
 		--build-arg REDIS_MAJOR=$(MAJOR) \
 		.
+ifneq ($(VERSION),unstable)
 	@$(NOP) $(DOCKER) tag $(STEM):$(VERSION)-$(ARCH)-$(OSNICK) $(STEM):$(MAJOR)-latest-$(ARCH)-$(OSNICK)
+endif
 
 #----------------------------------------------------------------------------------------------
 
 publish:
-	@W=132 ./deps/readies/bin/sep1
+	@./deps/readies/bin/sep1
 	@$(NOP) $(DOCKER) push $(STEM):$(VERSION)-$(ARCH)-$(OSNICK)
 	@$(NOP) $(DOCKER) push $(STEM):$(MAJOR)-latest-$(ARCH)-$(OSNICK)
 

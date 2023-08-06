@@ -36,13 +36,13 @@ CACHE=0             Build without cache
 ```
 ### Examples
 
-From a x64 system, build `redis:6.0.9-x64-bionic`:
+From a x64 system, build `redis:7.0.10-x64-bionic`:
 ```
-$ make build OSNICK=bionic VERSION=7.0.11
+$ make build OSNICK=bionic VERSION=7.0.10
 ```
-From an ARM (aarch64) system, build and `redis:7.0.11-arm64v8-bionic`:
+From an ARM (aarch64) system, build and `redis:7.0.10-arm64v8-bionic`:
 ```
-$ make build OSNICK=bionic VERSION=7.0.11
+$ make build OSNICK=bionic VERSION=7.0.10
 ```
 Build all standard versions (latest version of Redis 5.0, 6.0, 6.2, 7.0, 7.2) for Rocky Linux 8:
 ```

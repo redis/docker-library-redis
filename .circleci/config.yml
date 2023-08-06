@@ -57,7 +57,7 @@ jobs:
       platform:
         type: string
     docker:
-      - image: 'debian:buster'
+      - image: 'debian:bullseye'
     steps:
       - prebuild
       - run:
