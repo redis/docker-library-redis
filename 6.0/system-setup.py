@@ -23,17 +23,17 @@ class RedisSetup(paella.Setup):
 
     def debian_compat(self):
         if self.osnick == 'trusty':
-            self.run("%s/bin/getgcc --modern" % READIES)
+            self.run(f"{READIES}/bin/getgcc --modern")
         else:
-            self.run("%s/bin/getgcc" % READIES)
+            self.run(f"{READIES}/bin/getgcc")
         self.install("libssl-dev")
 
     def redhat_compat(self):
-        self.run("%s/bin/getgcc --modern" % READIES)
+        self.run(f"{READIES}/bin/getgcc --modern")
         self.install("libatomic openssl-devel")
 
     def fedora(self):
-        self.run("%s/bin/getgcc" % READIES)
+        self.run(f"{READIES}/bin/getgcc")
         self.install("libatomic openssl-devel jemalloc-devel")
 
     def macos(self):
@@ -47,7 +47,6 @@ class RedisSetup(paella.Setup):
             self.install("dirmngr gnupg patch pkg-config")
         else:
             self.install("patch pkgconfig gnupg linux-headers")
-
 
 #----------------------------------------------------------------------------------------------
 

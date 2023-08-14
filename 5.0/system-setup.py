@@ -45,7 +45,6 @@ class RedisSetup(paella.Setup):
         else:
             self.install("patch gnupg linux-headers")
 
-
 #----------------------------------------------------------------------------------------------
 
 parser = argparse.ArgumentParser(description='Set up system for RedisGears build.')

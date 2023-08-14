@@ -44,7 +44,7 @@ ADD ${REDIS_MAJOR}/build-fix-* /build/
 #    curl -LO "https://repo.archlinuxcn.org/x86_64/$patched_glibc" && \
 #    bsdtar -C / -xvf "$patched_glibc"
 
-RUN /build/deps/readies/bin/getbash
+# RUN /build/deps/readies/bin/getbash
 RUN /build/deps/readies/bin/getupdates
 RUN /build/deps/readies/bin/getpy3
 RUN	/build/system-setup.py

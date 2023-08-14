@@ -79,38 +79,7 @@ OSNICK ?= buster
 
 #----------------------------------------------------------------------------------------------
 
-# OS ?= debian:buster-slim
-
-OS.trusty=ubuntu:trusty
-OS.xenial=ubuntu:xenial
-OS.bionic=ubuntu:bionic
-OS.focal=ubuntu:focal
-OS.jammy=ubuntu:jammy
-OS.kinetic=ubuntu:kinetic
-OS.stretch=debian:stretch-slim
-OS.buster=debian:buster-slim
-OS.bullseye=debian:bullseye-slim
-OS.centos6=centos:6
-OS.centos7=centos:7
-OS.centos8.4=centos:8.4
-OS.centos8=quay.io/centos/centos:stream8
-OS.centos9=quay.io/centos/centos:stream9
-OS.ol7=oraclelinux:7
-OS.ol8=oraclelinux:8
-OS.amzn2=amazonlinux:2
-OS.amzn2022=amazonlinux:2022
-OS.alma8=almalinux:8
-OS.rocky8=rockylinux:8
-OS.fedora=fedora:latest
-OS.alpine3=alpine:3
-OS.alpine=alpine:edge
-OS.rhel7.4=rhel:7.4
-
-OS=$(OS.$(OSNICK))
-
-ifeq ($(OS),)
-$(error Probably wrong OSNICK specified ($(OSNICK)))
-endif
+include deps/readies/mk/osnick.defs
 
 #----------------------------------------------------------------------------------------------
 
@@ -214,7 +183,9 @@ endif
 publish:
 	@./deps/readies/bin/sep1
 	@$(NOP) $(DOCKER) push $(STEM):$(VERSION)-$(ARCH)-$(OSNICK)
+ifneq ($(VERSION),unstable)
 	@$(NOP) $(DOCKER) push $(STEM):$(MAJOR)-latest-$(ARCH)-$(OSNICK)
+endif
 
 #----------------------------------------------------------------------------------------------
 

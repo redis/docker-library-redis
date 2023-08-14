@@ -50,6 +50,9 @@ $ make build OSNICK=rocky8 STD_VERSIONS=1
 ```
 
 ------
+Currently synched with commit `f2da8752a05b783eb805b67ad7a56a997a0fe91f` of `docker-library/redis`.
+
+------
 ### From original repo:
 
 https://github.com/docker-library/redis

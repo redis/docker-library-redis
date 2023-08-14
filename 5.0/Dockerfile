@@ -62,10 +62,10 @@ RUN set -ex; \
 # (ports are not automatically exposed when running inside Docker, but rather explicitly by specifying -p / -P)
 # [1]: https://github.com/antirez/redis/commit/edd4d555df57dc84265fdfb4ef59a4678832f6da
 
-ADD ${REDIS_MAJOR}/redis-5.0.patch /usr/src/redis/
+ADD ${REDIS_MAJOR}/redis.patch /usr/src/redis/
 RUN set -ex ;\
 	cd /usr/src/redis ;\
-	patch -p1 -i redis-5.0.patch
+	patch -p1 -i redis.patch
 
 # For future reference, we modify this directly in the source instead of just supplying a default
 # configuration flag because apparently "if you specify any argument to redis-server,

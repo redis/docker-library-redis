@@ -101,7 +101,7 @@ jobs:
 
 #----------------------------------------------------------------------------------------------------------------------------------
 
-on-any-branch: &on-any-branch
+always: &always
   filters:
     branches:
       only: /.*/
@@ -122,16 +122,16 @@ workflows:
   general:
     jobs:
       - build-x64:
-          <<: *on-any-branch
+          <<: *always
           matrix:
             parameters:
-              platform: [amzn2, rocky8, centos7, jammy, focal, bionic, xenial, bullseye, buster, fedora] # alpine3, alpine
+              platform: [amzn2, rocky9, rocky8, centos7, lunar, jammy, focal, bionic, xenial, bookworm, bullseye, buster, fedora] # alpine3, alpine
           context: common
       - build-arm8:
-          <<: *on-any-branch
+          <<: *always
           matrix:
             parameters:
-              platform: [rocky8, jammy, focal, bionic, bullseye, buster, fedora] # alpine3, alpine
+              platform: [rocky9, rocky8, lunar, jammy, focal, bionic, bookworm, bullseye, buster, fedora] # alpine3, alpine
           context: common
 
   weekly:
@@ -146,10 +146,10 @@ workflows:
       - build-x64:
           matrix:
             parameters:
-              platform: [amzn2, rocky8, centos7, jammy, focal, bionic, xenial, bullseye, buster, fedora] # alpine3, alpine
+              platform: [amzn2023, amzn2, rocky9, rocky8, centos7, lunar, jammy, focal, bionic, xenial, bookworm, bullseye, buster, fedora] # alpine3, alpine
           context: common
       - build-arm8:
           matrix:
             parameters:
-              platform: [rocky8, jammy, focal, bionic, bullseye, buster, fedora] # alpine3, alpine
+              platform: [rocky9, rocky8, lunar, jammy, focal, bionic, bookworm, bullseye, buster, fedora] # alpine3, alpine
           context: common

@@ -14,4 +14,4 @@ grep -E '^ *createBoolConfig[(]"protected-mode",.*, *1 *,.*[)],$' src/config.c
 sed -ri 's!^( *createBoolConfig[(]"protected-mode",.*, *)1( *,.*[)],)$!\10\2!' src/config.c
 grep -E '^ *createBoolConfig[(]"protected-mode",.*, *0 *,.*[)],$' src/config.c
 
-git --no-pager diff -p > redis-6.0.patch
+git --no-pager diff -p > redis.patch
