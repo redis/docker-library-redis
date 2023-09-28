@@ -17,7 +17,7 @@ endif
 
 #----------------------------------------------------------------------------------------------
 
-STD_MAJORS=7 7.0 6.2 6.0 5.0
+STD_MAJORS=7.2 7.0 6.2 6.0 5.0
 
 ifeq ($(VERSION),)
 ifeq ($(VERSIONS),)
@@ -57,6 +57,8 @@ else ifeq ($(patsubst 6.2%,6.2,$(VERSION)),6.2)
 MAJOR=6.2
 else ifeq ($(patsubst 7.0%,7.0,$(VERSION)),7.0)
 MAJOR=7.0
+else ifeq ($(patsubst 7.2%,7.2,$(VERSION)),7.2)
+MAJOR=7.2
 else ifeq ($(patsubst 7%,7,$(VERSION)),7)
 MAJOR=7.2
 else ifeq ($(VERSION),unstable)
@@ -91,6 +93,7 @@ UID.ol7=995
 UID.ol8=995
 UID.alma8=996
 UID.rocky8=994
+UID.rocky9=994
 UID.fedora=989
 UID.rhel7.4=800
 UID.alpine3=800

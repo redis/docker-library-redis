@@ -1,3 +1,3 @@
 #!/bin/bash
 
-yum install -y findutils libatomic openssl-libs
+yum install -y findutils libatomic openssl-libs shadow-utils
