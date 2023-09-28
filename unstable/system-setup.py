@@ -44,7 +44,7 @@ class RedisSetup(paella.Setup):
 
     def common_last(self):
         if self.dist != "alpine":
-            self.install("dirmngr gnupg patch pkg-config")
+            self.install("gnupg patch pkg-config") # dirmngr
         else:
             self.install("patch pkgconfig gnupg linux-headers")
 
