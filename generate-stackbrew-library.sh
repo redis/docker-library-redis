@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set -eu
 
 declare -A aliases=(
@@ -9,11 +9,13 @@ declare -A aliases=(
 self="$(basename "$BASH_SOURCE")"
 cd "$(dirname "$(readlink -f "$BASH_SOURCE")")"
 
-versions=( */ )
-versions=( "${versions[@]%/}" )
+if [ "$#" -eq 0 ]; then
+	versions="$(jq -r 'keys | map(@sh) | join(" ")' versions.json)"
+	eval "set -- $versions"
+fi
 
 # sort version numbers with highest first
-IFS=$'\n'; versions=( $(echo "${versions[*]}" | sort -rV) ); unset IFS
+IFS=$'\n'; set -- $(sort -rV <<<"$*"); unset IFS
 
 # get the most recent commit which modified any of "$@"
 fileCommit() {
@@ -68,50 +70,49 @@ join() {
 	echo "${out#$sep}"
 }
 
-for version in "${versions[@]}"; do
-	for v in \
-		'' alpine \
-	; do
-		dir="$version${v:+/$v}"
-		variant="$(basename "$v")"
+for version; do
+	export version
 
-		[ -f "$dir/Dockerfile" ] || continue
+	variants="$(jq -r '.[env.version].variants | map(@sh) | join(" ")' versions.json)"
+	eval "variants=( $variants )"
 
+	alpine="$(jq -r '.[env.version].alpine' versions.json)"
+	debian="$(jq -r '.[env.version].debian' versions.json)"
+
+	fullVersion="$(jq -r '.[env.version].version' versions.json)"
+
+	versionAliases=()
+	while [ "$fullVersion" != "$version" -a "${fullVersion%[.]*}" != "$fullVersion" ]; do
+		versionAliases+=( $fullVersion )
+		fullVersion="${fullVersion%[.]*}"
+	done
+	versionAliases+=(
+		$version
+		${aliases[$version]:-}
+	)
+
+	for variant in "${variants[@]}"; do
+		dir="$version/$variant"
 		commit="$(dirCommit "$dir")"
 
-		fullVersion="$(git show "$commit":"$dir/Dockerfile" | awk '$1 == "ENV" && $2 == "REDIS_VERSION" { print $3; exit }')"
-
-		versionAliases=()
-		while [ "$fullVersion" != "$version" -a "${fullVersion%[.]*}" != "$fullVersion" ]; do
-			versionAliases+=( $fullVersion )
-			fullVersion="${fullVersion%[.]*}"
-		done
-		versionAliases+=(
-			$version
-			${aliases[$version]:-}
-		)
-
-		if [ -n "$variant" ]; then
-			variantAliases=( "${versionAliases[@]/%/-$variant}" )
-			variantAliases=( "${variantAliases[@]//latest-/}" )
-		else
-			variantAliases=( "${versionAliases[@]}" )
-		fi
-
 		variantParent="$(awk 'toupper($1) == "FROM" { print $2 }' "$dir/Dockerfile")"
-
-		suite="${variantParent#*:}" # "jessie-slim", "stretch"
-		suite="${suite%-slim}" # "jessie", "stretch"
-
-		if [ "$v" = 'alpine' ]; then
-			suite="alpine$suite" # "alpine3.8"
-			suiteAliases=( "${versionAliases[@]/%/-$suite}" )
-		else
-			suiteAliases=( "${variantAliases[@]/%/-$suite}" )
-		fi
-		suiteAliases=( "${suiteAliases[@]//latest-/}" )
-		variantAliases+=( "${suiteAliases[@]}" )
 		variantArches="${parentRepoToArches[$variantParent]}"
+
+		variantAliases=( "${versionAliases[@]/%/-$variant}" )
+		variantAliases=( "${variantAliases[@]//latest-/}" )
+
+		case "$variant" in
+			"$debian")
+				variantAliases=(
+					"${versionAliases[@]}"
+					"${variantAliases[@]}"
+				)
+				;;
+			alpine"$alpine")
+				variantAliases+=( "${versionAliases[@]/%/-alpine}" )
+				variantAliases=( "${variantAliases[@]//latest-/}" )
+				;;
+		esac
 
 		echo
 		cat <<-EOE
