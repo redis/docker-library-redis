@@ -1,14 +1,36 @@
-FROM alpine:3.18
+#
+# NOTE: THIS DOCKERFILE IS GENERATED VIA "apply-templates.sh"
+#
+# PLEASE DO NOT EDIT IT DIRECTLY.
+#
+
+FROM debian:bookworm-slim
 
 # add our user and group first to make sure their IDs get assigned consistently, regardless of whatever dependencies get added
-RUN addgroup -S -g 1000 redis && adduser -S -G redis -u 999 redis
-# alpine already has a gid 999, so we'll use the next id
+RUN groupadd -r -g 999 redis && useradd -r -g redis -u 999 redis
 
-RUN apk add --no-cache \
-# grab su-exec for easy step-down from root
-		'su-exec>=0.2' \
-# add tzdata for https://github.com/docker-library/redis/issues/138
-		tzdata
+# grab gosu for easy step-down from root
+# https://github.com/tianon/gosu/releases
+ENV GOSU_VERSION 1.16
+RUN set -eux; \
+	savedAptMark="$(apt-mark showmanual)"; \
+	apt-get update; \
+	apt-get install -y --no-install-recommends ca-certificates gnupg wget; \
+	rm -rf /var/lib/apt/lists/*; \
+	dpkgArch="$(dpkg --print-architecture | awk -F- '{ print $NF }')"; \
+	wget -O /usr/local/bin/gosu "https://github.com/tianon/gosu/releases/download/$GOSU_VERSION/gosu-$dpkgArch"; \
+	wget -O /usr/local/bin/gosu.asc "https://github.com/tianon/gosu/releases/download/$GOSU_VERSION/gosu-$dpkgArch.asc"; \
+	export GNUPGHOME="$(mktemp -d)"; \
+	gpg --batch --keyserver hkps://keys.openpgp.org --recv-keys B42F6819007F00F88E364FD4036A9C25BF357DD4; \
+	gpg --batch --verify /usr/local/bin/gosu.asc /usr/local/bin/gosu; \
+	gpgconf --kill all; \
+	rm -rf "$GNUPGHOME" /usr/local/bin/gosu.asc; \
+	apt-mark auto '.*' > /dev/null; \
+	[ -z "$savedAptMark" ] || apt-mark manual $savedAptMark > /dev/null; \
+	apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false; \
+	chmod +x /usr/local/bin/gosu; \
+	gosu --version; \
+	gosu nobody true
 
 ENV REDIS_VERSION 6.0.20
 ENV REDIS_DOWNLOAD_URL http://download.redis.io/releases/redis-6.0.20.tar.gz
@@ -16,20 +38,19 @@ ENV REDIS_DOWNLOAD_SHA 173d4c5f44b5d7186da96c4adc5cb20e8018b50ec3a8dfe0d191dbbab
 
 RUN set -eux; \
 	\
-	apk add --no-cache --virtual .build-deps \
-		coreutils \
-		dpkg-dev dpkg \
-		gcc \
-		linux-headers \
-		make \
-		musl-dev \
-		openssl-dev \
-# install real "wget" to avoid:
-#   + wget -O redis.tar.gz https://download.redis.io/releases/redis-6.0.6.tar.gz
-#   Connecting to download.redis.io (45.60.121.1:80)
-#   wget: bad header line:     XxhODalH: btu; path=/; Max-Age=900
+	savedAptMark="$(apt-mark showmanual)"; \
+	apt-get update; \
+	apt-get install -y --no-install-recommends \
+		ca-certificates \
 		wget \
+		\
+		dpkg-dev \
+		gcc \
+		libc6-dev \
+		libssl-dev \
+		make \
 	; \
+	rm -rf /var/lib/apt/lists/*; \
 	\
 	wget -O redis.tar.gz "$REDIS_DOWNLOAD_URL"; \
 	echo "$REDIS_DOWNLOAD_SHA *redis.tar.gz" | sha256sum -c -; \
@@ -79,14 +100,17 @@ RUN set -eux; \
 	\
 	rm -r /usr/src/redis; \
 	\
-	runDeps="$( \
-		scanelf --needed --nobanner --format '%n#p' --recursive /usr/local \
-			| tr ',' '\n' \
-			| sort -u \
-			| awk 'system("[ -e /usr/local/lib/" $1 " ]") == 0 { next } { print "so:" $1 }' \
-	)"; \
-	apk add --no-network --virtual .redis-rundeps $runDeps; \
-	apk del --no-network .build-deps; \
+	apt-mark auto '.*' > /dev/null; \
+	[ -z "$savedAptMark" ] || apt-mark manual $savedAptMark > /dev/null; \
+	find /usr/local -type f -executable -exec ldd '{}' ';' \
+		| awk '/=>/ { so = $(NF-1); if (index(so, "/usr/local/") == 1) { next }; gsub("^/(usr/)?", "", so); print so }' \
+		| sort -u \
+		| xargs -r dpkg-query --search \
+		| cut -d: -f1 \
+		| sort -u \
+		| xargs -r apt-mark manual \
+	; \
+	apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false; \
 	\
 	redis-cli --version; \
 	redis-server --version

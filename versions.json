@@ -1,0 +1,58 @@
+{
+  "6.0": {
+    "alpine": "3.18",
+    "debian": "bookworm",
+    "downloadUrl": "http://download.redis.io/releases/redis-6.0.20.tar.gz",
+    "gosu": {
+      "version": "1.16"
+    },
+    "sha256": "173d4c5f44b5d7186da96c4adc5cb20e8018b50ec3a8dfe0d191dbbab53952f0",
+    "variants": [
+      "bookworm",
+      "alpine3.18"
+    ],
+    "version": "6.0.20"
+  },
+  "6.2": {
+    "alpine": "3.18",
+    "debian": "bookworm",
+    "downloadUrl": "http://download.redis.io/releases/redis-6.2.14.tar.gz",
+    "gosu": {
+      "version": "1.16"
+    },
+    "sha256": "34e74856cbd66fdb3a684fb349d93961d8c7aa668b06f81fd93ff267d09bc277",
+    "variants": [
+      "bookworm",
+      "alpine3.18"
+    ],
+    "version": "6.2.14"
+  },
+  "7.0": {
+    "alpine": "3.18",
+    "debian": "bookworm",
+    "downloadUrl": "http://download.redis.io/releases/redis-7.0.14.tar.gz",
+    "gosu": {
+      "version": "1.16"
+    },
+    "sha256": "7e1cdf347f4970ea39d5b7fdb19aedec4c21942e202de65bdeb782d38d2f299f",
+    "variants": [
+      "bookworm",
+      "alpine3.18"
+    ],
+    "version": "7.0.14"
+  },
+  "7.2": {
+    "alpine": "3.18",
+    "debian": "bookworm",
+    "downloadUrl": "http://download.redis.io/releases/redis-7.2.2.tar.gz",
+    "gosu": {
+      "version": "1.16"
+    },
+    "sha256": "ca999be08800edc6d265379c4c7aafad92f0ee400692e4e2d69829ab4b4c3d08",
+    "variants": [
+      "bookworm",
+      "alpine3.18"
+    ],
+    "version": "7.2.2"
+  }
+}

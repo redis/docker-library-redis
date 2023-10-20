@@ -1,3 +1,9 @@
+#
+# NOTE: THIS DOCKERFILE IS GENERATED VIA "apply-templates.sh"
+#
+# PLEASE DO NOT EDIT IT DIRECTLY.
+#
+
 FROM debian:bookworm-slim
 
 # add our user and group first to make sure their IDs get assigned consistently, regardless of whatever dependencies get added
@@ -26,9 +32,9 @@ RUN set -eux; \
 	gosu --version; \
 	gosu nobody true
 
-ENV REDIS_VERSION 7.2.2
-ENV REDIS_DOWNLOAD_URL http://download.redis.io/releases/redis-7.2.2.tar.gz
-ENV REDIS_DOWNLOAD_SHA ca999be08800edc6d265379c4c7aafad92f0ee400692e4e2d69829ab4b4c3d08
+ENV REDIS_VERSION 7.0.14
+ENV REDIS_DOWNLOAD_URL http://download.redis.io/releases/redis-7.0.14.tar.gz
+ENV REDIS_DOWNLOAD_SHA 7e1cdf347f4970ea39d5b7fdb19aedec4c21942e202de65bdeb782d38d2f299f
 
 RUN set -eux; \
 	\
