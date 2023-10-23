@@ -1,3 +1,4 @@
+{{ include ".template-helper-functions" -}}
 FROM alpine:{{ env.variant | ltrimstr("alpine") }}
 
 # add our user and group first to make sure their IDs get assigned consistently, regardless of whatever dependencies get added
@@ -89,7 +90,21 @@ RUN set -eux; \
 	apk del --no-network .build-deps; \
 	\
 	redis-cli --version; \
-	redis-server --version
+	redis-server --version; \
+	\
+	echo {{
+		{
+			name: "redis-server",
+			version: .version,
+			params: {
+				os_name: "alpine",
+				os_version: env.variant | ltrimstr("alpine")
+			},
+			licenses: [
+				"BSD-3-Clause"
+			]
+		} | sbom | tostring | @sh
+	}} > /usr/local/redis.spdx.json
 
 RUN mkdir /data && chown redis:redis /data
 VOLUME /data

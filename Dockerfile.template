@@ -1,3 +1,4 @@
+{{ include ".template-helper-functions" -}}
 FROM debian:{{ env.variant }}-slim
 
 # add our user and group first to make sure their IDs get assigned consistently, regardless of whatever dependencies get added
@@ -107,7 +108,21 @@ RUN set -eux; \
 	apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false; \
 	\
 	redis-cli --version; \
-	redis-server --version
+	redis-server --version; \
+	\
+	echo {{
+		{
+			name: "redis-server",
+			version: .version,
+			params: {
+				os_name: "debian",
+				os_version: env.variant
+			},
+			licenses: [
+				"BSD-3-Clause"
+			]
+		} | sbom | tostring | @sh
+	}} > /usr/local/redis.spdx.json
 
 RUN mkdir /data && chown redis:redis /data
 VOLUME /data
