@@ -44,15 +44,15 @@
   "7.2": {
     "alpine": "3.18",
     "debian": "bookworm",
-    "downloadUrl": "http://download.redis.io/releases/redis-7.2.2.tar.gz",
+    "downloadUrl": "http://download.redis.io/releases/redis-7.2.3.tar.gz",
     "gosu": {
       "version": "1.16"
     },
-    "sha256": "ca999be08800edc6d265379c4c7aafad92f0ee400692e4e2d69829ab4b4c3d08",
+    "sha256": "3e2b196d6eb4ddb9e743088bfc2915ccbb42d40f5a8a3edd8cb69c716ec34be7",
     "variants": [
       "bookworm",
       "alpine3.18"
     ],
-    "version": "7.2.2"
+    "version": "7.2.3"
   }
 }
