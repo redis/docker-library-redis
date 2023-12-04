@@ -1,30 +1,17 @@
-{{ include ".template-helper-functions" -}}
-{{ if env.variant == "alpine" then ( -}}
-FROM alpine:{{ .alpine.version }}
-{{ ) else ( -}}
-FROM debian:{{ .debian.version }}-slim
-{{ ) end -}}
+#
+# NOTE: THIS DOCKERFILE IS GENERATED VIA "apply-templates.sh"
+#
+# PLEASE DO NOT EDIT IT DIRECTLY.
+#
+
+FROM debian:bookworm-slim
 
 # add our user and group first to make sure their IDs get assigned consistently, regardless of whatever dependencies get added
-{{ if env.variant == "alpine" then ( -}}
-RUN set -eux; \
-# alpine already has a gid 999, so we'll use the next id
-	addgroup -S -g 1000 redis; \
-	adduser -S -G redis -u 999 redis
-{{ ) else ( -}}
 RUN set -eux; \
 	groupadd -r -g 999 redis; \
 	useradd -r -g redis -u 999 redis
-{{ ) end -}}
 
 # runtime dependencies
-{{ if env.variant == "alpine" then ( -}}
-RUN set -eux; \
-	apk add --no-cache \
-# add tzdata for https://github.com/docker-library/redis/issues/138
-		tzdata \
-	;
-{{ ) else ( -}}
 RUN set -eux; \
 	apt-get update; \
 	apt-get install -y --no-install-recommends \
@@ -32,69 +19,26 @@ RUN set -eux; \
 		tzdata \
 	; \
 	rm -rf /var/lib/apt/lists/*
-{{ ) end -}}
 
 # grab gosu for easy step-down from root
 # https://github.com/tianon/gosu/releases
-ENV GOSU_VERSION {{ .gosu.version }}
+ENV GOSU_VERSION 1.17
 RUN set -eux; \
-{{ if env.variant == "alpine" then ( -}}
-	apk add --no-cache --virtual .gosu-fetch gnupg; \
-	arch="$(apk --print-arch)"; \
-{{ ) else ( -}}
 	savedAptMark="$(apt-mark showmanual)"; \
 	apt-get update; \
 	apt-get install -y --no-install-recommends ca-certificates gnupg wget; \
 	rm -rf /var/lib/apt/lists/*; \
 	arch="$(dpkg --print-architecture | awk -F- '{ print $NF }')"; \
-{{ ) end -}}
 	case "$arch" in \
-{{
-	[
-		.gosu.arches
-		| to_entries[]
-		| (
-			if env.variant == "alpine" then
-				{
-					# https://dl-cdn.alpinelinux.org/alpine/edge/main/
-					# https://dl-cdn.alpinelinux.org/alpine/latest-stable/main/
-					amd64: "x86_64",
-					arm32v6: "armhf",
-					arm32v7: "armv7",
-					arm64v8: "aarch64",
-					i386: "x86",
-					ppc64le: "ppc64le",
-					riscv64: "riscv64",
-					s390x: "s390x",
-				}
-			else
-				{
-					# https://salsa.debian.org/dpkg-team/dpkg/-/blob/main/data/cputable
-					# https://wiki.debian.org/ArchitectureSpecificsMemo#Architecture_baselines
-					# http://deb.debian.org/debian/dists/unstable/main/
-					# http://deb.debian.org/debian/dists/stable/main/
-					# https://deb.debian.org/debian-ports/dists/unstable/main/
-					amd64: "amd64",
-					arm32v5: "armel",
-					arm32v7: "armhf",
-					arm64v8: "arm64",
-					i386: "i386",
-					mips64le: "mips64el",
-					ppc64le: "ppc64el",
-					riscv64: "riscv64",
-					s390x: "s390x",
-				}
-			end
-		)[.key] as $arch
-		| select($arch)
-		| .value
-		| (
--}}
-		{{ $arch | @sh }}) url={{ .url | @sh }}; sha256={{ .sha256 | @sh }} ;; \
-{{
-		)
-	] | add
--}}
+		'amd64') url='https://github.com/tianon/gosu/releases/download/1.17/gosu-amd64'; sha256='bbc4136d03ab138b1ad66fa4fc051bafc6cc7ffae632b069a53657279a450de3' ;; \
+		'arm64') url='https://github.com/tianon/gosu/releases/download/1.17/gosu-arm64'; sha256='c3805a85d17f4454c23d7059bcb97e1ec1af272b90126e79ed002342de08389b' ;; \
+		'armel') url='https://github.com/tianon/gosu/releases/download/1.17/gosu-armel'; sha256='f9969910fa141140438c998cfa02f603bf213b11afd466dcde8fa940e700945d' ;; \
+		'i386') url='https://github.com/tianon/gosu/releases/download/1.17/gosu-i386'; sha256='087dbb8fe479537e64f9c86fa49ff3b41dee1cbd28739a19aaef83dc8186b1ca' ;; \
+		'mips64el') url='https://github.com/tianon/gosu/releases/download/1.17/gosu-mips64el'; sha256='87140029d792595e660be0015341dfa1c02d1181459ae40df9f093e471d75b70' ;; \
+		'ppc64el') url='https://github.com/tianon/gosu/releases/download/1.17/gosu-ppc64el'; sha256='1891acdcfa70046818ab6ed3c52b9d42fa10fbb7b340eb429c8c7849691dbd76' ;; \
+		'riscv64') url='https://github.com/tianon/gosu/releases/download/1.17/gosu-riscv64'; sha256='38a6444b57adce135c42d5a3689f616fc7803ddc7a07ff6f946f2ebc67a26ba6' ;; \
+		's390x') url='https://github.com/tianon/gosu/releases/download/1.17/gosu-s390x'; sha256='69873bab588192f760547ca1f75b27cfcf106e9f7403fee6fd0600bc914979d0' ;; \
+		'armhf') url='https://github.com/tianon/gosu/releases/download/1.17/gosu-armhf'; sha256='e5866286277ff2a2159fb9196fea13e0a59d3f1091ea46ddb985160b94b6841b' ;; \
 		*) echo >&2 "error: unsupported gosu architecture: '$arch'"; exit 1 ;; \
 	esac; \
 	wget -O /usr/local/bin/gosu.asc "$url.asc"; \
@@ -105,39 +49,19 @@ RUN set -eux; \
 	gpg --batch --verify /usr/local/bin/gosu.asc /usr/local/bin/gosu; \
 	gpgconf --kill all; \
 	rm -rf "$GNUPGHOME" /usr/local/bin/gosu.asc; \
-{{ if env.variant == "alpine" then ( -}}
-	apk del --no-network .gosu-fetch; \
-{{ ) else ( -}}
 	apt-mark auto '.*' > /dev/null; \
 	[ -z "$savedAptMark" ] || apt-mark manual $savedAptMark > /dev/null; \
 	apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false; \
-{{ ) end -}}
 	chmod +x /usr/local/bin/gosu; \
 	gosu --version; \
 	gosu nobody true
 
-ENV REDIS_VERSION {{ .version }}
-ENV REDIS_DOWNLOAD_URL {{ .url }}
-ENV REDIS_DOWNLOAD_SHA {{ .sha256 // error("no sha256 for \(.version) (\(env.version))") }}
+ENV REDIS_VERSION 6.2.14
+ENV REDIS_DOWNLOAD_URL http://download.redis.io/releases/redis-6.2.14.tar.gz
+ENV REDIS_DOWNLOAD_SHA 34e74856cbd66fdb3a684fb349d93961d8c7aa668b06f81fd93ff267d09bc277
 
 RUN set -eux; \
 	\
-{{ if env.variant == "alpine" then ( -}}
-	apk add --no-cache --virtual .build-deps \
-		coreutils \
-		dpkg-dev dpkg \
-		gcc \
-		linux-headers \
-		make \
-		musl-dev \
-		openssl-dev \
-# install real "wget" to avoid:
-#   + wget -O redis.tar.gz https://download.redis.io/releases/redis-6.0.6.tar.gz
-#   Connecting to download.redis.io (45.60.121.1:80)
-#   wget: bad header line:     XxhODalH: btu; path=/; Max-Age=900
-		wget \
-	; \
-{{ ) else ( -}}
 	savedAptMark="$(apt-mark showmanual)"; \
 	apt-get update; \
 	apt-get install -y --no-install-recommends \
@@ -151,7 +75,6 @@ RUN set -eux; \
 		make \
 	; \
 	rm -rf /var/lib/apt/lists/*; \
-{{ ) end -}}
 	\
 	wget -O redis.tar.gz "$REDIS_DOWNLOAD_URL"; \
 	echo "$REDIS_DOWNLOAD_SHA *redis.tar.gz" | sha256sum -c -; \
@@ -201,16 +124,6 @@ RUN set -eux; \
 	\
 	rm -r /usr/src/redis; \
 	\
-{{ if env.variant == "alpine" then ( -}}
-	runDeps="$( \
-		scanelf --needed --nobanner --format '%n#p' --recursive /usr/local \
-			| tr ',' '\n' \
-			| sort -u \
-			| awk 'system("[ -e /usr/local/lib/" $1 " ]") == 0 { next } { print "so:" $1 }' \
-	)"; \
-	apk add --no-network --virtual .redis-rundeps $runDeps; \
-	apk del --no-network .build-deps; \
-{{ ) else ( -}}
 	apt-mark auto '.*' > /dev/null; \
 	[ -z "$savedAptMark" ] || apt-mark manual $savedAptMark > /dev/null; \
 	find /usr/local -type f -executable -exec ldd '{}' ';' \
@@ -222,33 +135,11 @@ RUN set -eux; \
 		| xargs -r apt-mark manual \
 	; \
 	apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false; \
-{{ ) end -}}
 	\
 	redis-cli --version; \
 	redis-server --version; \
 	\
-	echo {{
-		{
-			name: "redis-server",
-			version: .version,
-			params: (
-				if env.variant == "alpine" then
-					{
-						os_name: "alpine",
-						os_version: .alpine.version,
-					}
-				else
-					{
-						os_name: "debian",
-						os_version: .debian.version,
-					}
-				end
-			),
-			licenses: [
-				"BSD-3-Clause"
-			]
-		} | sbom | tostring | @sh
-	}} > /usr/local/redis.spdx.json
+	echo '{"spdxVersion":"SPDX-2.3","SPDXID":"SPDXRef-DOCUMENT","name":"redis-server-sbom","packages":[{"name":"redis-server","versionInfo":"6.2.14","SPDXID":"SPDXRef-Package--redis-server","externalRefs":[{"referenceCategory":"PACKAGE-MANAGER","referenceType":"purl","referenceLocator":"pkg:generic/redis-server@6.2.14?os_name=debian&os_version=bookworm"}],"licenseDeclared":"BSD-3-Clause"}]}' > /usr/local/redis.spdx.json
 
 RUN mkdir /data && chown redis:redis /data
 VOLUME /data
