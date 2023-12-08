@@ -175,7 +175,7 @@
       "version": "bookworm"
     },
     "alpine": {
-      "version": "3.18"
+      "version": "3.19"
     },
     "gosu": {
       "version": "1.17",
