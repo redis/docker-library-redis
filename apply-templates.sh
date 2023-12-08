@@ -3,8 +3,6 @@ set -Eeuo pipefail
 
 [ -f versions.json ] # run "versions.sh" first
 
-cd "$(dirname "$(readlink -f "$BASH_SOURCE")")"
-
 jqt='.jq-template.awk'
 if [ -n "${BASHBREW_SCRIPTS:-}" ]; then
 	jqt="$BASHBREW_SCRIPTS/jq-template.awk"
@@ -17,6 +15,7 @@ jqf='.template-helper-functions.jq'
 if [ -n "${BASHBREW_SCRIPTS:-}" ]; then
 	jqf="$BASHBREW_SCRIPTS/template-helper-functions.jq"
 elif [ "$BASH_SOURCE" -nt "$jqf" ]; then
+	# https://github.com/docker-library/bashbrew/blob/master/scripts/template-helper-functions.jq
 	wget -qO "$jqf" 'https://github.com/docker-library/bashbrew/raw/08c926140ad0af22de58c2a2656afda58082ba3e/scripts/template-helper-functions.jq'
 fi
 
@@ -37,44 +36,22 @@ generated_warning() {
 }
 
 for version; do
-	export version
+	rm -rf "$version"
 
-	if [ -d "$version" ]; then
-		rm -rf "$version"
-	fi
+	for variant in debian alpine; do
+		export version variant
 
-	if jq -e '.[env.version] | not' versions.json > /dev/null; then
-		echo "skipping $version ..."
-		continue
-	fi
+		dir="$version/$variant"
 
-	variants="$(jq -r '.[env.version].variants | map(@sh) | join(" ")' versions.json)"
-	eval "variants=( $variants )"
-
-	for variant in "${variants[@]}"; do
-		export variant
-
-		echo "processing $version/$variant ..."
-
-		dir="$version${variant:+/$variant}"
+		echo "processing $dir ..."
 
 		mkdir -p "$dir"
 
-		cp -f docker-entrypoint.sh "$dir/"
-
-		case "$variant" in
-			alpine*)
-				template='Dockerfile-alpine.template'
-				sed -i -e 's/gosu/su-exec/g' "$dir/docker-entrypoint.sh"
-				;;
-			*)
-				template='Dockerfile.template'
-				;;
-		esac
-
 		{
 			generated_warning
-			gawk -f "$jqt" "$template"
+			gawk -f "$jqt" Dockerfile.template
 		} > "$dir/Dockerfile"
+
+		cp -a docker-entrypoint.sh "$dir/"
 	done
 done

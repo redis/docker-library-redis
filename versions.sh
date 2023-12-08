@@ -1,23 +1,85 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-# we will support at most two entries in each of these lists, and both should be in descending order
-supportedDebianSuites=(
-	bookworm
-)
-supportedAlpineVersions=(
-	3.18
-)
-defaultDebianSuite="${supportedDebianSuites[0]}"
-declare -A debianSuites=(
-	#[7.2]='3.17'
-)
-defaultAlpineVersion="${supportedAlpineVersions[0]}"
-declare -A alpineVersions=(
-	#[14]='3.16'
-)
+alpine="$(
+	bashbrew cat --format '{{ .TagEntry.Tags | join "\n" }}' https://github.com/docker-library/official-images/raw/HEAD/library/alpine:latest \
+		| grep -E '^[0-9]+[.][0-9]+$'
+)"
+[ "$(wc -l <<<"$alpine")" = 1 ]
+export alpine
 
-gosuVersion='1.16'
+debian="$(
+	bashbrew cat --format '{{ .TagEntry.Tags | join "\n" }}' https://github.com/docker-library/official-images/raw/HEAD/library/debian:latest \
+		| grep -vE '^latest$|[0-9.-]' \
+		| head -1
+)"
+[ "$(wc -l <<<"$debian")" = 1 ]
+export debian
+
+gosus="$(
+	git ls-remote --tags https://github.com/tianon/gosu.git \
+		| cut -d/ -f3- \
+		| cut -d^ -f1 \
+		| grep -E '^[0-9]+' \
+		| sort -urV
+)"
+gosu=
+for possible in $gosus; do
+	urlBase="https://github.com/tianon/gosu/releases/download/$possible"
+	if shas="$(wget -qO- "$urlBase/SHA256SUMS")" && [ -n "$shas" ]; then
+		gosu="$(jq <<<"$shas" -csR --arg version "$possible" --arg urlBase "$urlBase" '{
+			version: $version,
+			arches: (
+				rtrimstr("\n")
+				| split("\n")
+				| map(
+					# this capture will naturally ignore the ".asc" file checksums
+					capture(
+						[
+							"^(?<sha256>[0-9a-f]{64})",
+							"(  | [*])",
+							"(?<file>",
+								"gosu-",
+								"(?<dpkgArch>[^_. -]+)",
+							")$"
+						] | join("")
+					)
+					| {
+						(
+							# convert dpkg arch into bashbrew arch
+							{
+								# https://salsa.debian.org/dpkg-team/dpkg/-/blob/main/data/cputable
+								# https://wiki.debian.org/ArchitectureSpecificsMemo#Architecture_baselines
+								# http://deb.debian.org/debian/dists/unstable/main/
+								# http://deb.debian.org/debian/dists/stable/main/
+								# https://deb.debian.org/debian-ports/dists/unstable/main/
+								amd64: "amd64",
+								armel: "arm32v5",
+								armhf: "arm32v6", # https://github.com/tianon/gosu/blob/2dada3bb5dfbc1e7162a29907691b6f45995d54e/Dockerfile#L52-L53
+								arm64: "arm64v8",
+								i386: "i386",
+								mips64el: "mips64le",
+								ppc64el: "ppc64le",
+								riscv64: "riscv64",
+								s390x: "s390x",
+							}[.dpkgArch] // empty
+						): {
+							url: ($urlBase + "/" + .file),
+							sha256: .sha256,
+						},
+					}
+				)
+				| add
+				| if has("arm32v6") and (has("arm32v7") | not) then
+					.arm32v7 = .arm32v6
+				else . end
+			),
+		}')"
+		break
+	fi
+done
+[ -n "$gosu" ]
+export gosu
 
 cd "$(dirname "$(readlink -f "$BASH_SOURCE")")"
 
@@ -30,95 +92,64 @@ else
 fi
 versions=( "${versions[@]%/}" )
 
-packagesBase='https://raw.githubusercontent.com/redis/redis-hashes/master/README'
-
-declare -A packages=
-
-fetch_package_list() {
-	local -; set +x # make sure running with "set -x" doesn't spam the terminal with the raw package lists
-
-	# normal (GA) releases end up in the "main" component of upstream's repository
-	if [ -z "${packages}" ]; then
-		packages="$(curl -fsSL "$packagesBase")"
-	fi
-}
-get_version() {
-	local version="$1"; shift
-
-	rcVersion="${version%-rc}"
-
-	line="$(
-		awk '
-			{ gsub(/^redis-|[.]tar[.]gz$/, "", $2) }
-			$1 == "hash" && $2 ~ /^'"$rcVersion"'([.]|$)/ { print }
-		' <<< "$packages" \
-			| sort -rV \
-			| head -1
-	)"
-
-	if [ -n "$line" ]; then
-		fullVersion="$(cut -d' ' -f2 <<<"$line")"
-		downloadUrl="$(cut -d' ' -f5 <<<"$line")"
-		shaHash="$(cut -d' ' -f4 <<<"$line")"
-		shaType="$(cut -d' ' -f3 <<<"$line")"
-	elif [ "$version" != "$rcVersion" ] && fullVersion="$(
-			git ls-remote --tags https://github.com/redis/redis.git "refs/tags/$rcVersion*" \
-				| cut -d/ -f3 \
-				| cut -d^ -f1 \
-				| sort -urV \
-				| head -1
-	)" && [ -n "$fullVersion" ]; then
-		downloadUrl="https://github.com/redis/redis/archive/$fullVersion.tar.gz"
-		shaType='sha256'
-		shaHash="$(curl -fsSL "$downloadUrl" | "${shaType}sum" | cut -d' ' -f1)"
-	else
-		echo >&2 "error: full version for $version cannot be determined"
-		exit 1
-	fi
-	[ "$shaType" = 'sha256' ] || [ "$shaType" = 'sha1' ]
-}
+packages="$(
+	wget -qO- 'https://github.com/redis/redis-hashes/raw/master/README' \
+		| jq -csR '
+			rtrimstr("\n")
+			| split("\n")
+			| map(
+				# this capture will naturally ignore comments and blank lines
+				capture(
+					[
+						"^hash[[:space:]]+",
+						"(?<file>redis-",
+						"(?<version>([0-9.]+)(-rc[0-9]+)?)",
+						"[.][^[:space:]]+)[[:space:]]+",
+						"(?<type>sha256|sha1)[[:space:]]+", # this filters us down to just the checksum types we are prepared to handle right now
+						"(?<sum>[0-9a-f]{64}|[0-9a-f]{40})[[:space:]]+",
+						"(?<url>[^[:space:]]+)",
+						"$"
+					] | join("")
+				)
+				| {
+					version: .version,
+					url: .url,
+					(.type): .sum,
+				}
+			)
+		'
+)"
 
 for version in "${versions[@]}"; do
-	export version
+	export version rcVersion="${version%-rc}"
 
-	versionAlpineVersion="${alpineVersions[$version]:-$defaultAlpineVersion}"
-	versionDebianSuite="${debianSuites[$version]:-$defaultDebianSuite}"
-	export versionAlpineVersion versionDebianSuite
+	doc="$(
+		jq <<<"$packages" -c '
+			map(
+				select(
+					.version
+					| (
+						startswith(env.rcVersion + ".")
+						or startswith(env.rcVersion + "-")
+					) and (
+						index("-")
+						| if env.version == env.rcVersion then not else . end
+					)
+				)
+			)[-1]
+		'
+	)"
 
-	doc="$(jq -nc '{
-		alpine: env.versionAlpineVersion,
-		debian: env.versionDebianSuite,
-	}')"
-
-	fetch_package_list
-	get_version "$version"
-
-	for suite in "${supportedDebianSuites[@]}"; do
-		export suite
-		doc="$(jq <<<"$doc" -c '
-			.variants += [ env.suite ]
-		')"
-	done
-
-	for alpineVersion in "${supportedAlpineVersions[@]}"; do
-		doc="$(jq <<<"$doc" -c --arg v "$alpineVersion" '
-			.variants += [ "alpine" + $v ]
-		')"
-	done
-
+	fullVersion="$(jq <<<"$doc" -r '.version')"
 	echo "$version: $fullVersion"
 
-	export fullVersion shaType shaHash downloadUrl gosuVersion
 	json="$(jq <<<"$json" -c --argjson doc "$doc" '
 		.[env.version] = ($doc + {
-			version: env.fullVersion,
-			downloadUrl: env.downloadUrl,
-			(env.shaType): env.shaHash,
-			"gosu": {
-				version: env.gosuVersion
-			}
+			debian: { version: env.debian },
+			alpine: { version: env.alpine },
+			gosu: (env.gosu | fromjson),
 		})
 	')"
 done
 
-jq <<<"$json" -S . > versions.json
+jq <<<"$json" . > versions.json
