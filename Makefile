@@ -205,7 +205,7 @@ build    Build image(s)
 publish  Push image(s) to Docker Hub
 
 Arguments:
-OSNICK=nick         nick=jammy|focal|bionic|xenial|bullseye|buster|rocky8|centos7|amzn2|fedora|alpine
+OSNICK=nick         nick=jammy|focal|bionic|xenial|bullseye|buster|rocky8|centos7|amzn2|fedora|alpine|mariner2
 OS=os               (optional) OS Docker image name (e.g., debian:buster-slim)
 VERSION=ver         Redis version
 VERSIONS="vers..."  Multiple Redis versions
