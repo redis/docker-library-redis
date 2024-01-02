@@ -65,7 +65,7 @@ jobs:
           command: |
             docker version
             if [[ <<parameters.platform>> == mariner2.0 ]]; then
-                make build OSNICK=$OSNICK VERSIONS="7.2 unstable"
+                make build OSNICK=<<parameters.platform>> VERSIONS="7.2 unstable"
             else
                 make build OSNICK=<<parameters.platform>> STD_VERSIONS=1
             fi
