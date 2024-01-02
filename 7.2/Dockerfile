@@ -77,7 +77,7 @@ RUN set -ex; \
 	export BUILD_TLS=yes; \
 	/build/deps/readies/bin/runn ARCH= make REDIS_CFLAGS=-DUSE_JEMALLOC=${JEMALLOC} V=1 -C /usr/src/redis all; \
 	/build/deps/readies/bin/runn make -C /usr/src/redis install
-	
+
 #----------------------------------------------------------------------------------------------
 FROM ${OS}
 
