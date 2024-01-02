@@ -42,6 +42,9 @@ class RedisSetup(paella.Setup):
     def alpine(self):
         self.install("gcc make openssl openssl-dev libatomic dev86 musl-dev")
 
+    def mariner(self):
+        self.install("gcc tar make")
+
     def common_last(self):
         if self.dist != "alpine":
             self.install("gnupg patch pkg-config") # dirmngr

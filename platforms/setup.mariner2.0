@@ -1,3 +1,4 @@
 #!/bin/bash
 
-tdnf install -y --noplugins --skipsignature tar gzip
+#tdnf install -y --noplugins --skipsignature tar gzip
+tdnf install -y tar shadow-utils
