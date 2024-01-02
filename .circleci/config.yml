@@ -125,7 +125,7 @@ workflows:
           <<: *always
           matrix:
             parameters:
-              platform: [amzn2023, amzn2, rocky9, rocky8, centos7, lunar, jammy, focal, bionic, xenial, bookworm, bullseye, buster, fedora] # alpine3, alpine
+              platform: [mariner2.0] # [amzn2023, amzn2, rocky9, rocky8, centos7, lunar, jammy, focal, bionic, xenial, bookworm, bullseye, buster, fedora] # alpine3, alpine
           context: common
       - build-arm8:
           <<: *always
@@ -146,7 +146,7 @@ workflows:
       - build-x64:
           matrix:
             parameters:
-              platform: [amzn2023, amzn2, rocky9, rocky8, centos7, lunar, jammy, focal, bionic, xenial, bookworm, bullseye, buster, fedora] # alpine3, alpine
+              platform: [mariner2.0] # [amzn2023, amzn2, rocky9, rocky8, centos7, lunar, jammy, focal, bionic, xenial, bookworm, bullseye, buster, fedora] # alpine3, alpine
           context: common
       - build-arm8:
           matrix:
