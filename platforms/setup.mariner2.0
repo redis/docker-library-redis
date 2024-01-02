@@ -1,0 +1,3 @@
+#!/bin/bash
+
+tdnf install -y tar shadow-utils 

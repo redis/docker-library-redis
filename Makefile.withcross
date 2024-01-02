@@ -110,6 +110,7 @@ OS.alpine3=alpine:3
 OS.alpineedge=alpine:edge
 #OS.rawhide=fedora:latest
 OS.rhel7.4=rhel:7.4
+OS.mariner2.0=mcr.microsoft.com/cbl-mariner/base/core:2.0
 OS.alpine3=alpine:3
 OS.alpineedge=alpine:edge
 OS.jammy=ubuntu:jammy
