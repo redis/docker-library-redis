@@ -139,7 +139,7 @@ workflows:
           <<: *always
           matrix:
             parameters:
-              platform: [lunar, jammy, focal, bionic, bookworm, bullseye, buster, fedora] # rocky9, rocky8 # alpine3, alpine
+              platform: [rocky9, rocky8, lunar, jammy, focal, bionic, bookworm, bullseye, buster, fedora] # alpine3, alpine
           context: common
 
   weekly:
