@@ -64,13 +64,21 @@ jobs:
           name: Build
           command: |
             docker version
-            make build OSNICK=<<parameters.platform>> STD_VERSIONS=1
+            if [[ <<parameters.platform>> == mariner2.0 ]]; then
+                make build OSNICK=<<parameters.platform>> VERSIONS="7.2 unstable"
+            else
+                make build OSNICK=<<parameters.platform>> STD_VERSIONS=1
+            fi
           no_output_timeout: 30m
       - run:
           name: Publish
           command: |
             if [[ $CIRCLE_BRANCH == master ]]; then
+              if [[ <<parameters.platform>> == mariner2.0 ]]; then
+                make publish OSNICK=<<parameters.platform>> VERSIONS="7.2 unstable"
+              else 
                 make publish OSNICK=<<parameters.platform>> STD_VERSIONS=1
+              fi
             else
                 echo "Not master branch: skipped publish"
             fi
@@ -125,13 +133,13 @@ workflows:
           <<: *always
           matrix:
             parameters:
-              platform: [amzn2023, amzn2, rocky9, rocky8, centos7, lunar, jammy, focal, bionic, xenial, bookworm, bullseye, buster, fedora] # alpine3, alpine
+              platform: [mariner2.0, amzn2023, amzn2, rocky9, rocky8, centos7, lunar, jammy, focal, bionic, xenial, bookworm, bullseye, buster, fedora] # alpine3, alpine
           context: common
       - build-arm8:
           <<: *always
           matrix:
             parameters:
-              platform: [rocky9, rocky8, lunar, jammy, focal, bionic, bookworm, bullseye, buster, fedora] # alpine3, alpine
+              platform: [lunar, jammy, focal, bionic, bookworm, bullseye, buster, fedora] # rocky9, rocky8 # alpine3, alpine
           context: common
 
   weekly:
@@ -146,7 +154,7 @@ workflows:
       - build-x64:
           matrix:
             parameters:
-              platform: [amzn2023, amzn2, rocky9, rocky8, centos7, lunar, jammy, focal, bionic, xenial, bookworm, bullseye, buster, fedora] # alpine3, alpine
+              platform: [mariner2.0, amzn2023, amzn2, rocky9, rocky8, centos7, lunar, jammy, focal, bionic, xenial, bookworm, bullseye, buster, fedora] # alpine3, alpine
           context: common
       - build-arm8:
           matrix:
