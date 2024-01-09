@@ -56,9 +56,9 @@ RUN set -eux; \
 	gosu --version; \
 	gosu nobody true
 
-ENV REDIS_VERSION 7.0.14
-ENV REDIS_DOWNLOAD_URL http://download.redis.io/releases/redis-7.0.14.tar.gz
-ENV REDIS_DOWNLOAD_SHA 7e1cdf347f4970ea39d5b7fdb19aedec4c21942e202de65bdeb782d38d2f299f
+ENV REDIS_VERSION 7.0.15
+ENV REDIS_DOWNLOAD_URL http://download.redis.io/releases/redis-7.0.15.tar.gz
+ENV REDIS_DOWNLOAD_SHA 98066f5363504b26c34dd20fbcc3c957990d764cdf42576c836fc021073f4341
 
 RUN set -eux; \
 	\
@@ -139,7 +139,7 @@ RUN set -eux; \
 	redis-cli --version; \
 	redis-server --version; \
 	\
-	echo '{"spdxVersion":"SPDX-2.3","SPDXID":"SPDXRef-DOCUMENT","name":"redis-server-sbom","packages":[{"name":"redis-server","versionInfo":"7.0.14","SPDXID":"SPDXRef-Package--redis-server","externalRefs":[{"referenceCategory":"PACKAGE-MANAGER","referenceType":"purl","referenceLocator":"pkg:generic/redis-server@7.0.14?os_name=debian&os_version=bookworm"}],"licenseDeclared":"BSD-3-Clause"}]}' > /usr/local/redis.spdx.json
+	echo '{"spdxVersion":"SPDX-2.3","SPDXID":"SPDXRef-DOCUMENT","name":"redis-server-sbom","packages":[{"name":"redis-server","versionInfo":"7.0.15","SPDXID":"SPDXRef-Package--redis-server","externalRefs":[{"referenceCategory":"PACKAGE-MANAGER","referenceType":"purl","referenceLocator":"pkg:generic/redis-server@7.0.15?os_name=debian&os_version=bookworm"}],"licenseDeclared":"BSD-3-Clause"}]}' > /usr/local/redis.spdx.json
 
 RUN mkdir /data && chown redis:redis /data
 VOLUME /data
