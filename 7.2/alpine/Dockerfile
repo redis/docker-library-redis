@@ -1,18 +1,57 @@
-FROM alpine:3.17
+#
+# NOTE: THIS DOCKERFILE IS GENERATED VIA "apply-templates.sh"
+#
+# PLEASE DO NOT EDIT IT DIRECTLY.
+#
+
+FROM alpine:3.19
 
 # add our user and group first to make sure their IDs get assigned consistently, regardless of whatever dependencies get added
-RUN addgroup -S -g 1000 redis && adduser -S -G redis -u 999 redis
+RUN set -eux; \
 # alpine already has a gid 999, so we'll use the next id
+	addgroup -S -g 1000 redis; \
+	adduser -S -G redis -u 999 redis
 
-RUN apk add --no-cache \
-# grab su-exec for easy step-down from root
-		'su-exec>=0.2' \
+# runtime dependencies
+RUN set -eux; \
+	apk add --no-cache \
 # add tzdata for https://github.com/docker-library/redis/issues/138
-		tzdata
+		tzdata \
+	;
 
-ENV REDIS_VERSION 7.2-rc1
-ENV REDIS_DOWNLOAD_URL https://github.com/redis/redis/archive/7.2-rc1.tar.gz
-ENV REDIS_DOWNLOAD_SHA d94d95c448eeb3dca8b4fd4801f9d2f8bdae0f5f84b2d9f5cfbd48cd6d8d5b43
+# grab gosu for easy step-down from root
+# https://github.com/tianon/gosu/releases
+ENV GOSU_VERSION 1.17
+RUN set -eux; \
+	apk add --no-cache --virtual .gosu-fetch gnupg; \
+	arch="$(apk --print-arch)"; \
+	case "$arch" in \
+		'x86_64') url='https://github.com/tianon/gosu/releases/download/1.17/gosu-amd64'; sha256='bbc4136d03ab138b1ad66fa4fc051bafc6cc7ffae632b069a53657279a450de3' ;; \
+		'aarch64') url='https://github.com/tianon/gosu/releases/download/1.17/gosu-arm64'; sha256='c3805a85d17f4454c23d7059bcb97e1ec1af272b90126e79ed002342de08389b' ;; \
+		'armhf') url='https://github.com/tianon/gosu/releases/download/1.17/gosu-armhf'; sha256='e5866286277ff2a2159fb9196fea13e0a59d3f1091ea46ddb985160b94b6841b' ;; \
+		'x86') url='https://github.com/tianon/gosu/releases/download/1.17/gosu-i386'; sha256='087dbb8fe479537e64f9c86fa49ff3b41dee1cbd28739a19aaef83dc8186b1ca' ;; \
+		'ppc64le') url='https://github.com/tianon/gosu/releases/download/1.17/gosu-ppc64el'; sha256='1891acdcfa70046818ab6ed3c52b9d42fa10fbb7b340eb429c8c7849691dbd76' ;; \
+		'riscv64') url='https://github.com/tianon/gosu/releases/download/1.17/gosu-riscv64'; sha256='38a6444b57adce135c42d5a3689f616fc7803ddc7a07ff6f946f2ebc67a26ba6' ;; \
+		's390x') url='https://github.com/tianon/gosu/releases/download/1.17/gosu-s390x'; sha256='69873bab588192f760547ca1f75b27cfcf106e9f7403fee6fd0600bc914979d0' ;; \
+		'armv7') url='https://github.com/tianon/gosu/releases/download/1.17/gosu-armhf'; sha256='e5866286277ff2a2159fb9196fea13e0a59d3f1091ea46ddb985160b94b6841b' ;; \
+		*) echo >&2 "error: unsupported gosu architecture: '$arch'"; exit 1 ;; \
+	esac; \
+	wget -O /usr/local/bin/gosu.asc "$url.asc"; \
+	wget -O /usr/local/bin/gosu "$url"; \
+	echo "$sha256 */usr/local/bin/gosu" | sha256sum -c -; \
+	export GNUPGHOME="$(mktemp -d)"; \
+	gpg --batch --keyserver hkps://keys.openpgp.org --recv-keys B42F6819007F00F88E364FD4036A9C25BF357DD4; \
+	gpg --batch --verify /usr/local/bin/gosu.asc /usr/local/bin/gosu; \
+	gpgconf --kill all; \
+	rm -rf "$GNUPGHOME" /usr/local/bin/gosu.asc; \
+	apk del --no-network .gosu-fetch; \
+	chmod +x /usr/local/bin/gosu; \
+	gosu --version; \
+	gosu nobody true
+
+ENV REDIS_VERSION 7.2.4
+ENV REDIS_DOWNLOAD_URL http://download.redis.io/releases/redis-7.2.4.tar.gz
+ENV REDIS_DOWNLOAD_SHA 8d104c26a154b29fd67d6568b4f375212212ad41e0c2caa3d66480e78dbd3b59
 
 RUN set -eux; \
 	\
@@ -89,7 +128,9 @@ RUN set -eux; \
 	apk del --no-network .build-deps; \
 	\
 	redis-cli --version; \
-	redis-server --version
+	redis-server --version; \
+	\
+	echo '{"spdxVersion":"SPDX-2.3","SPDXID":"SPDXRef-DOCUMENT","name":"redis-server-sbom","packages":[{"name":"redis-server","versionInfo":"7.2.4","SPDXID":"SPDXRef-Package--redis-server","externalRefs":[{"referenceCategory":"PACKAGE-MANAGER","referenceType":"purl","referenceLocator":"pkg:generic/redis-server@7.2.4?os_name=alpine&os_version=3.19"}],"licenseDeclared":"BSD-3-Clause"}]}' > /usr/local/redis.spdx.json
 
 RUN mkdir /data && chown redis:redis /data
 VOLUME /data

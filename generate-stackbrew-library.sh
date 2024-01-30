@@ -1,19 +1,21 @@
-#!/bin/bash
-set -eu
+#!/usr/bin/env bash
+set -Eeuo pipefail
 
 declare -A aliases=(
-	[7.0]='7 latest'
+	[7.2]='7 latest'
 	[6.2]='6'
 )
 
 self="$(basename "$BASH_SOURCE")"
 cd "$(dirname "$(readlink -f "$BASH_SOURCE")")"
 
-versions=( */ )
-versions=( "${versions[@]%/}" )
+if [ "$#" -eq 0 ]; then
+	versions="$(jq -r 'keys | map(@sh) | join(" ")' versions.json)"
+	eval "set -- $versions"
+fi
 
 # sort version numbers with highest first
-IFS=$'\n'; versions=( $(echo "${versions[*]}" | sort -rV) ); unset IFS
+IFS=$'\n'; set -- $(sort -rV <<<"$*"); unset IFS
 
 # get the most recent commit which modified any of "$@"
 fileCommit() {
@@ -41,7 +43,7 @@ getArches() {
 	local repo="$1"; shift
 	local officialImagesUrl='https://github.com/docker-library/official-images/raw/master/library/'
 
-	eval "declare -A -g parentRepoToArches=( $(
+	eval "declare -g -A parentRepoToArches=( $(
 		find -name 'Dockerfile' -exec awk '
 				toupper($1) == "FROM" && $2 !~ /^('"$repo"'|scratch|.*\/.*)(:|$)/ {
 					print "'"$officialImagesUrl"'" $2
@@ -68,55 +70,62 @@ join() {
 	echo "${out#$sep}"
 }
 
-for version in "${versions[@]}"; do
-	for v in \
-		'' alpine \
-	; do
-		dir="$version${v:+/$v}"
-		variant="$(basename "$v")"
+for version; do
+	export version
 
-		[ -f "$dir/Dockerfile" ] || continue
+	fullVersion="$(jq -r '.[env.version].version' versions.json)"
+
+	versionAliases=()
+	while [ "$fullVersion" != "$version" ] && [ "${fullVersion%.*}" != "$fullVersion" ]; do
+		versionAliases+=( $fullVersion )
+		fullVersion="${fullVersion%.*}"
+	done
+	versionAliases+=(
+		$version
+		${aliases[$version]:-}
+	)
+
+	for variant in debian alpine; do
+		export variant
+		dir="$version/$variant"
 
 		commit="$(dirCommit "$dir")"
 
-		fullVersion="$(git show "$commit":"$dir/Dockerfile" | awk '$1 == "ENV" && $2 == "REDIS_VERSION" { print $3; exit }')"
-
-		versionAliases=()
-		while [ "$fullVersion" != "$version" -a "${fullVersion%[.]*}" != "$fullVersion" ]; do
-			versionAliases+=( $fullVersion )
-			fullVersion="${fullVersion%[.]*}"
-		done
-		versionAliases+=(
-			$version
-			${aliases[$version]:-}
-		)
-
-		if [ -n "$variant" ]; then
+		if [ "$variant" = 'debian' ]; then
+			variantAliases=( "${versionAliases[@]}" )
+		else
 			variantAliases=( "${versionAliases[@]/%/-$variant}" )
 			variantAliases=( "${variantAliases[@]//latest-/}" )
-		else
-			variantAliases=( "${versionAliases[@]}" )
 		fi
 
-		variantParent="$(awk 'toupper($1) == "FROM" { print $2 }' "$dir/Dockerfile")"
+		parent="$(awk 'toupper($1) == "FROM" { print $2 }' "$dir/Dockerfile")"
+		arches="${parentRepoToArches[$parent]}"
 
-		suite="${variantParent#*:}" # "jessie-slim", "stretch"
-		suite="${suite%-slim}" # "jessie", "stretch"
-
-		if [ "$v" = 'alpine' ]; then
-			suite="alpine$suite" # "alpine3.8"
-			suiteAliases=( "${versionAliases[@]/%/-$suite}" )
-		else
-			suiteAliases=( "${variantAliases[@]/%/-$suite}" )
+		suite="${parent#*:}" # "bookworm-slim", "bookworm"
+		suite="${suite%-slim}" # "bookworm"
+		if [ "$variant" = 'alpine' ]; then
+			suite="alpine$suite" # "alpine3.18"
 		fi
+		suiteAliases=( "${versionAliases[@]/%/-$suite}" )
 		suiteAliases=( "${suiteAliases[@]//latest-/}" )
 		variantAliases+=( "${suiteAliases[@]}" )
-		variantArches="${parentRepoToArches[$variantParent]}"
+
+		# calculate the intersection of parent image arches and gosu arches
+		arches="$(jq -r --arg arches "$arches" '
+			(
+				$arches
+				| gsub("^[[:space:]]+|[[:space:]]+$"; "")
+				| split("[[:space:]]+"; "")
+			) as $parentArches
+			| .[env.version]
+			| $parentArches - ($parentArches - (.gosu.arches | keys))
+			| join(", ")
+		' versions.json)"
 
 		echo
 		cat <<-EOE
 			Tags: $(join ', ' "${variantAliases[@]}")
-			Architectures: $(join ', ' $variantArches)
+			Architectures: $arches
 			GitCommit: $commit
 			Directory: $dir
 		EOE
