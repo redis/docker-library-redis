@@ -128,9 +128,7 @@ RUN set -eux; \
 	apk del --no-network .build-deps; \
 	\
 	redis-cli --version; \
-	redis-server --version; \
-	\
-	echo '{"spdxVersion":"SPDX-2.3","SPDXID":"SPDXRef-DOCUMENT","name":"redis-server-sbom","packages":[{"name":"redis-server","versionInfo":"7.0.15","SPDXID":"SPDXRef-Package--redis-server","externalRefs":[{"referenceCategory":"PACKAGE-MANAGER","referenceType":"purl","referenceLocator":"pkg:generic/redis-server@7.0.15?os_name=alpine&os_version=3.20"}],"licenseDeclared":"BSD-3-Clause"}]}' > /usr/local/redis.spdx.json
+	redis-server --version
 
 RUN mkdir /data && chown redis:redis /data
 VOLUME /data
