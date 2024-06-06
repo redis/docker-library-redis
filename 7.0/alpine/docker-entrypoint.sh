@@ -10,7 +10,8 @@ fi
 # allow the container to be started with `--user`
 if [ "$1" = 'redis-server' -a "$(id -u)" = '0' ]; then
 	find . \! -user redis -exec chown redis '{}' +
-	exec gosu redis "$0" "$@"
+	# setpriv is builtin in busybox so invoke as /usr/bin/setpriv
+	exec /usr/bin/setpriv --reuid=redis -- "$0" "$@"
 fi
 
 # set an appropriate umask (if one isn't set already)
