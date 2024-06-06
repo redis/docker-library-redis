@@ -31,8 +31,6 @@ RUN set -eux; \
 	apt-get install -y --no-install-recommends \
 # add tzdata explicitly for https://github.com/docker-library/redis/issues/138 (see also https://bugs.debian.org/837060 and related)
 		tzdata \
-# add util-linux for setpriv for step down from root.
-		util-linux \
 	; \
 	rm -rf /var/lib/apt/lists/*
 {{ ) end -}}
