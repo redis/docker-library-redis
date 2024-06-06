@@ -17,7 +17,7 @@ RUN set -eux; \
 	apk add --no-cache \
 # add tzdata for https://github.com/docker-library/redis/issues/138
 		tzdata \
-# add setpriv for step down from root.
+# add setpriv for step down from root
 		setpriv \
 	;
 

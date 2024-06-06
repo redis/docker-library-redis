@@ -112,8 +112,8 @@ for version; do
 
 		echo
 		cat <<-EOE
-			Tags: $(join ', ' $arches)
-			Architectures: $arches
+			Tags: $(join ', ' "${variantAliases[@]}")
+			Architectures: $(join ', ' $arches)
 			GitCommit: $commit
 			Directory: $dir
 		EOE
