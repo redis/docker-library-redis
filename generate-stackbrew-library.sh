@@ -110,7 +110,7 @@ for version; do
 		suiteAliases=( "${suiteAliases[@]//latest-/}" )
 		variantAliases+=( "${suiteAliases[@]}" )
 
-		# calculate the intersection of parent image arches and gosu arches
+		# calculate the intersection of parent image arches
 		arches="$(jq -r --arg arches "$arches" '
 			(
 				$arches
@@ -118,7 +118,7 @@ for version; do
 				| split("[[:space:]]+"; "")
 			) as $parentArches
 			| .[env.version]
-			| $parentArches - ($parentArches - (.gosu.arches | keys))
+			| $parentArches
 			| join(", ")
 		' versions.json)"
 
