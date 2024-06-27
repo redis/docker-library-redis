@@ -168,9 +168,9 @@
     }
   },
   "7.4-rc": {
-    "version": "7.4-rc1",
-    "url": "http://download.redis.io/releases/redis-7.4-rc1.tar.gz",
-    "sha256": "68d788fc2b50ba523d006be4b2f247daf8027a334925f730d3135094db49f454",
+    "version": "7.4-rc2",
+    "url": "http://download.redis.io/releases/redis-7.4-rc2.tar.gz",
+    "sha256": "6f3ca6e196b5757bf51752ea9944cbc927731c771aeab661be8c2c05bd1edbce",
     "debian": {
       "version": "bookworm"
     },
