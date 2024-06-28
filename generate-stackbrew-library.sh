@@ -56,11 +56,11 @@ getArches() {
 getArches 'redis'
 
 cat <<-EOH
-# this file is generated via https://github.com/docker-library/redis/blob/$(fileCommit "$self")/$self
+# This file was generated via https://github.com/redis/docker-library-redis/blob/$(fileCommit "$self")/$self
 
-Maintainers: Tianon Gravi <admwiggin@gmail.com> (@tianon),
-             Joseph Ferguson <yosifkit@gmail.com> (@yosifkit)
-GitRepo: https://github.com/docker-library/redis.git
+Maintainers: David Maier <david.maier@redis.com> (@dmaier-redislabs),
+             Yossi Gottlieb <yossi@redis.com> (@yossigo)
+GitRepo: https://github.com/redis/docker-library-redis.git
 EOH
 
 # prints "$2$1$3$1...$N"
