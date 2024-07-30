@@ -22,6 +22,8 @@ RUN set -eux; \
 	apk add --no-cache \
 # add tzdata for https://github.com/docker-library/redis/issues/138
 		tzdata \
+# add setpriv for step down from root
+		setpriv \
 	;
 {{ ) else ( -}}
 RUN set -eux; \
@@ -32,88 +34,6 @@ RUN set -eux; \
 	; \
 	rm -rf /var/lib/apt/lists/*
 {{ ) end -}}
-
-# grab gosu for easy step-down from root
-# https://github.com/tianon/gosu/releases
-ENV GOSU_VERSION {{ .gosu.version }}
-RUN set -eux; \
-{{ if env.variant == "alpine" then ( -}}
-	apk add --no-cache --virtual .gosu-fetch gnupg; \
-	arch="$(apk --print-arch)"; \
-{{ ) else ( -}}
-	savedAptMark="$(apt-mark showmanual)"; \
-	apt-get update; \
-	apt-get install -y --no-install-recommends ca-certificates gnupg wget; \
-	rm -rf /var/lib/apt/lists/*; \
-	arch="$(dpkg --print-architecture | awk -F- '{ print $NF }')"; \
-{{ ) end -}}
-	case "$arch" in \
-{{
-	[
-		.gosu.arches
-		| to_entries[]
-		| (
-			if env.variant == "alpine" then
-				{
-					# https://dl-cdn.alpinelinux.org/alpine/edge/main/
-					# https://dl-cdn.alpinelinux.org/alpine/latest-stable/main/
-					amd64: "x86_64",
-					arm32v6: "armhf",
-					arm32v7: "armv7",
-					arm64v8: "aarch64",
-					i386: "x86",
-					ppc64le: "ppc64le",
-					riscv64: "riscv64",
-					s390x: "s390x",
-				}
-			else
-				{
-					# https://salsa.debian.org/dpkg-team/dpkg/-/blob/main/data/cputable
-					# https://wiki.debian.org/ArchitectureSpecificsMemo#Architecture_baselines
-					# http://deb.debian.org/debian/dists/unstable/main/
-					# http://deb.debian.org/debian/dists/stable/main/
-					# https://deb.debian.org/debian-ports/dists/unstable/main/
-					amd64: "amd64",
-					arm32v5: "armel",
-					arm32v7: "armhf",
-					arm64v8: "arm64",
-					i386: "i386",
-					mips64le: "mips64el",
-					ppc64le: "ppc64el",
-					riscv64: "riscv64",
-					s390x: "s390x",
-				}
-			end
-		)[.key] as $arch
-		| select($arch)
-		| .value
-		| (
--}}
-		{{ $arch | @sh }}) url={{ .url | @sh }}; sha256={{ .sha256 | @sh }} ;; \
-{{
-		)
-	] | add
--}}
-		*) echo >&2 "error: unsupported gosu architecture: '$arch'"; exit 1 ;; \
-	esac; \
-	wget -O /usr/local/bin/gosu.asc "$url.asc"; \
-	wget -O /usr/local/bin/gosu "$url"; \
-	echo "$sha256 */usr/local/bin/gosu" | sha256sum -c -; \
-	export GNUPGHOME="$(mktemp -d)"; \
-	gpg --batch --keyserver hkps://keys.openpgp.org --recv-keys B42F6819007F00F88E364FD4036A9C25BF357DD4; \
-	gpg --batch --verify /usr/local/bin/gosu.asc /usr/local/bin/gosu; \
-	gpgconf --kill all; \
-	rm -rf "$GNUPGHOME" /usr/local/bin/gosu.asc; \
-{{ if env.variant == "alpine" then ( -}}
-	apk del --no-network .gosu-fetch; \
-{{ ) else ( -}}
-	apt-mark auto '.*' > /dev/null; \
-	[ -z "$savedAptMark" ] || apt-mark manual $savedAptMark > /dev/null; \
-	apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false; \
-{{ ) end -}}
-	chmod +x /usr/local/bin/gosu; \
-	gosu --version; \
-	gosu nobody true
 
 ENV REDIS_VERSION {{ .version }}
 ENV REDIS_DOWNLOAD_URL {{ .url }}

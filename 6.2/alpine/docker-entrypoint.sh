@@ -10,7 +10,7 @@ fi
 # allow the container to be started with `--user`
 if [ "$1" = 'redis-server' -a "$(id -u)" = '0' ]; then
 	find . \! -user redis -exec chown redis '{}' +
-	exec gosu redis "$0" "$@"
+	exec setpriv --reuid=redis --regid=redis --clear-groups -- "$0" "$@"
 fi
 
 # set an appropriate umask (if one isn't set already)
