@@ -139,3 +139,7 @@ ENTRYPOINT ["docker-entrypoint.sh"]
 
 EXPOSE 6379
 CMD ["redis-server"]
+
+# Search for "PONG" instead of relying on the exit status because of
+# https://stackoverflow.com/a/71504657/815742.
+HEALTHCHECK --start-period=1s CMD redis-cli ping | grep ^PONG$
