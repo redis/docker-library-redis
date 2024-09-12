@@ -1,0 +1,34 @@
+name: Build and Test
+on:
+  pull_request:
+    branches:
+      - master
+      - release/*
+
+jobs:
+  build-and-test:
+    runs-on: [ubuntu-latest]
+    strategy:
+      matrix:
+        distribution:
+          - debian
+          #- alpine
+        platform:
+          - linux/amd64
+          - linux/i386
+          - linux/arm/v5
+          - linux/arm/v7
+          - linux/mips64le
+          - linux/ppc64le
+          - linux/s390x
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - uses: ./.github/actions/build-and-tag-locally
+        with:
+          distribution: ${{ matrix.distribution }}
+          platform: ${{ matrix.platform }}
+          registry_username: ${{ vars.REGISTRY_USERNAME }}
+          registry_password: ${{ secrets.REGISTRY_PASSWORD }}
+          publish_image: ${{ vars.PUBLISH_IMAGE }}
+          registry_repository: ${{ vars.REGISTRY_REPOSITORY }}
