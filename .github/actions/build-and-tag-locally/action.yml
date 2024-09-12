@@ -1,0 +1,211 @@
+name: Build and Test
+
+inputs:
+  distribution:
+    description: "Distribution flavor"
+    default: "debian"
+  platform:
+    description: "Platform"
+    required: true
+  publish_image:
+    description: "Publish image to Docker Hub"
+    default: "false"
+  registry_username:
+    description: "Docker Hub username"
+    required: false
+  registry_password:
+    description: "Docker Hub password"
+    required: false
+  registry_repository:
+    description: 'Repository to push the image to'
+    required: false
+
+runs:
+  using: "composite"
+  steps:
+    - name: Install QEMU
+      shell: bash
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y qemu-user-static
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Calculate architecture name
+      id: platform
+      shell: bash
+      run: |
+        case ${{ inputs.platform }} in
+          linux/amd64)
+            plaform_name="amd64"
+            ;;
+          linux/arm64)
+            plaform_name="arm64"
+            ;;
+          linux/arm/v5)
+            plaform_name="arm-v5"
+            ;;
+          linux/arm/v7)
+            plaform_name="arm-v7"
+            ;;
+          linux/i386)
+            plaform_name="i386"
+            ;;
+          linux/mips64le)
+            plaform_name="mips64le"
+            ;;
+          linux/ppc64le)
+            plaform_name="ppc64le"
+            ;;
+          linux/s390x)
+            plaform_name="s390x"
+            ;;
+          *)
+            echo "Architecture not supported: ${{ inputs.platform }}"
+            exit 1
+            ;;
+        esac
+        echo "display_name=$plaform_name" >> "$GITHUB_OUTPUT"
+
+    - name: Clean up
+      shell: bash
+      run: |
+        docker rm -f sanity-test-${{ steps.platform.outputs.display_name }} || true
+        docker rmi -f ${{ github.sha }}:${{ steps.platform.outputs.display_name }} || true
+
+    - name: Docker Login
+      uses: docker/login-action@v3
+      if: inputs.publish_image == 'true'
+      with:
+        registry: ${{ inputs.registry_repository }}
+        username: ${{ inputs.registry_username }}
+        password: ${{ inputs.registry_password }}
+
+    - name: Build
+      uses: docker/build-push-action@v6
+      with:
+        context: .
+        file: ${{ inputs.distribution }}/Dockerfile
+        push: false
+        load: true
+        platforms: ${{ inputs.platform }}
+        tags: ${{ github.sha }}:${{ steps.platform.outputs.display_name }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+    - name: Save image
+      shell: bash
+      run: |
+        docker save -o /tmp/image-${{ steps.platform.outputs.display_name }}.tar ${{ github.sha }}:${{ steps.platform.outputs.display_name }}
+    
+    - name: Upload image
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ steps.platform.outputs.display_name }}-docker-image.tar
+        path: /tmp/image-${{ steps.platform.outputs.display_name }}.tar
+        retention-days: 45
+
+    - name: Run container
+      shell: bash
+      if: ${{ contains(fromJSON('["amd64", "arm64", "i386"]'), steps.platform.outputs.display_name) }}
+      run: |
+        docker run -d --name sanity-test-${{ steps.platform.outputs.display_name }} ${{ github.sha }}:${{ steps.platform.outputs.display_name }}
+    
+    - name: Container Logs
+      if: ${{ contains(fromJSON('["amd64", "arm64", "i386"]'), steps.platform.outputs.display_name) }}
+      shell: bash
+      run: |
+        docker logs sanity-test-${{ steps.platform.outputs.display_name }}
+
+    - name: Sanity Tests
+      if: ${{ contains(fromJSON('["amd64", "arm64", "i386"]'), steps.platform.outputs.display_name) }}
+      shell: bash
+      run: |
+        docker exec sanity-test-${{ steps.platform.outputs.display_name }} redis-cli ping
+        docker exec sanity-test-${{ steps.platform.outputs.display_name }} redis-cli info server
+  
+    - name: Verify installed modules
+      if: ${{ contains(fromJSON('["amd64", "arm64",]'), steps.platform.outputs.display_name) }}
+      shell: bash
+      run: |
+        modules=$(docker exec sanity-test-${{ steps.platform.outputs.display_name }} redis-cli module list)
+        echo "Installed modules:"
+        echo "$modules"
+        missing_modules=()
+        for module in "bf" "search" "timeseries" "ReJSON"; do
+          if ! echo "$modules" | grep -q "$module"; then
+            missing_modules+=("$module")
+          fi
+        done
+        if [ ${#missing_modules[@]} -eq 0 ]; then
+          echo "All required modules are installed"
+        else
+          echo "The following modules are missing: ${missing_modules[*]}"
+          exit 1
+        fi
+  
+    - name: Test RedisBloom
+      if: ${{ contains(fromJSON('["amd64", "arm64"]'), steps.platform.outputs.display_name) }}
+      shell: bash
+      run: |
+        docker exec sanity-test-${{ steps.platform.outputs.display_name }} redis-cli BF.ADD popular_keys "redis:hash"
+        docker exec sanity-test-${{ steps.platform.outputs.display_name }} redis-cli BF.ADD popular_keys "redis:set"
+        [ "$(docker exec sanity-test-${{ steps.platform.outputs.display_name }} redis-cli BF.EXISTS popular_keys "redis:hash")" = "1" ] || { echo "RedisBloom test failed: 'redis:hash' not found"; exit 1; }
+        [ "$(docker exec sanity-test-${{ steps.platform.outputs.display_name }} redis-cli BF.EXISTS popular_keys "redis:list")" = "0" ] || { echo "RedisBloom test failed: 'redis:list' found unexpectedly"; exit 1; }
+        echo "RedisBloom test passed successfully"
+      
+    - name: Test RediSearch
+      if: ${{ contains(fromJSON('["amd64", "arm64"]'), steps.platform.outputs.display_name) }}
+      shell: bash
+      run: |
+        docker exec sanity-test-${{ steps.platform.outputs.display_name }} redis-cli FT.CREATE redis_commands ON HASH PREFIX 1 cmd: SCHEMA name TEXT SORTABLE description TEXT
+        docker exec sanity-test-${{ steps.platform.outputs.display_name }} redis-cli HSET cmd:set name "SET" description "Set the string value of a key"
+        docker exec sanity-test-${{ steps.platform.outputs.display_name }} redis-cli HSET cmd:get name "GET" description "Get the value of a key"
+        result=$(docker exec sanity-test-${{ steps.platform.outputs.display_name }} redis-cli FT.SEARCH redis_commands "value")
+        if echo "$result" | grep -q "Set the string value of a key" && echo "$result" | grep -q "Get the value of a key"; then
+          echo "RediSearch test passed successfully"
+        else
+          echo "RediSearch test failed: expected commands not found in search results"
+          exit 1
+        fi
+
+    - name: Test RedisTimeSeries
+      if: ${{ contains(fromJSON('["amd64", "arm64"]'), steps.platform.outputs.display_name) }}
+      shell: bash
+      run: |
+        docker exec sanity-test-${{ steps.platform.outputs.display_name }} redis-cli TS.CREATE redis:cpu:usage RETENTION 86400
+        docker exec sanity-test-${{ steps.platform.outputs.display_name }} redis-cli TS.ADD redis:cpu:usage "*" 80
+        docker exec sanity-test-${{ steps.platform.outputs.display_name }} redis-cli TS.ADD redis:cpu:usage "*" 65
+        docker exec sanity-test-${{ steps.platform.outputs.display_name }} redis-cli TS.ADD redis:cpu:usage "*" 70
+        result=$(docker exec sanity-test-${{ steps.platform.outputs.display_name }} redis-cli TS.RANGE redis:cpu:usage - + COUNT 3)
+        if echo "$result" | grep -q "80" && echo "$result" | grep -q "65" && echo "$result" | grep -q "70"; then
+          echo "RedisTimeSeries test passed successfully"
+        else
+          echo "RedisTimeSeries test failed: expected values not found in time series"
+          exit 1
+        fi
+
+    - name: Test ReJSON
+      if: ${{ contains(fromJSON('["amd64", "arm64"]'), steps.platform.outputs.display_name) }}
+      shell: bash
+      run: |
+        docker exec sanity-test-${{ steps.platform.outputs.display_name }} redis-cli JSON.SET redis:config $ '{"maxmemory":"2gb","maxmemory-policy":"allkeys-lru"}'
+        result=$(docker exec sanity-test-${{ steps.platform.outputs.display_name }} redis-cli JSON.GET redis:config $.maxmemory-policy)
+        cleaned_result=$(echo $result | tr -d '[]"')
+        if [ "$cleaned_result" = "allkeys-lru" ]; then
+          echo "ReJSON test passed successfully"
+        else
+          echo "ReJSON test failed: expected 'allkeys-lru', got $result"
+          exit 1
+        fi
+
+    - name: Push image
+      uses: docker/build-push-action@v6
+      if: ${{ inputs.publish_image == 'true' && contains(fromJSON('["amd64","arm64"]'), steps.platform.outputs.display_name) }}
+      with:
+        context: .
+        file: ${{ inputs.distribution }}/Dockerfile
+        push: true
+        tags: ${{ inputs.registry_repository }}:${{ github.sha }}-${{ inputs.distribution }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
