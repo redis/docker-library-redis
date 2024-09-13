@@ -1,14 +1,13 @@
-ARG BASE_IMAGE=debian:bookworm-slim
-FROM ${BASE_IMAGE} AS sources
-ARG REDIS_VERSION=8.0-m01
-ARG REDIS_DOWNLOAD_URL=https://github.com/redis/redis/archive/refs/tags/${REDIS_VERSION}.tar.gz
-ARG REDIS_DOWNLOAD_SHA=4c77c2218747505c50c43a45d12a067a3631a26d9397929da180e183b03e862c
+FROM debian:bookworm-slim AS sources
+ENV REDIS_VERSION=8.0-m01
+ENV REDIS_DOWNLOAD_URL=https://github.com/redis/redis/archive/refs/tags/8.0-m01.tar.gz
+ENV REDIS_DOWNLOAD_SHA=4c77c2218747505c50c43a45d12a067a3631a26d9397929da180e183b03e862c
 WORKDIR /files
-ADD --checksum=sha256:${REDIS_DOWNLOAD_SHA} ${REDIS_DOWNLOAD_URL} .
-RUN apt-get update && apt-get install -y tar patch
-RUN tar -xvf *.tar.gz && mv redis-${REDIS_VERSION} redis
+RUN apt-get update && apt-get install -y tar patch wget
+RUN wget -O redis.tar.gz "$REDIS_DOWNLOAD_URL"; echo "$REDIS_DOWNLOAD_SHA redis.tar.gz" | sha256sum -c -;
+RUN tar -xvf redis.tar.gz && mv redis-$REDIS_VERSION redis
 
-FROM ${BASE_IMAGE}
+FROM debian:bookworm-slim
 
 # add our user and group first to make sure their IDs get assigned consistently, regardless of whatever dependencies get added
 RUN set -eux; \
