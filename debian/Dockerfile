@@ -1,12 +1,3 @@
-FROM debian:bookworm-slim AS sources
-ENV REDIS_VERSION=8.0-m01
-ENV REDIS_DOWNLOAD_URL=https://github.com/redis/redis/archive/refs/tags/8.0-m01.tar.gz
-ENV REDIS_DOWNLOAD_SHA=4c77c2218747505c50c43a45d12a067a3631a26d9397929da180e183b03e862c
-WORKDIR /files
-RUN apt-get update && apt-get install -y tar patch wget
-RUN wget -O redis.tar.gz "$REDIS_DOWNLOAD_URL"; echo "$REDIS_DOWNLOAD_SHA redis.tar.gz" | sha256sum -c -;
-RUN tar -xvf redis.tar.gz && mv redis-$REDIS_VERSION redis
-
 FROM debian:bookworm-slim
 
 # add our user and group first to make sure their IDs get assigned consistently, regardless of whatever dependencies get added
@@ -59,7 +50,11 @@ RUN set -eux; \
 	gosu --version; \
 	gosu nobody true
 
-RUN --mount=type=bind,from=sources,source=/files/redis,target=/usr/src/redis,rw set -eux; \
+ENV REDIS_VERSION=8.0-m01
+ENV REDIS_DOWNLOAD_URL=https://github.com/redis/redis/archive/refs/tags/8.0-m01.tar.gz
+ENV REDIS_DOWNLOAD_SHA=4c77c2218747505c50c43a45d12a067a3631a26d9397929da180e183b03e862c
+
+RUN set -eux; \
 	\
 	savedAptMark="$(apt-mark showmanual)"; \
 	apt-get update; \
@@ -97,6 +92,12 @@ RUN --mount=type=bind,from=sources,source=/files/redis,target=/usr/src/redis,rw 
 	fi; \
 	\
 	rm -rf /var/lib/apt/lists/*; \
+	\
+	wget -O redis.tar.gz "$REDIS_DOWNLOAD_URL"; \
+	echo "$REDIS_DOWNLOAD_SHA *redis.tar.gz" | sha256sum -c -; \
+	mkdir -p /usr/src/redis; \
+	tar -xzf redis.tar.gz -C /usr/src/redis --strip-components=1; \
+	rm redis.tar.gz; \
 	\
 # disable Redis protected mode [1] as it is unnecessary in context of Docker
 # (ports are not automatically exposed when running inside Docker, but rather explicitly by specifying -p / -P)
