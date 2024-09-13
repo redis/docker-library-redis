@@ -84,8 +84,7 @@ runs:
     - name: Build
       uses: docker/build-push-action@v6
       with:
-        context: .
-        file: ${{ inputs.distribution }}/Dockerfile
+        context: ${{ inputs.distribution }}
         push: false
         load: true
         platforms: ${{ inputs.platform }}
@@ -203,8 +202,7 @@ runs:
       uses: docker/build-push-action@v6
       if: ${{ inputs.publish_image == 'true' && contains(fromJSON('["amd64","arm64"]'), steps.platform.outputs.display_name) }}
       with:
-        context: .
-        file: ${{ inputs.distribution }}/Dockerfile
+        context: ${{ inputs.distribution }}
         push: true
         tags: ${{ inputs.registry_repository }}:${{ github.sha }}-${{ inputs.distribution }}
         cache-from: type=gha
