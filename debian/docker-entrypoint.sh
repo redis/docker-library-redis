@@ -21,14 +21,39 @@ if [ "$um" = '0022' ]; then
 	umask 0077
 fi
 
-modules_dir="/usr/local/lib/redis/modules/"
 command="exec \"\$@\""
+if [ "$1" = 'redis-server' ]; then
+	echo "Starting Redis Server"
+	modules_dir="/usr/local/lib/redis/modules/"
+	
+	if [ ! -d "$modules_dir" ]; then
+		echo "Warning: Default Redis modules directory $modules_dir does not exist."
+	elif [ -n "$(ls -A $modules_dir 2>/dev/null)" ]; then
+		for module in "$modules_dir"/*.so; 
+		do
+			if [ ! -s "$module" ]; then
+				echo "Skipping module $module: file has no size."
+				continue
+			fi
+			
+			if [ -d "$module" ]; then
+				echo "Skipping module $module: is a directory."
+				continue
+			fi
+			
+			if [ ! -r "$module" ]; then
+				echo "Skipping module $module: file is not readable."
+				continue
+			fi
 
-if [ -n "$(ls -A $modules_dir)" ]; then
-	for module in "$modules_dir"/*.so; 
-	do
-		command="$command --loadmodule $module"
-	done
+			if [ ! -x "$module" ]; then
+				echo "Warning: Module $module is not executable."
+			fi
+			
+			command="$command --loadmodule $module"
+		done
+	fi
 fi
+
 
 eval "$command"
