@@ -48,12 +48,13 @@ if [ "$1" = 'redis-server' ]; then
 
 			if [ ! -x "$module" ]; then
 				echo "Warning: Module $module is not executable."
+				continue
 			fi
 			
-			command="$command --loadmodule $module"
+			set -- "$@" --loadmodule "$module"
 		done
 	fi
 fi
 
 
-eval "$command"
+exec "$@"
