@@ -21,7 +21,6 @@ if [ "$um" = '0022' ]; then
 	umask 0077
 fi
 
-command="exec \"\$@\""
 if [ "$1" = 'redis-server' ]; then
 	echo "Starting Redis Server"
 	modules_dir="/usr/local/lib/redis/modules/"
