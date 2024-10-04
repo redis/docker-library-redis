@@ -1,8 +1,8 @@
 {
   "6.2": {
-    "version": "6.2.14",
-    "url": "http://download.redis.io/releases/redis-6.2.14.tar.gz",
-    "sha256": "34e74856cbd66fdb3a684fb349d93961d8c7aa668b06f81fd93ff267d09bc277",
+    "version": "6.2.16",
+    "url": "http://download.redis.io/releases/redis-6.2.16.tar.gz",
+    "sha256": "846bff83c26d827d49f8cc8114ea9d1e72eea1169f7de36b8135ea2cec104e7d",
     "debian": {
       "version": "bookworm"
     },
@@ -112,9 +112,9 @@
     }
   },
   "7.2": {
-    "version": "7.2.5",
-    "url": "http://download.redis.io/releases/redis-7.2.5.tar.gz",
-    "sha256": "5981179706f8391f03be91d951acafaeda91af7fac56beffb2701963103e423d",
+    "version": "7.2.6",
+    "url": "http://download.redis.io/releases/redis-7.2.6.tar.gz",
+    "sha256": "fb10d67a2fe2b4556f6cb840064dd6e6e3175ce8ca035f0726990ec2da9f3d0e",
     "debian": {
       "version": "bookworm"
     },
@@ -224,9 +224,9 @@
     }
   },
   "7.4": {
-    "version": "7.4.0",
-    "url": "http://download.redis.io/releases/redis-7.4.0.tar.gz",
-    "sha256": "57b47c2c6682636d697dbf5d66d8d495b4e653afc9cd32b7adf9da3e433b8aaf",
+    "version": "7.4.1",
+    "url": "http://download.redis.io/releases/redis-7.4.1.tar.gz",
+    "sha256": "bc34b878eb89421bbfca6fa78752343bf37af312a09eb0fae47c9575977dfaa2",
     "debian": {
       "version": "bookworm"
     },

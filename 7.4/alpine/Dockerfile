@@ -49,9 +49,9 @@ RUN set -eux; \
 	gosu --version; \
 	gosu nobody true
 
-ENV REDIS_VERSION 7.4.0
-ENV REDIS_DOWNLOAD_URL http://download.redis.io/releases/redis-7.4.0.tar.gz
-ENV REDIS_DOWNLOAD_SHA 57b47c2c6682636d697dbf5d66d8d495b4e653afc9cd32b7adf9da3e433b8aaf
+ENV REDIS_VERSION 7.4.1
+ENV REDIS_DOWNLOAD_URL http://download.redis.io/releases/redis-7.4.1.tar.gz
+ENV REDIS_DOWNLOAD_SHA bc34b878eb89421bbfca6fa78752343bf37af312a09eb0fae47c9575977dfaa2
 
 RUN set -eux; \
 	\
