@@ -4,7 +4,7 @@ set -e
 # first arg is `-f` or `--some-option`
 # or first arg is `something.conf`
 if [ "${1#-}" != "$1" ] || [ "${1%.conf}" != "$1" ]; then
-	set -- redis-server "$@"
+	set -- redis-server "$@" '--include=/usr/local/etc/redis/conf.d/*.conf'
 fi
 
 # allow the container to be started with `--user`
