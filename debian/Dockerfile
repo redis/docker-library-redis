@@ -14,8 +14,8 @@ RUN set -eux; \
 	; \
 	rm -rf /var/lib/apt/lists/*
 
-ENV REDIS_DOWNLOAD_URL=https://github.com/redis/redis/archive/refs/tags/8.0-m04.tar.gz
-ENV REDIS_DOWNLOAD_SHA=6902a938c629a33f14d49881b1b60e6621c29e445554f882ce7ec48f2743d516
+ENV REDIS_DOWNLOAD_URL=https://github.com/redis/redis/archive/refs/tags/8.0-rc1.tar.gz
+ENV REDIS_DOWNLOAD_SHA=3f8283dcbaf3f8297607c2595ccd9b2b9785a0e88f4007c882dd60846ffec28c
 RUN set -eux; \
 	\
 	savedAptMark="$(apt-mark showmanual)"; \
@@ -25,11 +25,10 @@ RUN set -eux; \
 		wget \
 		dpkg-dev \
 		gcc \
-        g++ \
+		g++ \
 		libc6-dev \
 		libssl-dev \
-		make \
-	; \
+		make; \
 	\
 	arch="$(dpkg --print-architecture | awk -F- '{ print $NF }')"; \
 	case "$arch" in \

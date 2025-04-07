@@ -14,9 +14,8 @@ RUN set -eux; \
 # we need setpriv package as busybox provides very limited functionality
 		setpriv \
 	;
-
-ENV REDIS_DOWNLOAD_URL=https://github.com/redis/redis/archive/refs/tags/8.0-m04.tar.gz
-ENV REDIS_DOWNLOAD_SHA=6902a938c629a33f14d49881b1b60e6621c29e445554f882ce7ec48f2743d516
+ENV REDIS_DOWNLOAD_URL=https://github.com/redis/redis/archive/refs/tags/8.0-rc1.tar.gz
+ENV REDIS_DOWNLOAD_SHA=3f8283dcbaf3f8297607c2595ccd9b2b9785a0e88f4007c882dd60846ffec28c
 RUN set -eux; \
 	\
 	apk add --no-cache --virtual .build-deps \
@@ -27,9 +26,8 @@ RUN set -eux; \
 		make \
 		musl-dev \
 		openssl-dev \
-        g++ \
-	; \
-  \
+		g++; \
+	\
 	arch="$(dpkg --print-architecture | awk -F- '{ print $NF }')"; \
 	case "$arch" in \
 		'amd64') export BUILD_WITH_MODULES=yes; export INSTALL_RUST_TOOLCHAIN=yes; export DISABLE_WERRORS=yes ;; \
@@ -37,43 +35,42 @@ RUN set -eux; \
 		*) echo >&2 "Modules are NOT supported! unsupported architecture: '$arch'"; export BUILD_WITH_MODULES=no ;; \
 	esac; \
 	if [ "$BUILD_WITH_MODULES" = "yes" ]; then \
-    apk add --no-cache --virtual .module-build-deps \
-      autoconf \
-      automake \
-      bash \
-      bsd-compat-headers \
-      build-base \
-      cargo \
-      clang \
-      clang18-libclang \
-      cmake \
-      curl \
-      g++ \
-      git \
-      libffi-dev \
-      libgcc \
-      libtool \
-      openssh \
-      openssl  \
-      py-virtualenv \
-      py3-cryptography \
-      py3-pip \
-      py3-virtualenv \
-      python3 \
-      python3-dev \
-      rsync \
-      tar \
-      unzip \
-      which \
-      xsimd \
-      xz \
-	;\
+	apk add --no-cache --virtual .module-build-deps \
+		autoconf \
+		automake \
+		bash \
+		bsd-compat-headers \
+		build-base \
+		cargo \
+		clang \
+		clang18-libclang \
+		cmake \
+		curl \
+		g++ \
+		git \
+		libffi-dev \
+		libgcc \
+		libtool \
+		openssh \
+		openssl  \
+		py-virtualenv \
+		py3-cryptography \
+		py3-pip \
+		py3-virtualenv \
+		python3 \
+		python3-dev \
+		rsync \
+		tar \
+		unzip \
+		which \
+		xsimd \
+		xz; \
 	fi; \
 	\
-#	install required python packages for RedisJSON module
+# install required python packages for RedisJSON module
 	pip install -q --upgrade setuptools &&  pip install -q --upgrade pip && PIP_BREAK_SYSTEM_PACKAGES=1 pip install -q addict toml jinja2 ramp-packer ;\
- 	wget -O redis.tar.gz "$REDIS_DOWNLOAD_URL"; \
-    echo "$REDIS_DOWNLOAD_SHA *redis.tar.gz" | sha256sum -c -; \
+	wget -O redis.tar.gz "$REDIS_DOWNLOAD_URL"; \
+	echo "$REDIS_DOWNLOAD_SHA *redis.tar.gz" | sha256sum -c -; \
 	mkdir -p /usr/src/redis; \
 	tar -xzf redis.tar.gz -C /usr/src/redis --strip-components=1; \
 	rm redis.tar.gz; \
@@ -104,11 +101,11 @@ RUN set -eux; \
 	grep -F "cd jemalloc && ./configure $extraJemallocConfigureFlags " /usr/src/redis/deps/Makefile; \
 	\
 	export BUILD_TLS=yes; \
-    if [ "$BUILD_WITH_MODULES" = "yes" ]; then \
-        make -C /usr/src/redis/modules/redisjson get_source; \
-        sed -i 's/^RUST_FLAGS=$/RUST_FLAGS += -C target-feature=-crt-static/' /usr/src/redis/modules/redisjson/src/Makefile ; \
-        grep -E 'RUST_FLAGS' /usr/src/redis/modules/redisjson/src/Makefile; \
-    fi; \
+	if [ "$BUILD_WITH_MODULES" = "yes" ]; then \
+		make -C /usr/src/redis/modules/redisjson get_source; \
+		sed -i 's/^RUST_FLAGS=$/RUST_FLAGS += -C target-feature=-crt-static/' /usr/src/redis/modules/redisjson/src/Makefile ; \
+		grep -E 'RUST_FLAGS' /usr/src/redis/modules/redisjson/src/Makefile; \
+	fi; \
 	make -C /usr/src/redis -j "$(nproc)" all; \
 	make -C /usr/src/redis install; \
 	\
@@ -133,12 +130,12 @@ RUN set -eux; \
 			| awk 'system("[ -e /usr/local/lib/" $1 " ]") == 0 { next } { print "so:" $1 }' \
 	)"; \
 	apk add --no-network --virtual .redis-rundeps $runDeps; \
-    if [ "$BUILD_WITH_MODULES" = "yes" ]; then \
-    	apk del --no-network .module-build-deps; \
-    fi; \
-    apk del --no-network .build-deps; \
-    apk --purge del apk-tools ; \
-    rm -fr ~/.cache/pip*  rm -f /sbin/apk && rm -rf /etc/apk && rm -rf /lib/apk && rm -rf /usr/share/apk && rm -rf /var/lib/apk && rm -rf /usr/lib/python*; \
+	if [ "$BUILD_WITH_MODULES" = "yes" ]; then \
+		apk del --no-network .module-build-deps; \
+	fi; \
+	apk del --no-network .build-deps; \
+	apk --purge del apk-tools ; \
+	rm -fr ~/.cache/pip*  rm -f /sbin/apk && rm -rf /etc/apk && rm -rf /lib/apk && rm -rf /usr/share/apk && rm -rf /var/lib/apk && rm -rf /usr/lib/python*; \
 	\
 	redis-cli --version; \
 	redis-server --version;
