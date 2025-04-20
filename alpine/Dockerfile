@@ -109,17 +109,6 @@ RUN set -eux; \
 	make -C /usr/src/redis -j "$(nproc)" all; \
 	make -C /usr/src/redis install; \
 	\
-# TODO https://github.com/redis/redis/pull/3494 (deduplicate "redis-server" copies)
-	serverMd5="$(md5sum /usr/local/bin/redis-server | cut -d' ' -f1)"; export serverMd5; \
-	find /usr/local/bin/redis* -maxdepth 0 \
-		-type f -not -name redis-server \
-		-exec sh -eux -c ' \
-			md5="$(md5sum "$1" | cut -d" " -f1)"; \
-			test "$md5" = "$serverMd5"; \
-		' -- '{}' ';' \
-		-exec ln -svfT 'redis-server' '{}' ';' \
-	; \
-	\
 	make -C /usr/src/redis distclean; \
 	rm -r /usr/src/redis; \
 	\
