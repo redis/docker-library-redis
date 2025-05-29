@@ -257,3 +257,32 @@ runs:
           echo "ReJSON test failed: expected 'allkeys-lru', got $result"
           exit 1
         fi
+    - name: Test the entrypoint
+      id: test_entrypoint
+      if: ${{ contains(fromJSON('["amd64", "i386"]'), steps.platform.outputs.display_name) }}
+      shell: bash
+      run: >
+        cd test && env
+        PLATFORM=${{ steps.platform.outputs.display_name }}
+        REDIS_IMG=${{ github.sha }}:${{ steps.platform.outputs.display_name }}
+        ./run-entrypoint-tests.sh
+        -- --output-junit-xml=report-entrypoint.xml
+
+    - name: Test Report
+      uses: dorny/test-reporter@v2
+      # run this step even if previous step failed, but not if it was skipped
+      if: ${{ !cancelled() && steps.test_entrypoint.conclusion != 'skipped' }}
+      with:
+        name: Entrypoint Tests
+        path: test/report-entrypoint.xml
+        reporter: java-junit
+
+    - name: Push image
+      uses: docker/build-push-action@v6
+      if: ${{ inputs.publish_image == 'true' && contains(fromJSON('["amd64"]'), steps.platform.outputs.display_name) }}
+      with:
+        context: ${{ inputs.distribution }}
+        push: true
+        tags: ${{ inputs.registry_repository }}:${{ github.sha }}-${{ inputs.distribution }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
