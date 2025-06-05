@@ -1,15 +1,15 @@
-name: Build and Test
+name: Build and Test Unstable
 on:
   pull_request:
     branches:
-      - master
-      - release/*
+      - unstable
   workflow_call:
 
 jobs:
   build-and-test:
-    runs-on: ${{ contains(matrix.platform, 'arm64') && 'ubuntu24-arm64-2-8' || 'ubuntu-latest' }}
+    runs-on: 'ubuntu-latest'
     strategy:
+      fail-fast: false
       matrix:
         distribution:
           - debian
@@ -23,7 +23,7 @@ jobs:
           - linux/mips64le
           - linux/ppc64le
           - linux/s390x
-          - linux/arm64
+#          - linux/arm64        # Currently the unstable isn't running on arm64
           - linux/riscv64
         exclude:
         - distribution: alpine
