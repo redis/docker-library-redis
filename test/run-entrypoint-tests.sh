@@ -20,6 +20,9 @@
 #
 ##
 
+# Container initialization wait time in seconds
+CONTAINER_INIT_WAIT=3
+
 if [ -z "$REDIS_IMG" ]; then
 	echo "REDIS_IMG may not be empty"
 	exit 1
@@ -38,6 +41,7 @@ get_container_user_uid_gid_on_the_host() {
 	container_user="$1"
 	dir=$(mktemp -d -p .)
 	docker run --rm -v "$(pwd)/$dir":/w -w /w --entrypoint=/bin/sh "$REDIS_IMG" -c "chown $container_user ."
+	sleep $CONTAINER_INIT_WAIT  # Wait for container to fully initialize
 	stat -c "%u %g" "$dir"
 	sudo rm -rf "$dir"
 }
@@ -177,6 +181,7 @@ run_docker_and_test_ownership() {
 	fi
 
 	docker_output=$($docker_run 2>&1)
+	sleep $CONTAINER_INIT_WAIT  # Wait for container to fully initialize
 
 	if [ "$TEST_VERBOSE" ]; then
 		echo "After:"
@@ -265,6 +270,7 @@ run_redis_docker_and_check_uid_gid() {
 	docker_cmd="$*"
 	# shellcheck disable=SC2086
 	container=$(docker run $docker_flags -d "$REDIS_IMG" $docker_cmd)
+	sleep $CONTAINER_INIT_WAIT  # Wait for container to fully initialize
 	ret=$?
 
 	assertTrue "Container '$docker_flags $REDIS_IMG $docker_cmd' created" "[ $ret -eq 0 ]"
@@ -296,6 +302,7 @@ run_redis_docker_and_check_modules() {
 	docker_cmd="$1"
 	# shellcheck disable=SC2086
 	container=$(docker run --rm -d "$REDIS_IMG" $docker_cmd)
+	sleep $CONTAINER_INIT_WAIT  # Wait for container to fully initialize
 	info=$(docker exec "$container" redis-cli info)
 
 	[ "$PLATFORM" ] && [ "$PLATFORM" != "amd64" ] && startSkipping
@@ -322,6 +329,7 @@ assert_redis_unstable() {
 
 test_redis_version() {
 	ret=$(docker run --rm "$REDIS_IMG" -v|tail -n 1)
+	sleep $CONTAINER_INIT_WAIT  # Wait for container to fully initialize
 	assert_redis_unstable "$ret"
 }
 
@@ -545,6 +553,7 @@ test_redis_server_persistence_with_bind_mount() {
 	chmod 0444 "$dir"
 
 	container=$(docker run --rm -d -v "$(pwd)/$dir":/data "$REDIS_IMG" --appendonly yes)
+	sleep $CONTAINER_INIT_WAIT  # Wait for container to fully initialize
 
 	result=$(echo save | docker exec -i "$container" redis-cli)
 	assertEquals "OK" "$result"
@@ -559,6 +568,7 @@ test_redis_server_persistence_with_bind_mount() {
 	sudo chown -R "$HOST_OWNER" "$dir"
 
 	container2=$(docker run --rm -d -v "$(pwd)/$dir":/data "$REDIS_IMG")
+	sleep $CONTAINER_INIT_WAIT  # Wait for container to fully initialize
 	value=$(echo "GET FOO" | docker exec -i "$container2" redis-cli)
 	assertEquals "$container" "$value"
 
@@ -576,6 +586,7 @@ test_redis_server_persistence_with_volume() {
 	docker run --rm -v test_redis:/data --entrypoint=/bin/sh "$REDIS_IMG" -c 'chown -R 0:0 /data'
 
 	container=$(docker run --rm -d -v test_redis:/data "$REDIS_IMG" --appendonly yes)
+	sleep $CONTAINER_INIT_WAIT  # Wait for container to fully initialize
 
 	result=$(echo save | docker exec -i "$container" redis-cli)
 	assertEquals "OK" "$result"
@@ -590,6 +601,7 @@ test_redis_server_persistence_with_volume() {
 	docker run --rm -v test_redis:/data --entrypoint=/bin/sh "$REDIS_IMG" -c 'chown -R 0:0 /data && chmod 0000 -R /data'
 
 	container2=$(docker run --rm -d -v test_redis:/data "$REDIS_IMG")
+	sleep $CONTAINER_INIT_WAIT  # Wait for container to fully initialize
 	value=$(echo "GET FOO" | docker exec -i "$container2" redis-cli)
 	assertEquals "$container" "$value"
 
