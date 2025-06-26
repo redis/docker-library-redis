@@ -1,4 +1,4 @@
-FROM alpine:3.21
+FROM alpine:3.22
 
 # add our user and group first to make sure their IDs get assigned consistently, regardless of whatever dependencies get added
 RUN set -eux; \
@@ -42,7 +42,8 @@ RUN set -eux; \
 		build-base \
 		cargo \
 		clang \
-		clang18-libclang \
+		clang-static \
+		clang-libclang \
 		cmake \
 		curl \
 		g++ \
@@ -50,6 +51,8 @@ RUN set -eux; \
 		libffi-dev \
 		libgcc \
 		libtool \
+		llvm-dev \
+		ncurses-dev \
 		openssh \
 		openssl  \
 		py-virtualenv \
@@ -106,8 +109,12 @@ RUN set -eux; \
 	sed -ri 's!cd jemalloc && ./configure !&'"$extraJemallocConfigureFlags"' !' /usr/src/redis/deps/Makefile; \
 	grep -F "cd jemalloc && ./configure $extraJemallocConfigureFlags " /usr/src/redis/deps/Makefile; \
 	\
+# Disable static linking the C runtime for RediSearch's rust submodule
+	export RUST_DYN_CRT=1; \
 	export BUILD_TLS=yes; \
 	if [ "$BUILD_WITH_MODULES" = "yes" ]; then \
+		# Disable static linking the C runtime for RediSearch's rust submodule
+		export RUST_DYN_CRT=1; \
 		make -C /usr/src/redis/modules/redisjson get_source; \
 		sed -i 's/^RUST_FLAGS=$/RUST_FLAGS += -C target-feature=-crt-static/' /usr/src/redis/modules/redisjson/src/Makefile ; \
 		grep -E 'RUST_FLAGS' /usr/src/redis/modules/redisjson/src/Makefile; \
@@ -140,8 +147,7 @@ RUN set -eux; \
 		apk del --no-network .module-build-deps; \
 	fi; \
 	apk del --no-network .build-deps; \
-	apk --purge del apk-tools ; \
-	rm -fr ~/.cache/pip*  rm -f /sbin/apk && rm -rf /etc/apk && rm -rf /lib/apk && rm -rf /usr/share/apk && rm -rf /var/lib/apk && rm -rf /usr/lib/python*; \
+	rm -rf ~/.cache ~/.gitconfig; \
 	\
 	redis-cli --version; \
 	redis-server --version;
