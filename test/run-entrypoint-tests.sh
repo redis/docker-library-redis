@@ -314,15 +314,15 @@ assert_redis_output_has_no_config_perm_error() {
 	assertNotContains "cmd: $docker_cmd, docker output contains '$s': " "$docker_output" "$s"
 }
 
-assert_redis_v8() {
-	assertContains "$1" "Redis server v=8"
+assert_redis_unstable() {
+	assertContains "$1" "Redis server v=255.255.255"
 }
 
 # Tests #
 
 test_redis_version() {
 	ret=$(docker run --rm "$REDIS_IMG" -v|tail -n 1)
-	assert_redis_v8 "$ret"
+	assert_redis_unstable "$ret"
 }
 
 test_data_dir_owner_and_perms_changed_by_server_when_data_is_RO() {
@@ -498,7 +498,7 @@ test_redis_start_reached_when_config_dir_does_not_exist() {
 test_redis_start_reached_when_chown_on_data_dir_is_denied() {
 	assert_internal() {
 		# shellcheck disable=SC2317
-		assert_redis_v8 "$docker_output"
+		assert_redis_unstable "$docker_output"
 	}
 	dir_structure="
 		.        dir  $HOST_OWNER -> $HOST_UID 0333 -> 0700
