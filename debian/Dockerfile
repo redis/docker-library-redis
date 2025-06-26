@@ -91,7 +91,14 @@ RUN set -eux; \
 	sed -ri 's!cd jemalloc && ./configure !&'"$extraJemallocConfigureFlags"' !' /usr/src/redis/deps/Makefile; \
 	grep -F "cd jemalloc && ./configure $extraJemallocConfigureFlags " /usr/src/redis/deps/Makefile; \
 	\
+# Disable static linking the C runtime for RediSearch's rust submodule
+	export RUST_DYN_CRT=1; \
 	export BUILD_TLS=yes; \
+	if [ "$BUILD_WITH_MODULES" = "yes" ]; then \
+		make -C /usr/src/redis/modules/redisjson get_source; \
+		sed -i 's/^RUST_FLAGS=$/RUST_FLAGS += -C target-feature=-crt-static/' /usr/src/redis/modules/redisjson/src/Makefile ; \
+		grep -E 'RUST_FLAGS' /usr/src/redis/modules/redisjson/src/Makefile; \
+	fi; \
 	make -C /usr/src/redis -j "$(nproc)" all; \
 	make -C /usr/src/redis install; \
 	\
