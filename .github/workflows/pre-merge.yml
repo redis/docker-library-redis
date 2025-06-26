@@ -23,7 +23,7 @@ jobs:
           - linux/mips64le
           - linux/ppc64le
           - linux/s390x
-          - linux/arm64        # Currently the unstable isn't running on arm64
+          - linux/arm64
           - linux/riscv64
         exclude:
         - distribution: alpine
@@ -37,6 +37,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request && github.sha || 'unstable' }}
       - uses: ./.github/actions/build-and-tag-locally
         with:
           distribution: ${{ matrix.distribution }}
