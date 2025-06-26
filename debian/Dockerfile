@@ -92,11 +92,6 @@ RUN set -eux; \
 	grep -F "cd jemalloc && ./configure $extraJemallocConfigureFlags " /usr/src/redis/deps/Makefile; \
 	\
 	export BUILD_TLS=yes; \
-	if [ "$BUILD_WITH_MODULES" = "yes" ]; then \
-		make -C /usr/src/redis/modules/redisjson get_source; \
-		sed -i 's/^RUST_FLAGS=$/RUST_FLAGS += -C target-feature=-crt-static/' /usr/src/redis/modules/redisjson/src/Makefile ; \
-		grep -E 'RUST_FLAGS' /usr/src/redis/modules/redisjson/src/Makefile; \
-	fi; \
 	make -C /usr/src/redis -j "$(nproc)" all; \
 	make -C /usr/src/redis install; \
 	\
