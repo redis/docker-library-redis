@@ -275,7 +275,7 @@ run_redis_docker_and_check_uid_gid() {
 
 	assertTrue "Container '$docker_flags $REDIS_IMG $docker_cmd' created" "[ $ret -eq 0 ]"
 	if [ $ret -gt 0 ]; then
-		echo "retarning"
+		echo "returning"
 		return 1
 	fi
 
