@@ -4,6 +4,9 @@ on:
     branches:
       - master
       - release/*
+  push:
+    branches:
+      - release/8.2
   workflow_call:
 
 jobs:
