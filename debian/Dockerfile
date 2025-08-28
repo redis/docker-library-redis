@@ -46,6 +46,9 @@ RUN set -eux; \
 			unzip \
 			rsync \
 			clang \
+			llvm \
+			llvm-dev \
+			libclang-dev \
 			automake \
 			autoconf \
 			libtool \

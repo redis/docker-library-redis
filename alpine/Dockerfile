@@ -51,6 +51,7 @@ RUN set -eux; \
 		libffi-dev \
 		libgcc \
 		libtool \
+		llvm \
 		llvm-dev \
 		ncurses-dev \
 		openssh \
@@ -67,6 +68,9 @@ RUN set -eux; \
 		which \
 		xsimd \
 		xz; \
+	# Make llvm-config and libclang discoverable for clang-sys (Rust) \
+	export LLVM_CONFIG_PATH="$(command -v llvm-config || true)"; \
+	if [ -e /usr/lib/libclang.so ]; then export LIBCLANG_PATH="/usr/lib"; fi; \
 	fi; \
 	\
 # install required python packages for RedisJSON module
