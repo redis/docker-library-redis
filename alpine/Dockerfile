@@ -72,8 +72,8 @@ RUN set -eux; \
 	export LLVM_CONFIG_PATH="$(command -v llvm-config || true)"; \
 	if [ -e /usr/lib/libclang.so ]; then export LIBCLANG_PATH="/usr/lib"; fi; \
 	# install required python packages for RedisJSON module
-	python3 -m pip -q install --upgrade pip setuptools; \
-	PIP_BREAK_SYSTEM_PACKAGES=1 python3 -m pip -q install addict toml jinja2 ramp-packer; \
+	python3 -m pip -q install --break-system-packages --upgrade pip setuptools; \
+	PIP_BREAK_SYSTEM_PACKAGES=1 python3 -m pip -q install --break-system-packages addict toml jinja2 ramp-packer; \
 	fi; \
 	\
 	wget -O redis.tar.gz "$REDIS_DOWNLOAD_URL"; \
