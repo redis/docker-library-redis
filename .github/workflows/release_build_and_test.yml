@@ -13,6 +13,9 @@ on:
       workflow_uuid:
         description: 'Optional UUID to identify this workflow run'
         required: false
+  push:
+    branches:
+      - release-test
 
 # UUID is used to help automation to identify workflow run in the list of workflow runs.
 run-name: "Release Build and Test${{ github.event.inputs.workflow_uuid && format(': {0}', github.event.inputs.workflow_uuid) || '' }}"
@@ -21,6 +24,11 @@ jobs:
   prepare-release:
     runs-on: ["ubuntu-latest"]
     steps:
+      - name: Fail
+        shell: bash
+        run: |
+          exit 11
+
       - name: Checkout code
         uses: actions/checkout@v4
 
