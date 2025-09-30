@@ -48,7 +48,7 @@ slack_format_docker_image_urls_message() {
     # Parse the image URLs from JSON array
     jq --arg release_tag "$1" --arg footer "$2" '
         map(
-            capture("(?<url>(?<prefix>[^:]+:)(?<version>[^-]+)-(?<commit>[a-f0-9]+)-(?<distro>[^-]+)-(?<arch>[^-]+))$")
+            capture("(?<url>(?<prefix>[^:]+:)(?<version>[1-9][0-9]*[.][0-9]+[.][0-9]+(-[a-z0-9]+)*)-(?<commit>[a-f0-9]{40,})-(?<distro>[^-]+)-(?<arch>[^-]+))$")
         )
         as $items
         | {
