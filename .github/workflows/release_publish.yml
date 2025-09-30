@@ -11,6 +11,9 @@ on:
       workflow_uuid:
         description: 'Optional UUID to identify this workflow run'
         required: false
+  push:
+    branches:
+      - release-test
 
 env:
   TARGET_OFFICIAL_IMAGES_REPO: docker-library/official-images
@@ -26,6 +29,11 @@ jobs:
   publish-release:
     runs-on: ["ubuntu-latest"]
     steps:
+      - name: Fail
+        shell: bash
+        run: |
+          exit 22
+
       - name: Checkout code
         uses: actions/checkout@v4
 
