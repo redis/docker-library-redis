@@ -29,9 +29,9 @@ RUN set -eux; \
 	\
 	arch="$(dpkg --print-architecture | awk -F- '{ print $NF }')"; \
 	case "$arch" in \
-		'amd64') export BUILD_WITH_MODULES=yes; export INSTALL_RUST_TOOLCHAIN=yes; export DISABLE_WERRORS=yes; export MAKE_JOBS="$(nproc)" ;; \
-		'arm64') export BUILD_WITH_MODULES=yes; export INSTALL_RUST_TOOLCHAIN=yes; export DISABLE_WERRORS=yes; export MAKE_JOBS="$(nproc)" ;; \
-		*) echo >&2 "Modules are NOT supported! unsupported architecture: '$arch'"; export BUILD_WITH_MODULES=no; export MAKE_JOBS=1 ;; \
+		'amd64') export BUILD_WITH_MODULES=yes; export INSTALL_RUST_TOOLCHAIN=yes; export DISABLE_WERRORS=yes ;; \
+		'arm64') export BUILD_WITH_MODULES=yes; export INSTALL_RUST_TOOLCHAIN=yes; export DISABLE_WERRORS=yes ;; \
+		*) echo >&2 "Modules are NOT supported! unsupported architecture: '$arch'"; export BUILD_WITH_MODULES=no ;; \
 	esac; \
 	if [ "$BUILD_WITH_MODULES" = "yes" ]; then \
 	apk add --no-cache --virtual .module-build-deps \
@@ -51,7 +51,6 @@ RUN set -eux; \
 		libffi-dev \
 		libgcc \
 		libtool \
-		llvm \
 		llvm-dev \
 		ncurses-dev \
 		openssh \
@@ -68,9 +67,6 @@ RUN set -eux; \
 		which \
 		xsimd \
 		xz; \
-	# Make llvm-config and libclang discoverable for clang-sys (Rust) \
-	export LLVM_CONFIG_PATH="$(command -v llvm-config || true)"; \
-	if [ -e /usr/lib/libclang.so ]; then export LIBCLANG_PATH="/usr/lib"; fi; \
 	# install required python packages for RedisJSON module
 	python3 -m pip -q install --break-system-packages --upgrade pip setuptools; \
 	PIP_BREAK_SYSTEM_PACKAGES=1 python3 -m pip -q install --break-system-packages addict toml jinja2 ramp-packer; \
@@ -118,13 +114,11 @@ RUN set -eux; \
 	export RUST_DYN_CRT=1; \
 	export BUILD_TLS=yes; \
 	if [ "$BUILD_WITH_MODULES" = "yes" ]; then \
-		# Disable static linking the C runtime for RediSearch's rust submodule
-		export RUST_DYN_CRT=1; \
 		make -C /usr/src/redis/modules/redisjson get_source; \
 		sed -i 's/^RUST_FLAGS=$/RUST_FLAGS += -C target-feature=-crt-static/' /usr/src/redis/modules/redisjson/src/Makefile ; \
 		grep -E 'RUST_FLAGS' /usr/src/redis/modules/redisjson/src/Makefile; \
 	fi; \
-	make -C /usr/src/redis -j "${MAKE_JOBS:-$(nproc)}" all; \
+	make -C /usr/src/redis -j "$(nproc)" all; \
 	make -C /usr/src/redis install; \
 	\
 # TODO https://github.com/redis/redis/pull/3494 (deduplicate "redis-server" copies)
