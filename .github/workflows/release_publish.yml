@@ -78,7 +78,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           path: official-images
-          repository: ${{ github.event.inputs.pr_to_official_library && env.TARGET_OFFICIAL_IMAGES_REPO || env.FORKED_OFFICIAL_IMAGES_REPO }}
+          repository: ${{ github.event.inputs.pr_to_official_library == 'true' && env.TARGET_OFFICIAL_IMAGES_REPO || env.FORKED_OFFICIAL_IMAGES_REPO }}
 
       - name: Generate stackbrew library content
         env:
@@ -104,7 +104,7 @@ jobs:
         with:
           token: ${{ secrets.GH_TOKEN_FOR_PR }}
           draft: true
-          push-to-fork: ${{ github.event.inputs.pr_to_official_library && env.FORKED_OFFICIAL_IMAGES_REPO || '' }}
+          push-to-fork: ${{ github.event.inputs.pr_to_official_library == 'true' && env.FORKED_OFFICIAL_IMAGES_REPO || '' }}
           path: official-images
           branch: redis-${{ steps.parse-release.outputs.release_version }}
           commit-message: "Redis: Update to ${{ steps.parse-release.outputs.release_version }}"
