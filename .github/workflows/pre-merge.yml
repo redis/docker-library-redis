@@ -11,6 +11,11 @@ on:
         description: 'Release tag to build'
         required: true
         type: string
+      publish_image:
+        description: 'Publish Docker image to GHCR'
+        required: false
+        type: boolean
+        default: false
     outputs:
       docker_image_urls:
         description: 'Array of Docker image URLs that were published'
@@ -60,7 +65,7 @@ jobs:
           platform: ${{ matrix.platform }}
           registry_username: ${{ github.actor }}
           registry_password: ${{ secrets.GITHUB_TOKEN }}
-          publish_image: ${{ vars.PUBLISH_IMAGE }}
+          publish_image: ${{ inputs.publish_image || vars.PUBLISH_IMAGE }}
           registry_repository: ${{ format('ghcr.io/{0}', github.repository) }}
           release_tag: ${{ inputs.release_tag }}
 
