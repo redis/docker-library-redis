@@ -57,6 +57,7 @@ jobs:
     secrets: inherit
     with:
       release_tag: ${{ github.event.inputs.release_tag }}
+      publish_image: true
 
   merge-back-to-release-branch:
     needs: [prepare-release, build-and-test]
