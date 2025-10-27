@@ -17,9 +17,9 @@ on:
         type: boolean
         default: false
     outputs:
-      docker_image_urls:
-        description: 'Array of Docker image URLs that were published'
-        value: ${{ jobs.collect-image-urls.outputs.docker_image_urls }}
+      docker_images_metadata:
+        description: 'Array of structured Docker images metadata that were published'
+        value: ${{ jobs.collect-images-metadata.outputs.docker_images_metadata }}
 
 jobs:
   build-and-test:
@@ -69,56 +69,57 @@ jobs:
           registry_repository: ${{ format('ghcr.io/{0}', github.repository) }}
           release_tag: ${{ inputs.release_tag }}
 
-  collect-image-urls:
+  collect-images-metadata:
     runs-on: ubuntu-latest
     needs: build-and-test
     if: ${{ inputs.release_tag }}
     outputs:
-      docker_image_urls: ${{ steps.collect-urls.outputs.urls }}
+      docker_images_metadata: ${{ steps.collect-metadata.outputs.metadata }}
     steps:
-      - name: Download all image URL artifacts
+      - name: Download all images metadata artifacts
         uses: actions/download-artifact@v4
         with:
-          pattern: image-url-*
-          path: ./image-urls
+          pattern: image-metadata-*
+          path: ./images-metadata
           merge-multiple: true
 
-      - name: Collect image URLs from artifacts
-        id: collect-urls
+      - name: Collect images metadata from artifacts
+        id: collect-metadata
         run: |
-          if [ -d "./image-urls" ] && [ "$(ls -A ./image-urls 2>/dev/null)" ]; then
-            echo "Found image URL files:"
-            urls=$(find ./image-urls -name "*.txt" -exec cat {} \; | jq -R -s -c 'split("\n") | map(select(length > 0))')
-            echo "Collected image URLs: $urls"
+          if [ -d "./images-metadata" ] && [ "$(ls -A ./images-metadata 2>/dev/null)" ]; then
+            echo "Found images metadata files:"
+            # Collect all JSON files and merge them into a single array
+            metadata=$(find ./images-metadata -name "*.json" -exec cat {} \; | jq -s -c '.')
+            echo "Collected images metadata: $metadata"
           else
-            echo "No image URL artifacts found"
-            urls="[]"
+            echo "No images metadata artifacts found"
+            metadata="[]"
           fi
 
-          echo "urls=$urls" >> "$GITHUB_OUTPUT"
+          echo "metadata=$metadata" >> "$GITHUB_OUTPUT"
 
   notify-slack:
     runs-on: ubuntu-latest
-    needs: collect-image-urls
-    if: ${{ inputs.release_tag && needs.collect-image-urls.outputs.docker_image_urls != '[]' }}
+    needs: collect-images-metadata
+    if: ${{ inputs.release_tag && needs.collect-images-metadata.outputs.docker_images_metadata != '[]' }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Send Slack notification
         run: |
-          image_urls='${{ needs.collect-image-urls.outputs.docker_image_urls }}'
+          images_metadata='${{ needs.collect-images-metadata.outputs.docker_images_metadata }}'
           workflow_url="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           footer="Repository: ${{ github.repository }} | Commit: \`${{ github.sha }}\` | View: <$workflow_url|workflow run>"
 
           . ${GITHUB_WORKSPACE}/.github/actions/common/func.sh
 
-          echo "$image_urls" | slack_format_docker_image_urls_message "${{ inputs.release_tag }}" "$footer"  \
+          echo "$images_metadata" | slack_format_docker_images_metadata_message "${{ inputs.release_tag }}" "$footer"  \
           | curl -s --fail-with-body -d@- "${{ secrets.SLACK_WEB_HOOK_URL }}"
 
   notify-slack-when-failed:
     runs-on: ubuntu-latest
-    needs: collect-image-urls
+    needs: collect-images-metadata
     if: ${{ inputs.release_tag && failure() }}
     steps:
       - name: Checkout code
