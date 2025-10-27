@@ -263,7 +263,7 @@ runs:
             "commit": "${{ github.sha }}",
             "url": "${{ steps.format-registry-tag.outputs.tag }}"
           }
-          EOF
+        EOF
           echo "Image metadata saved:"
           cat "/tmp/image-metadata/${{ inputs.distribution }}-${{ steps.platform.outputs.display_name }}.json"
         else
