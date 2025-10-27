@@ -249,22 +249,31 @@ runs:
         cache-from: type=gha
         cache-to: type=gha,mode=max
 
-    - name: Save image URL to artifact
+    - name: Save image metadata to artifact
       shell: bash
       run: |
         if [[ "${{ inputs.publish_image }}" == "true" && "${{ contains(fromJSON('["amd64", "arm64"]'), steps.platform.outputs.display_name) }}" == "true" ]]; then
-          # Create a file with the image URL for this specific build
-          mkdir -p /tmp/image-urls
-          echo "${{ steps.format-registry-tag.outputs.tag }}" > "/tmp/image-urls/${{ inputs.distribution }}-${{ steps.platform.outputs.display_name }}.txt"
-          echo "Image URL saved: ${{ steps.format-registry-tag.outputs.tag }}"
+          # Create a JSON file with structured image metadata
+          mkdir -p /tmp/image-metadata
+          cat > "/tmp/image-metadata/${{ inputs.distribution }}-${{ steps.platform.outputs.display_name }}.json" << 'EOF'
+          {
+            "version": "${{ inputs.release_tag }}",
+            "arch": "${{ steps.platform.outputs.display_name }}",
+            "distro": "${{ inputs.distribution }}",
+            "commit": "${{ github.sha }}",
+            "url": "${{ steps.format-registry-tag.outputs.tag }}"
+          }
+        EOF
+          echo "Image metadata saved:"
+          cat "/tmp/image-metadata/${{ inputs.distribution }}-${{ steps.platform.outputs.display_name }}.json"
         else
           echo "Image not published for this platform/distribution combination"
         fi
 
-    - name: Upload image URL artifact
+    - name: Upload image metadata artifact
       uses: actions/upload-artifact@v4
       if: ${{ inputs.publish_image == 'true' && contains(fromJSON('["amd64", "arm64"]'), steps.platform.outputs.display_name) }}
       with:
-        name: image-url-${{ inputs.distribution }}-${{ steps.platform.outputs.display_name }}
-        path: /tmp/image-urls/${{ inputs.distribution }}-${{ steps.platform.outputs.display_name }}.txt
+        name: image-metadata-${{ inputs.distribution }}-${{ steps.platform.outputs.display_name }}
+        path: /tmp/image-metadata/${{ inputs.distribution }}-${{ steps.platform.outputs.display_name }}.json
         retention-days: 1
