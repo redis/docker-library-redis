@@ -95,13 +95,13 @@ jobs:
             exit 1
           fi
 
-          # Get docker image URLs from build-and-test job
-          DOCKER_IMAGE_URLS='${{ needs.build-and-test.outputs.docker_image_urls }}'
+          # Get docker images metadata from build-and-test job
+          DOCKER_IMAGES_METADATA='${{ needs.build-and-test.outputs.docker_images_metadata }}'
 
-          # Validate that DOCKER_IMAGE_URLS is valid JSON
-          if ! echo "$DOCKER_IMAGE_URLS" | jq . > /dev/null 2>&1; then
-            echo "Warning: docker_image_urls is not valid JSON, using empty array"
-            DOCKER_IMAGE_URLS="[]"
+          # Validate that DOCKER_IMAGES_METADATA is valid JSON
+          if ! echo "$DOCKER_IMAGES_METADATA" | jq . > /dev/null 2>&1; then
+            echo "Warning: docker_images_metadata is not valid JSON, using empty array"
+            DOCKER_IMAGES_METADATA="[]"
           fi
 
           cat > release_handle.json << EOF
@@ -110,7 +110,7 @@ jobs:
             "release_version": "${{ github.event.inputs.release_tag }}",
             "release_version_branch": "${{ steps.ensure-branch.outputs.release_version_branch }}",
             "release_branch": "${{ steps.ensure-branch.outputs.release_branch }}",
-            "docker_image_urls": $DOCKER_IMAGE_URLS
+            "docker_images_metadata": $DOCKER_IMAGES_METADATA
           }
           EOF
 
