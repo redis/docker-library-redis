@@ -44,14 +44,10 @@ redis_version_split() {
     printf "%s:%s:%s:%s\n" "$major" "$minor" "$patch" "$suffix"
 }
 
-slack_format_docker_image_urls_message() {
-    # Parse the image URLs from JSON array
+slack_format_docker_images_metadata_message() {
+    # Format the structured images metadata into a Slack message
     jq --arg release_tag "$1" --arg footer "$2" '
-        map(
-            capture("(?<url>(?<prefix>[^:]+:)(?<version>[1-9][0-9]*[.][0-9]+[.][0-9]+(-[a-z0-9]+)*)-(?<commit>[a-f0-9]{40,})-(?<distro>[^-]+)-(?<arch>[^-]+))$")
-        )
-        as $items
-        | {
+        {
             icon_emoji: ":redis-circle:",
             text: ("🐳 Docker Images Published for Redis: " + $release_tag),
             blocks: [
@@ -66,7 +62,7 @@ slack_format_docker_image_urls_message() {
                     "text": (
                     "The following Docker images have been published to Github Container Registry:\n\n" +
                     (
-                        $items
+                        .
                         | map(
                             "Distribution: *" + .distro + "* "
                             + "Architecture: *" + .arch + "*"
