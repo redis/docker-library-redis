@@ -104,7 +104,7 @@ jobs:
             DOCKER_IMAGES_METADATA="[]"
           fi
 
-          cat > release_handle.json << EOF
+          cat > result.json << EOF
           {
             "release_commit_sha": "$RELEASE_COMMIT_SHA",
             "release_version": "${{ github.event.inputs.release_tag }}",
@@ -114,12 +114,12 @@ jobs:
           }
           EOF
 
-          echo "Created release_handle.json:"
-          cat release_handle.json
+          echo "Created result.json for release_handle:"
+          cat result.json
 
       - name: Upload release handle artifact
         uses: actions/upload-artifact@v4
         with:
           name: release_handle
-          path: release_handle.json
+          path: result.json
           retention-days: 400
