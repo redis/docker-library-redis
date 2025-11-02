@@ -13,6 +13,9 @@ on:
         required: false
       pr_to_official_library:
         default: false
+      release_tag:
+        default: ""
+        required: false
 
 env:
   TARGET_OFFICIAL_IMAGES_REPO: docker-library/official-images
