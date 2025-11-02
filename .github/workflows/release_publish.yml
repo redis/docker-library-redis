@@ -124,21 +124,21 @@ jobs:
           echo "Pull Request URL: ${{ steps.create-pr.outputs.pull-request-url }}"
 
           # Create release_info.json artifact
-          cat > release_info.json << EOF
+          cat > result.json << EOF
           {
             "pull_request_number": "${{ steps.create-pr.outputs.pull-request-number }}",
             "pull_request_url": "${{ steps.create-pr.outputs.pull-request-url }}"
           }
           EOF
 
-          echo "Created release_info.json:"
-          cat release_info.json
+          echo "Created result.json for release_info:"
+          cat result.json
 
       - name: Upload release info artifact
         uses: actions/upload-artifact@v4
         with:
           name: release_info
-          path: release_info.json
+          path: result.json
           retention-days: 400
 
       - name: Send Slack notification
