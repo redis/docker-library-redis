@@ -22,7 +22,7 @@ RUN set -eux; \
 
 # grab gosu for easy step-down from root
 # https://github.com/tianon/gosu/releases
-ENV GOSU_VERSION 1.17
+ENV GOSU_VERSION 1.19
 RUN set -eux; \
 	savedAptMark="$(apt-mark showmanual)"; \
 	apt-get update; \
@@ -30,15 +30,15 @@ RUN set -eux; \
 	rm -rf /var/lib/apt/lists/*; \
 	arch="$(dpkg --print-architecture | awk -F- '{ print $NF }')"; \
 	case "$arch" in \
-		'amd64') url='https://github.com/tianon/gosu/releases/download/1.17/gosu-amd64'; sha256='bbc4136d03ab138b1ad66fa4fc051bafc6cc7ffae632b069a53657279a450de3' ;; \
-		'arm64') url='https://github.com/tianon/gosu/releases/download/1.17/gosu-arm64'; sha256='c3805a85d17f4454c23d7059bcb97e1ec1af272b90126e79ed002342de08389b' ;; \
-		'armel') url='https://github.com/tianon/gosu/releases/download/1.17/gosu-armel'; sha256='f9969910fa141140438c998cfa02f603bf213b11afd466dcde8fa940e700945d' ;; \
-		'i386') url='https://github.com/tianon/gosu/releases/download/1.17/gosu-i386'; sha256='087dbb8fe479537e64f9c86fa49ff3b41dee1cbd28739a19aaef83dc8186b1ca' ;; \
-		'mips64el') url='https://github.com/tianon/gosu/releases/download/1.17/gosu-mips64el'; sha256='87140029d792595e660be0015341dfa1c02d1181459ae40df9f093e471d75b70' ;; \
-		'ppc64el') url='https://github.com/tianon/gosu/releases/download/1.17/gosu-ppc64el'; sha256='1891acdcfa70046818ab6ed3c52b9d42fa10fbb7b340eb429c8c7849691dbd76' ;; \
-		'riscv64') url='https://github.com/tianon/gosu/releases/download/1.17/gosu-riscv64'; sha256='38a6444b57adce135c42d5a3689f616fc7803ddc7a07ff6f946f2ebc67a26ba6' ;; \
-		's390x') url='https://github.com/tianon/gosu/releases/download/1.17/gosu-s390x'; sha256='69873bab588192f760547ca1f75b27cfcf106e9f7403fee6fd0600bc914979d0' ;; \
-		'armhf') url='https://github.com/tianon/gosu/releases/download/1.17/gosu-armhf'; sha256='e5866286277ff2a2159fb9196fea13e0a59d3f1091ea46ddb985160b94b6841b' ;; \
+		'amd64') url='https://github.com/tianon/gosu/releases/download/1.19/gosu-amd64'; sha256='52c8749d0142edd234e9d6bd5237dff2d81e71f43537e2f4f66f75dd4b243dd0' ;; \
+		'arm64') url='https://github.com/tianon/gosu/releases/download/1.19/gosu-arm64'; sha256='3a8ef022d82c0bc4a98bcb144e77da714c25fcfa64dccc57f6aba7ae47ff1a44' ;; \
+		'armel') url='https://github.com/tianon/gosu/releases/download/1.19/gosu-armel'; sha256='6b6a27eb5b5f1efe74978f51aceb773cf004db34e9019f869c056ac8ebc232d9' ;; \
+		'i386') url='https://github.com/tianon/gosu/releases/download/1.19/gosu-i386'; sha256='4b38085eecdf33a79b6a2f1df8d36e2a93c93346679106127fcbd605aebf01c9' ;; \
+		'mips64el') url='https://github.com/tianon/gosu/releases/download/1.19/gosu-mips64el'; sha256='340150cdd91ca40972452ecfed74179daf87a91a5e058b85394b77fe7775e662' ;; \
+		'ppc64el') url='https://github.com/tianon/gosu/releases/download/1.19/gosu-ppc64el'; sha256='52102a5903b79dcf6287cf1fbc3a3157393989195a8c95e4788556cd35650ae3' ;; \
+		'riscv64') url='https://github.com/tianon/gosu/releases/download/1.19/gosu-riscv64'; sha256='17ece9173569485c29875058d0edd4cd4a70c00f4cfa6a11b04050e25fda2297' ;; \
+		's390x') url='https://github.com/tianon/gosu/releases/download/1.19/gosu-s390x'; sha256='6717b460d0b1a8fabbdca1fa3cbe7ea0e1c0d64f3ed252e1e1e101ed4e16d9e2' ;; \
+		'armhf') url='https://github.com/tianon/gosu/releases/download/1.19/gosu-armhf'; sha256='8457a0bfd28e016c2c7d8ea6e5f7eed1376033ffbd36491bb455094c8b1dc9fd' ;; \
 		*) echo >&2 "error: unsupported gosu architecture: '$arch'"; exit 1 ;; \
 	esac; \
 	wget -O /usr/local/bin/gosu.asc "$url.asc"; \
