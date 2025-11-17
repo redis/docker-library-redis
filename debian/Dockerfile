@@ -14,8 +14,8 @@ RUN set -eux; \
 	; \
 	rm -rf /var/lib/apt/lists/*
 
-ENV REDIS_DOWNLOAD_URL=https://github.com/redis/redis/archive/refs/tags/8.4-int2.tar.gz
-ENV REDIS_DOWNLOAD_SHA=032f4711e580e8b9d64a625ab4b7302481d78731d9c542a2387fc23ecdc48d08
+ENV REDIS_DOWNLOAD_URL=https://github.com/redis/redis/archive/refs/tags/8.4-int3.tar.gz
+ENV REDIS_DOWNLOAD_SHA=92831afb9f8f11374ad5ab2429accad18a6de231025ed84c052f7d2224a4ba78
 RUN set -eux; \
 	\
 	savedAptMark="$(apt-mark showmanual)"; \
