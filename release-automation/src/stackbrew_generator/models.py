@@ -1,5 +1,6 @@
 """Data models for stackbrew library generation."""
 
+import functools
 import re
 from enum import Enum
 from typing import List, Optional
@@ -14,8 +15,12 @@ class DistroType(str, Enum):
     DEBIAN = "debian"
 
 
+@functools.total_ordering
 class RedisVersion(BaseModel):
-    """Represents a parsed Redis version."""
+    """Represents a parsed Redis version.
+
+    TODO: This class duplicates the code from redis-developer/redis-oss-release-automation
+    """
 
     major: int = Field(..., ge=1, description="Major version number")
     minor: int = Field(..., ge=0, description="Minor version number")
@@ -64,19 +69,45 @@ class RedisVersion(BaseModel):
         return self.suffix.lower().endswith("-eol")
 
     @property
+    def is_rc(self) -> bool:
+        """Check if this version is a release candidate."""
+        return self.suffix.lower().startswith("-rc")
+
+    @property
+    def is_ga(self) -> bool:
+        """Check if this version is a general availability (GA) release."""
+        return not self.is_milestone
+
+    @property
+    def is_internal(self) -> bool:
+        """Check if this version is an internal release."""
+        return bool(re.search(r"-int\d*$", self.suffix.lower()))
+
+    @property
     def mainline_version(self) -> str:
         """Get the mainline version string (major.minor)."""
         return f"{self.major}.{self.minor}"
 
     @property
-    def sort_key(self) -> str:
-        suffix_weight = 0
-        if self.suffix.startswith("rc"):
-            suffix_weight = 100
-        elif self.suffix.startswith("m"):
-            suffix_weight = 50
+    def suffix_weight(self) -> str:
+        # warning: using lexicographic order, letters doesn't have any meaning except for ordering
+        suffix_weight = ""
+        if self.is_ga:
+            suffix_weight = "QQ"
+        if self.is_rc:
+            suffix_weight = "LL"
+        elif self.suffix.startswith("-m"):
+            suffix_weight = "II"
 
-        return f"{self.major}.{self.minor}.{self.patch or 0}.{suffix_weight}.{self.suffix}"
+        # internal versions are always lower than their GA/rc/m counterparts
+        if self.is_internal:
+            suffix_weight = suffix_weight[:1] + "E"
+
+        return suffix_weight
+
+    @property
+    def sort_key(self) -> str:
+        return f"{self.major}.{self.minor}.{self.patch or 0}.{self.suffix_weight}{self.suffix}"
 
     def __str__(self) -> str:
         """String representation of the version."""
@@ -90,21 +121,17 @@ class RedisVersion(BaseModel):
         if not isinstance(other, RedisVersion):
             return NotImplemented
 
-        # Compare major.minor.patch first
-        self_tuple = (self.major, self.minor, self.patch or 0)
-        other_tuple = (other.major, other.minor, other.patch or 0)
+        return self.sort_key < other.sort_key
 
-        if self_tuple != other_tuple:
-            return self_tuple < other_tuple
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, RedisVersion):
+            return NotImplemented
 
-        # If numeric parts are equal, compare suffixes
-        # Empty suffix (GA) comes after suffixes (milestones)
-        if not self.suffix and other.suffix:
-            return False
-        if self.suffix and not other.suffix:
-            return True
+        return self.sort_key == other.sort_key
 
-        return self.suffix < other.suffix
+    def __hash__(self) -> int:
+        """Hash for use in sets and dicts."""
+        return hash((self.major, self.minor, self.patch or 0, self.suffix))
 
 
 class Distribution(BaseModel):
