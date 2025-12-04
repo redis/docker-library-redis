@@ -49,6 +49,25 @@ class TestRedisVersion:
         assert version.suffix == "-eol"
         assert version.is_eol is True
 
+    def test_parse_rc_internal_version(self):
+        """Test parsing RC internal version."""
+        version = RedisVersion.parse("8.2.1-rc2-int3")
+        assert version.major == 8
+        assert version.minor == 2
+        assert version.patch == 1
+        assert version.suffix == "-rc2-int3"
+        assert version.is_rc is True
+        assert version.is_internal is True
+        assert len(version.sort_key) > 0
+
+        version = RedisVersion.parse("8.4-int")
+        assert version.major == 8
+        assert version.minor == 4
+        assert version.patch == None
+        assert version.suffix == "-int"
+        assert version.is_internal is True
+        assert len(version.sort_key) > 0
+
     def test_parse_invalid_version(self):
         """Test parsing invalid version strings."""
         with pytest.raises(ValueError):
@@ -82,22 +101,67 @@ class TestRedisVersion:
 
     def test_version_comparison(self):
         """Test version comparison for sorting."""
-        v1 = RedisVersion.parse("8.2.1")
-        v2 = RedisVersion.parse("8.2.2")
-        v3 = RedisVersion.parse("8.2.1-m01")
-        v4 = RedisVersion.parse("8.3.0")
+        v8_2_1 = RedisVersion.parse("8.2.1")
+        v8_2_2 = RedisVersion.parse("8.2.2")
+        v8_2_1_m_01 = RedisVersion.parse("8.2.1-m01")
+        v8_2_1_rc_01 = RedisVersion.parse("8.2.1-rc01")
+        v8_2_1_rc_01_int_1 = RedisVersion.parse("8.2.1-rc01-int1")
+        v8_3_0 = RedisVersion.parse("8.3.0")
+        v8_3_0_rc_1 = RedisVersion.parse("8.3.0-rc1")
+        v8_3_0_rc_1_int_1 = RedisVersion.parse("8.3.0-rc1-int1")
+        v8_3_0_rc_1_int_2 = RedisVersion.parse("8.3.0-rc1-int2")
+        v8_4 = RedisVersion.parse("8.4")
+        v8_4_rc_1 = RedisVersion.parse("8.4-rc1")
+        v8_6_int = RedisVersion.parse("8.6-int")
 
         # Test numeric comparison
-        assert v1 < v2
-        assert v2 < v4
+        assert v8_2_1 < v8_2_2
+        assert v8_2_2 < v8_3_0
 
         # Test milestone vs GA (GA comes after milestone)
-        assert v3 < v1
+        assert v8_2_1_m_01 < v8_2_1
+
+        assert v8_3_0_rc_1 < v8_3_0
+
+        assert v8_2_1_rc_01 > v8_2_1_m_01
+        assert v8_2_1_rc_01_int_1 > v8_2_1_m_01
+        assert v8_2_1_rc_01_int_1 < v8_2_1_rc_01
+
+        assert v8_3_0_rc_1_int_1 < v8_3_0_rc_1_int_2
+
+        assert v8_3_0_rc_1 > v8_3_0_rc_1_int_1
+        assert v8_3_0_rc_1 > v8_3_0_rc_1_int_2
 
         # Test sorting
-        versions = [v4, v1, v3, v2]
+        versions = [
+            v8_3_0,
+            v8_2_1,
+            v8_2_1_m_01,
+            v8_2_2,
+            v8_3_0_rc_1,
+            v8_3_0_rc_1_int_1,
+            v8_3_0_rc_1_int_2,
+            v8_6_int,
+            v8_4,
+            v8_4_rc_1,
+            v8_2_1_rc_01,
+            v8_2_1_rc_01_int_1,
+        ]
         sorted_versions = sorted(versions)
-        assert sorted_versions == [v3, v1, v2, v4]
+        assert sorted_versions == [
+            v8_2_1_m_01,
+            v8_2_1_rc_01_int_1,
+            v8_2_1_rc_01,
+            v8_2_1,
+            v8_2_2,
+            v8_3_0_rc_1_int_1,
+            v8_3_0_rc_1_int_2,
+            v8_3_0_rc_1,
+            v8_3_0,
+            v8_4_rc_1,
+            v8_4,
+            v8_6_int,
+        ]
 
 
 class TestDistribution:
