@@ -90,6 +90,18 @@ fix_perms_and_owner() {
 	done
 }
 
+first_arg_is_special() {
+	if    [ "$1" = "-v" ] \
+	   || [ "$1" = "--version" ] \
+	   || [ "$1" = "-h" ] \
+	   || [ "$1" = "--help" ] \
+	   || [ "$1" = "--test-memory" ] \
+	   || [ "$1" = "--check-system" ]; then \
+	   return 0
+	fi
+	return 1
+}
+
 requirepass_arg_present() {
 	# TODO: maybe better to check that provided password is not empty?
 	for arg in "$@"; do
@@ -292,6 +304,9 @@ current_args=("$@")
 head_args=("${current_args[@]}")
 tail_args=()
 if [ "$IS_REDIS_SERVER" ] || [ "$IS_REDIS_SENTINEL" ]; then
+	if first_arg_is_special "$2"; then
+		exec "${head_args[@]}"
+	fi
 	# head_args: command and (optionally) config
 	# tail_args: user supplied arguments
 	if [ -n "$CONFIG" ]; then
