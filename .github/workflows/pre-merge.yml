@@ -20,6 +20,17 @@ on:
       docker_images_metadata:
         description: 'Array of structured Docker images metadata that were published'
         value: ${{ jobs.collect-images-metadata.outputs.docker_images_metadata }}
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Release tag to build'
+        required: true
+        type: string
+      publish_image:
+        description: 'Publish Docker image to GHCR'
+        required: false
+        type: boolean
+        default: false
 
 jobs:
   build-and-test:
