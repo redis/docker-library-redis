@@ -24,7 +24,7 @@ on:
     inputs:
       release_tag:
         description: 'Release tag to build'
-        required: true
+        required: false
         type: string
       publish_image:
         description: 'Publish Docker image to GHCR'
