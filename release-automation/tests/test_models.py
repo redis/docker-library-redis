@@ -261,7 +261,7 @@ class TestStackbrewEntry:
             git_fetch_ref="refs/tags/v8.2.1"
         )
 
-        expected_architectures = ["amd64", "arm32v5", "arm32v7", "arm64v8", "i386", "mips64le", "ppc64le", "s390x"]
+        expected_architectures = ["amd64", "arm32v5", "arm32v7", "arm64v8", "i386", "riscv64", "ppc64le", "s390x"]
         assert entry.architectures == expected_architectures
 
     def test_alpine_architectures(self):
