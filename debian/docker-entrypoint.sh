@@ -122,13 +122,11 @@ config_has_security_settings() {
 	grep -q -e '^[[:space:]]*\(requirepass\|include\|user\)[[:space:]][[:space:]]*[^[:space:]]' "$1"
 }
 
-show_empty_password_warning() {
-	local config="$1"
-	shift
-	local pw
-	pw=$(get_provided_password)
-	if [ -z "$SKIP_PASSWORD_WARNING" ] && [ -z "$pw" ] && ! requirepass_arg_present "$@" && ! config_has_security_settings "$config"; then
-		cat >&2 <<-'EOF'
+sleep_and_print_empty_password_warning() {
+	if [ -n "$1" ]; then
+		sleep "$1"
+	fi
+	cat >&2 <<-'EOF'
   ********************************************************************************
   ********************************************************************************
   **                                                                            **
@@ -153,6 +151,17 @@ show_empty_password_warning() {
   ********************************************************************************
   ********************************************************************************
 EOF
+}
+
+show_empty_password_warning() {
+	local config="$1"
+	shift
+	local pw
+	pw=$(get_provided_password)
+
+	if [ -z "$SKIP_PASSWORD_WARNING" ] && [ -z "$pw" ] && ! requirepass_arg_present "$@" && ! config_has_security_settings "$config"; then
+		export -f sleep_and_print_empty_password_warning
+		setsid -f bash -c 'sleep_and_print_empty_password_warning 1'
 	fi
 }
 
