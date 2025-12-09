@@ -57,9 +57,6 @@ runs:
           linux/i386)
             plaform_name="i386"
             ;;
-          linux/mips64le)
-            plaform_name="mips64le"
-            ;;
           linux/ppc64le)
             plaform_name="ppc64le"
             ;;

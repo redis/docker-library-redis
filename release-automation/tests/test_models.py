@@ -2,7 +2,17 @@
 
 import pytest
 
-from stackbrew_generator.models import RedisVersion, Distribution, DistroType, Release, StackbrewEntry
+from stackbrew_generator.models import (
+    ALPINE_ARCHITECTURES,
+    DEBIAN_BOOKWORM_ARCHITECTURES,
+    DEBIAN_TRIXIE_ARCHITECTURES,
+    DebianRelease,
+    Distribution,
+    DistroType,
+    RedisVersion,
+    Release,
+    StackbrewEntry,
+)
 
 
 class TestRedisVersion:
@@ -248,10 +258,27 @@ class TestRelease:
 class TestStackbrewEntry:
     """Tests for StackbrewEntry model."""
 
-    def test_debian_architectures(self):
-        """Test that Debian distributions get the correct architectures."""
+    def test_debian_trixie_architectures(self):
+        """Test that Debian trixie gets riscv64 architecture (no mips64le)."""
+        version = RedisVersion.parse("8.4.0")
+        distribution = Distribution(type=DistroType.DEBIAN, name=DebianRelease.TRIXIE)
+
+        entry = StackbrewEntry(
+            tags=["8.4.0", "latest"],
+            commit="abc123def456",
+            version=version,
+            distribution=distribution,
+            git_fetch_ref="refs/tags/v8.4.0",
+        )
+
+        assert entry.architectures == list(DEBIAN_TRIXIE_ARCHITECTURES)
+        assert "riscv64" in entry.architectures
+        assert "mips64le" not in entry.architectures
+
+    def test_debian_bookworm_architectures(self):
+        """Test that Debian bookworm gets mips64le architecture (no riscv64)."""
         version = RedisVersion.parse("8.2.1")
-        distribution = Distribution(type=DistroType.DEBIAN, name="bookworm")
+        distribution = Distribution(type=DistroType.DEBIAN, name=DebianRelease.BOOKWORM)
 
         entry = StackbrewEntry(
             tags=["8.2.1", "latest"],
@@ -261,8 +288,9 @@ class TestStackbrewEntry:
             git_fetch_ref="refs/tags/v8.2.1"
         )
 
-        expected_architectures = ["amd64", "arm32v5", "arm32v7", "arm64v8", "i386", "mips64le", "ppc64le", "s390x"]
-        assert entry.architectures == expected_architectures
+        assert entry.architectures == list(DEBIAN_BOOKWORM_ARCHITECTURES)
+        assert "mips64le" in entry.architectures
+        assert "riscv64" not in entry.architectures
 
     def test_alpine_architectures(self):
         """Test that Alpine distributions get the correct architectures."""
@@ -277,8 +305,7 @@ class TestStackbrewEntry:
             git_fetch_ref="refs/tags/v8.2.1"
         )
 
-        expected_architectures = ["amd64", "arm32v6", "arm32v7", "arm64v8", "i386", "ppc64le", "riscv64", "s390x"]
-        assert entry.architectures == expected_architectures
+        assert entry.architectures == list(ALPINE_ARCHITECTURES)
 
     def test_stackbrew_entry_string_format(self):
         """Test that StackbrewEntry formats correctly with architectures."""
@@ -296,7 +323,7 @@ class TestStackbrewEntry:
         output = str(entry)
 
         # Check that it contains the expected Alpine architectures
-        assert "amd64, arm32v6, arm32v7, arm64v8, i386, ppc64le, riscv64, s390x" in output
+        assert ", ".join(ALPINE_ARCHITECTURES) in output
         assert "Tags: 8.2.1-alpine, alpine" in output
         assert "GitCommit: abc123def456" in output
         assert "GitFetch: refs/tags/v8.2.1" in output

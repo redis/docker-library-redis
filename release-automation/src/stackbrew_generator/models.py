@@ -3,9 +3,9 @@
 import functools
 import re
 from enum import Enum
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field
 
 
 class DistroType(str, Enum):
@@ -13,6 +13,50 @@ class DistroType(str, Enum):
 
     ALPINE = "alpine"
     DEBIAN = "debian"
+
+
+class DebianRelease:
+    """Debian release names."""
+
+    TRIXIE = "trixie"
+    BOOKWORM = "bookworm"
+
+
+DEBIAN_TRIXIE_ARCHITECTURES: Tuple[str, ...] = (
+    "amd64",
+    "arm32v5",
+    "arm32v7",
+    "arm64v8",
+    "i386",
+    "riscv64",
+    "ppc64le",
+    "s390x",
+)
+DEBIAN_BOOKWORM_ARCHITECTURES: Tuple[str, ...] = (
+    "amd64",
+    "arm32v5",
+    "arm32v7",
+    "arm64v8",
+    "i386",
+    "mips64le",
+    "ppc64le",
+    "s390x",
+)
+ALPINE_ARCHITECTURES: Tuple[str, ...] = (
+    "amd64",
+    "arm32v6",
+    "arm32v7",
+    "arm64v8",
+    "i386",
+    "ppc64le",
+    "riscv64",
+    "s390x",
+)
+
+DEBIAN_ARCHITECTURES: dict[str, Tuple[str, ...]] = {
+    DebianRelease.TRIXIE: DEBIAN_TRIXIE_ARCHITECTURES,
+    DebianRelease.BOOKWORM: DEBIAN_BOOKWORM_ARCHITECTURES,
+}
 
 
 @functools.total_ordering
@@ -213,14 +257,15 @@ class StackbrewEntry(BaseModel):
 
     @property
     def architectures(self) -> List[str]:
-        """Get supported architectures based on distribution type."""
+        """Get supported architectures based on distribution type and version."""
         if self.distribution.type == DistroType.DEBIAN:
-            return ["amd64", "arm32v5", "arm32v7", "arm64v8", "i386", "mips64le", "ppc64le", "s390x"]
+            archs = DEBIAN_ARCHITECTURES.get(self.distribution.name, DEBIAN_TRIXIE_ARCHITECTURES)
+            return list(archs)
         elif self.distribution.type == DistroType.ALPINE:
-            return ["amd64", "arm32v6", "arm32v7", "arm64v8", "i386", "ppc64le", "riscv64", "s390x"]
+            return list(ALPINE_ARCHITECTURES)
         else:
-            # Fallback to debian architectures for unknown distributions
-            return ["amd64", "arm32v5", "arm32v7", "arm64v8", "i386", "mips64le", "ppc64le", "s390x"]
+            # Fallback to debian trixie architectures for unknown distributions
+            return list(DEBIAN_TRIXIE_ARCHITECTURES)
 
     def __str__(self) -> str:
         """String representation in stackbrew format."""
