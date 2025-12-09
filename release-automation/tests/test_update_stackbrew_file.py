@@ -28,7 +28,7 @@ Maintainers: David Maier <david.maier@redis.com> (@dmaier-redislabs),
 GitRepo: https://github.com/redis/docker-library-redis.git
 
 Tags: 8.2.1, 8.2, 8, 8.2.1-bookworm, 8.2-bookworm, 8-bookworm, latest, bookworm
-Architectures: amd64, arm32v5, arm32v7, arm64v8, i386, riscv64, ppc64le, s390x
+Architectures: amd64, arm32v5, arm32v7, arm64v8, i386, mips64le, ppc64le, s390x
 GitCommit: old123commit
 GitFetch: refs/tags/v8.2.1
 Directory: debian
@@ -40,7 +40,7 @@ GitFetch: refs/tags/v8.2.1
 Directory: alpine
 
 Tags: 7.4.0, 7.4, 7, 7.4.0-bookworm, 7.4-bookworm, 7-bookworm
-Architectures: amd64, arm32v5, arm32v7, arm64v8, i386, riscv64, ppc64le, s390x
+Architectures: amd64, arm32v5, arm32v7, arm64v8, i386, mips64le, ppc64le, s390x
 GitCommit: old456commit
 GitFetch: refs/tags/v7.4.0
 Directory: debian
