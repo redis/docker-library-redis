@@ -57,19 +57,19 @@ update_dockerfile() {
     echo "Updating $dockerfile..."
 
     # Update REDIS_DOWNLOAD_URL
-    if grep -q "^ENV REDIS_DOWNLOAD_URL=" "$dockerfile"; then
-        sed -i "s|^ENV REDIS_DOWNLOAD_URL=.*|ENV REDIS_DOWNLOAD_URL=$REDIS_ARCHIVE_URL|" "$dockerfile"
+    if grep -q "^ARG REDIS_DOWNLOAD_URL=" "$dockerfile"; then
+        sed -i "s|^ARG REDIS_DOWNLOAD_URL=.*|ARG REDIS_DOWNLOAD_URL=$REDIS_ARCHIVE_URL|" "$dockerfile"
     else
-        echo "Cannot update $dockerfile, ENV REDIS_DOWNLOAD_URL not found"
+        echo "Cannot update $dockerfile, ARG REDIS_DOWNLOAD_URL not found"
         return 1
     fi
 
 
     # Update REDIS_DOWNLOAD_SHA
-    if grep -q "^ENV REDIS_DOWNLOAD_SHA=" "$dockerfile"; then
-        sed -i "s|^ENV REDIS_DOWNLOAD_SHA=.*|ENV REDIS_DOWNLOAD_SHA=$REDIS_ARCHIVE_SHA|" "$dockerfile"
+    if grep -q "^ARG REDIS_DOWNLOAD_SHA=" "$dockerfile"; then
+        sed -i "s|^ARG REDIS_DOWNLOAD_SHA=.*|ARG REDIS_DOWNLOAD_SHA=$REDIS_ARCHIVE_SHA|" "$dockerfile"
     else
-        echo "Cannot update $dockerfile, ENV REDIS_DOWNLOAD_SHA not found"
+        echo "Cannot update $dockerfile, ARG REDIS_DOWNLOAD_SHA not found"
         return 1
     fi
 }

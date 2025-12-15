@@ -1,0 +1,17 @@
+name: Test Nightly Unstable Build and Package
+on:
+  push:
+    branches:
+      - unstable-alignment
+
+jobs:
+  build-and-test-unstable:
+    uses: redis/docker-library-redis/.github/workflows/pre-merge.yml
+    with:
+      release_tag: unstable
+      redisearch_version: master
+      redisjson_version: master
+      redisbloom_version: master
+      redistimeseries_version: master
+      publish_image: false
+      custom_build: branch

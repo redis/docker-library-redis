@@ -1,7 +1,0 @@
-# This wokrflow is for building and publishing nightly unstable builds of Redis
-
-on:
-  workflow_dispatch:
-  workflow_call:
-
-jobs:
