@@ -108,13 +108,13 @@ runs:
       if: inputs.custom_build != ''
       run: |
         if [[ "${{ inputs.custom_build }}" == "branch" ]]; then
-            echo "REDIS_DOWNLOAD_URL=https://github.com/redis/redis/archive/refs/heads/${{ inputs.release_tag }}.tar.gz" >> "$GITHUB_ENV"
+            echo "REDIS_DOWNLOAD_URL=https://github.com/redis/redis/archive/refs/heads/${{ inputs.release_tag }}.tar.gz" | tee -a "$GITHUB_ENV"
         elif [[ "${{ inputs.custom_build }}" == "tag" ]]; then
-            echo "REDIS_DOWNLOAD_URL=https://github.com/redis/redis/archive/refs/tags/${{ inputs.release_tag }}.tar.gz" >> "$GITHUB_ENV"
+            echo "REDIS_DOWNLOAD_URL=https://github.com/redis/redis/archive/refs/tags/${{ inputs.release_tag }}.tar.gz" | tee -a "$GITHUB_ENV"
         elif [[ "${{ inputs.custom_build }}" == "commit" ]]; then
-            echo "REDIS_DOWNLOAD_URL=https://github.com/redis/redis/archive/${{ inputs.release_tag }}.tar.gz" >> "$GITHUB_ENV"
+            echo "REDIS_DOWNLOAD_URL=https://github.com/redis/redis/archive/${{ inputs.release_tag }}.tar.gz" | tee -a "$GITHUB_ENV"
         else
-            echo "Wrong custom_build, available options are tag, branch and "commit"
+            echo "Wrong custom_build type, available options are tag, branch and commit"
             exit 1
         fi
 
