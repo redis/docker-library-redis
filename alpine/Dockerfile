@@ -78,7 +78,7 @@ RUN set -eux; \
 # install required python packages for RedisJSON module
 	pip install -q --upgrade setuptools &&  pip install -q --upgrade pip && PIP_BREAK_SYSTEM_PACKAGES=1 pip install -q addict toml jinja2 ramp-packer ;\
 	wget -O redis.tar.gz "$REDIS_DOWNLOAD_URL"; \
-	if [ $CUSTOM_BUILD = false]; then \
+	if [ $CUSTOM_BUILD = false ]; then \
 		echo "$REDIS_DOWNLOAD_SHA *redis.tar.gz" | sha256sum -c -; \
 	fi; \
 	mkdir -p /usr/src/redis; \
@@ -114,7 +114,7 @@ RUN set -eux; \
 	export RUST_DYN_CRT=1; \
 	export BUILD_TLS=yes; \
 	if [ "$BUILD_WITH_MODULES" = "yes" ]; then \
-		if [ $CUSTOM_BUILD = true]; then \
+		if [ $CUSTOM_BUILD = true ]; then \
 			# Update modules versions
 			if [ -n "$REDISEARCH_VERSION" ]; then \
 				sed -i 's/^MODULE_VERSION = .*/MODULE_VERSION = $REDISEARCH_VERSION/' /usr/src/redis/modules/redisbloom/Makefile; \

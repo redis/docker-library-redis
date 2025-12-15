@@ -61,14 +61,14 @@ RUN set -eux; \
 	rm -rf /var/lib/apt/lists/*; \
 	\
 	wget -O redis.tar.gz "$REDIS_DOWNLOAD_URL"; \
-	if [ $CUSTOM_BUILD = false]; then \
+	if [ $CUSTOM_BUILD = false ]; then \
 		echo "$REDIS_DOWNLOAD_SHA *redis.tar.gz" | sha256sum -c -; \
 	fi; \
 	mkdir -p /usr/src/redis; \
 	tar -xzf redis.tar.gz -C /usr/src/redis --strip-components=1; \
 	rm redis.tar.gz; \
 	\
-	if [ $CUSTOM_BUILD = true]; then \
+	if [ $CUSTOM_BUILD = true ]; then \
 		# Update modules versions
 		if [ -n "$REDISEARCH_VERSION" ]; then \
 			sed -i 's/^MODULE_VERSION = .*/MODULE_VERSION = $REDISEARCH_VERSION/' /usr/src/redis/modules/redisbloom/Makefile; \
