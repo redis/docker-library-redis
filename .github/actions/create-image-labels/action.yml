@@ -41,17 +41,17 @@ runs:
           local module="$1"
           grep MODULE_VERSION modules/$module/Makefile | cut -d '=' -f2 | tr -d ' '
         }
-        echo REDIS_REVISION=$(git rev-parse HEAD) >> "$GITHUB_OUTPUT"
-        if [ -n "${{ inputs.redisearch_version }}" ]; then
+        cd redis
+        if [ -z "${{ inputs.redisearch_version }}" ]; then
           echo redisearch_version=$(get_module_version redisearch) >> $GITHUB_ENV
         fi
-        if [ -n "${{ inputs.redisjson_version }}" ]; then
+        if [ -z "${{ inputs.redisjson_version }}" ]; then
           echo redisjson_version=$(get_module_version redisjson) >> $GITHUB_ENV
         fi
-        if [ -n "${{ inputs.redisbloom_version }}" ]; then
+        if [ -z "${{ inputs.redisbloom_version }}" ]; then
           echo redisbloom_version=$(get_module_version redisbloom) >> $GITHUB_ENV
         fi
-        if [ -n "${{ inputs.redistimeseries_version }}" ]; then
+        if [ -z "${{ inputs.redistimeseries_version }}" ]; then
           echo redistimeseries_version=$(get_module_version redistimeseries) >> $GITHUB_ENV
         fi
 
@@ -91,8 +91,8 @@ runs:
         created_timestamp=$(date -u --rfc-3339=seconds)
         labels+="org.opencontainers.image.created=$created_timestamp"$'\n'
         # Modules revisions labels
-        modules_repos = (redis redisearch redisjson redistimeseries redisbloom)
-        for module in modules_repos; do
+        modules_repos=(redisearch redisjson redistimeseries redisbloom)
+        for module in "${modules_repos[@]}"; do
           revision=$(git -C $module rev-parse HEAD)
           labels+="io.redis.$module.revision=$revision"$'\n'
         done
@@ -103,11 +103,12 @@ runs:
         labels+="io.redis.revision=$redis_revision"$'\n'
         VER=$(sed -n 's/^.* REDIS_VERSION "\(.*\)"$/\1/g p' < src/version.h)
         if [ "$VER" = "255.255.255" ]; then
-          GITSHA=$(sed -n 's/^.* REDIS_GIT_SHA1 "\(.*\)"$/\1/g p' < src/release.h)
-          VER="unstable-$GITSHA"
+          labels+="io.redis.version=unstable"$'\n'
+        else
+          labels+="io.redis.version=$VER"$'\n'
         fi
-        labels+="io.redis.version=$VER"$'\n'
-        labels+="io.redis.source=https://github.com/redis/redis"$'\n
+        labels+="io.redis.source=https://github.com/redis/redis"$'\n'
+        echo "labels: $labels"
         echo "image_labels<<EOF" >> $GITHUB_OUTPUT
         echo "$labels" >> $GITHUB_OUTPUT
         echo "EOF" >> $GITHUB_OUTPUT

@@ -302,7 +302,7 @@ runs:
           ${{ inputs.custom_build != '' && 'CUSTOM_BUILD=true' || '' }}
           ${{ inputs.custom_build != '' && format('REDIS_DOWNLOAD_URL={0}', env.REDIS_DOWNLOAD_URL) || '' }}
         labels: |
-            ${{ steps.get-image-labels.outputs.image_labels }}
+            ${{ steps.get-image-labels.outputs.image-labels }}
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
             org.opencontainers.image.revision=${{ github.sha }}
 
