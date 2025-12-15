@@ -71,16 +71,16 @@ RUN set -eux; \
 	if [ $CUSTOM_BUILD = true ]; then \
 		# Update modules versions
 		if [ -n "$REDISEARCH_VERSION" ]; then \
-			sed -i 's/^MODULE_VERSION = .*/MODULE_VERSION = $REDISEARCH_VERSION/' /usr/src/redis/modules/redisbloom/Makefile; \
+			sed -i "s/^MODULE_VERSION = .*/MODULE_VERSION = $REDISEARCH_VERSION/" /usr/src/redis/modules/redisearch/Makefile; \
 		fi; \
 		if [ -n "$REDISJSON_VERSION" ]; then \
-			sed -i 's/^MODULE_VERSION = .*/MODULE_VERSION = $REDISJSON_VERSION/' /usr/src/redis/modules/redisjson/Makefile; \
+			sed -i "s/^MODULE_VERSION = .*/MODULE_VERSION = $REDISJSON_VERSION/" /usr/src/redis/modules/redisjson/Makefile; \
 		fi; \
 		if [ -n "$REDISBLOOM_VERSION" ]; then \
-			sed -i 's/^MODULE_VERSION = .*/MODULE_VERSION = $REDISBLOOM_VERSION/' /usr/src/redis/modules/redisearch/Makefile; \
+			sed -i "s/^MODULE_VERSION = .*/MODULE_VERSION = $REDISBLOOM_VERSION/" /usr/src/redis/modules/redisbloom/Makefile; \
 		fi; \
 		if [ -n "$REDISTIMESERIES_VERSION" ]; then \
-			sed -i 's/^MODULE_VERSION = .*/MODULE_VERSION = $REDISTIMESERIES_VERSION/' /usr/src/redis/modules/redistimeseries/Makefile; \
+			sed -i "s/^MODULE_VERSION = .*/MODULE_VERSION = $REDISTIMESERIES_VERSION/" /usr/src/redis/modules/redistimeseries/Makefile; \
 		fi; \
 	fi; \
 # disable Redis protected mode [1] as it is unnecessary in context of Docker
