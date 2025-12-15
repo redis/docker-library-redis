@@ -133,7 +133,8 @@ runs:
           REDISJSON_VERSION=${{ inputs.redisjson_version }}
           REDISBLOOM_VERSION=${{ inputs.redisbloom_version }}
           REDISTIMESERIES_VERSION=${{ inputs.redistimeseries_version }}
-          ${{ inputs.custom_build != '' && format('CUSTOM_BUILD=true\nREDIS_DOWNLOAD_URL={0}', env.REDIS_DOWNLOAD_URL) || '' }}
+          ${{ inputs.custom_build != '' && 'CUSTOM_BUILD=true' || '' }}
+          ${{ inputs.custom_build != '' && format('REDIS_DOWNLOAD_URL={0}', env.REDIS_DOWNLOAD_URL) || '' }}
 
     - name: Run container
       shell: bash
@@ -286,7 +287,8 @@ runs:
           REDISJSON_VERSION=${{ inputs.redisjson_version }}
           REDISBLOOM_VERSION=${{ inputs.redisbloom_version }}
           REDISTIMESERIES_VERSION=${{ inputs.redistimeseries_version }}
-          ${{ inputs.custom_build != '' && format('CUSTOM_BUILD=true\nREDIS_DOWNLOAD_URL={0}', env.REDIS_DOWNLOAD_URL) || '' }}
+          ${{ inputs.custom_build != '' && 'CUSTOM_BUILD=true' || '' }}
+          ${{ inputs.custom_build != '' && format('REDIS_DOWNLOAD_URL={0}', env.REDIS_DOWNLOAD_URL) || '' }}
         labels: |
             ${{ steps.get-image-labels.outputs.image_labels }}
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
