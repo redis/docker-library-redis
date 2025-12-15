@@ -14,7 +14,12 @@ RUN set -eux; \
 # we need setpriv package as busybox provides very limited functionality
 		setpriv \
 	;
-ENV REDIS_DOWNLOAD_URL=https://github.com/redis/redis/archive/refs/heads/unstable.tar.gz
+ENV REDIS_DOWNLOAD_URL=https://github.com/redis/redis/archive/refs/tags/8.4.0.tar.gz
+ENV REDIS_DOWNLOAD_SHA=b947d9015622669b5bee8ec954f658b3278d42dbefae23a92d9b7704bfe143f9
+ARG REDISEARCH_VERSION
+ARG REDISJSON_VERSION
+ARG REDISBLOOM_VERSION
+ARG REDISTIMESERIES_VERSION
 RUN set -eux; \
 	\
 	apk add --no-cache --virtual .build-deps \
@@ -67,23 +72,15 @@ RUN set -eux; \
 		which \
 		xsimd \
 		xz; \
-	# install required python packages for RedisJSON module
-	python3 -m pip -q install --break-system-packages --upgrade pip setuptools; \
-	PIP_BREAK_SYSTEM_PACKAGES=1 python3 -m pip -q install --break-system-packages addict toml jinja2 ramp-packer; \
 	fi; \
 	\
+# install required python packages for RedisJSON module
+	pip install -q --upgrade setuptools &&  pip install -q --upgrade pip && PIP_BREAK_SYSTEM_PACKAGES=1 pip install -q addict toml jinja2 ramp-packer ;\
 	wget -O redis.tar.gz "$REDIS_DOWNLOAD_URL"; \
+	echo "$REDIS_DOWNLOAD_SHA *redis.tar.gz" | sha256sum -c -; \
 	mkdir -p /usr/src/redis; \
 	tar -xzf redis.tar.gz -C /usr/src/redis --strip-components=1; \
 	rm redis.tar.gz; \
-	\
-	# Update module versions to master - will be removed once modules are updated to latest version on redis unstable. RED-159986
-	if [ "$BUILD_WITH_MODULES" = "yes" ]; then \
-		sed -i 's/^MODULE_VERSION = .*/MODULE_VERSION = master/' /usr/src/redis/modules/redisbloom/Makefile; \
-		sed -i 's/^MODULE_VERSION = .*/MODULE_VERSION = master/' /usr/src/redis/modules/redisjson/Makefile; \
-		sed -i 's/^MODULE_VERSION = .*/MODULE_VERSION = master/' /usr/src/redis/modules/redisearch/Makefile; \
-		sed -i 's/^MODULE_VERSION = .*/MODULE_VERSION = master/' /usr/src/redis/modules/redistimeseries/Makefile; \
-	fi; \
 	\
 # disable Redis protected mode [1] as it is unnecessary in context of Docker
 # (ports are not automatically exposed when running inside Docker, but rather explicitly by specifying -p / -P)
@@ -114,6 +111,19 @@ RUN set -eux; \
 	export RUST_DYN_CRT=1; \
 	export BUILD_TLS=yes; \
 	if [ "$BUILD_WITH_MODULES" = "yes" ]; then \
+		# Update modules versions
+		if [ -n "$REDISEARCH_VERSION" ]; then \
+			sed -i 's/^MODULE_VERSION = .*/MODULE_VERSION = $REDISEARCH_VERSION/' /usr/src/redis/modules/redisbloom/Makefile; \
+		fi; \
+		if [ -n "$REDISJSON_VERSION" ]; then \
+			sed -i 's/^MODULE_VERSION = .*/MODULE_VERSION = $REDISJSON_VERSION/' /usr/src/redis/modules/redisjson/Makefile; \
+		fi; \
+		if [ -n "$REDISBLOOM_VERSION" ]; then \
+			sed -i 's/^MODULE_VERSION = .*/MODULE_VERSION = $REDISBLOOM_VERSION/' /usr/src/redis/modules/redisbloom/Makefile; \
+		fi; \
+		if [ -n "$REDISTIMESERIES_VERSION" ]; then \
+			sed -i 's/^MODULE_VERSION = .*/MODULE_VERSION = $REDISTIMESERIES_VERSION/' /usr/src/redis/modules/redistimeseries/Makefile; \
+		fi; \
 		make -C /usr/src/redis/modules/redisjson get_source; \
 		sed -i 's/^RUST_FLAGS=$/RUST_FLAGS += -C target-feature=-crt-static/' /usr/src/redis/modules/redisjson/src/Makefile ; \
 		grep -E 'RUST_FLAGS' /usr/src/redis/modules/redisjson/src/Makefile; \

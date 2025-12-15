@@ -1,9 +1,41 @@
-name: Build and Test Unstable
+
+name: Build and Test
 on:
   pull_request:
     branches:
-      - unstable
+      - master
+      - release/*
   workflow_call:
+    inputs:
+      release_tag:
+        description: 'Release tag to build'
+        required: true
+        type: string
+      redisearch_version:
+        description: 'Redisearch version to build'
+        required: false
+        type: string
+      redisjson_version:
+        description: 'Redisjson version to build'
+        required: false
+        type: string
+      redisbloom_version:
+        description: 'Redisbloom version to build'
+        required: false
+        type: string
+      redistimeseries_version:
+        description: 'Redistimeseries version to build'
+        required: false
+        type: string
+      publish_image:
+        description: 'Publish Docker image to GHCR'
+        required: false
+        type: boolean
+        default: false
+    outputs:
+      docker_images_metadata:
+        description: 'Array of structured Docker images metadata that were published'
+        value: ${{ jobs.collect-images-metadata.outputs.docker_images_metadata }}
 
 jobs:
   build-and-test:
@@ -20,30 +52,108 @@ jobs:
           - linux/arm/v5
           - linux/arm/v6
           - linux/arm/v7
-          - linux/mips64le
           - linux/ppc64le
           - linux/s390x
           - linux/arm64
           - linux/riscv64
         exclude:
         - distribution: alpine
-          platform: linux/mips64le
-        - distribution: alpine
           platform: linux/arm/v5
-        - distribution: debian
-          platform: linux/riscv64
         - distribution: debian
           platform: linux/arm/v6
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request && github.sha || 'unstable' }}
+          ref: >-
+            ${{ (github.ref_name == 'unstable'
+            || github.event_name == 'workflow_call'
+            || github.event_name == 'schedule')
+            && 'unstable'
+            || ''
+            }}
+      - name: Ensure release branch
+        if: inputs.release_tag != '' && inputs.release_tag != 'unstable'
+        uses: redis-developer/redis-oss-release-automation/.github/actions/ensure-release-branch@main
+        with:
+          release_tag: ${{ inputs.release_tag }}
+          gh_token: ${{ secrets.GITHUB_TOKEN }}
       - uses: ./.github/actions/build-and-tag-locally
         with:
           distribution: ${{ matrix.distribution }}
           platform: ${{ matrix.platform }}
-          registry_username: ${{ vars.REGISTRY_USERNAME }}
-          registry_password: ${{ secrets.REGISTRY_PASSWORD }}
-          publish_image: ${{ vars.PUBLISH_IMAGE }}
-          registry_repository: ${{ vars.REGISTRY_REPOSITORY }}
+          registry_username: ${{ github.actor }}
+          registry_password: ${{ secrets.GITHUB_TOKEN }}
+          publish_image: ${{ inputs.publish_image || vars.PUBLISH_IMAGE }}
+          registry_repository: ${{ format('ghcr.io/{0}', github.repository) }}
+          release_tag: ${{ inputs.release_tag }}
+          redisearch_version: ${{ inputs.redisearch_version }}
+          redisjson_version: ${{ inputs.redisjson_version }}
+          redisbloom_version: ${{ inputs.redisbloom_version }}
+          redistimeseries_version: ${{ inputs.redistimeseries_version }}
+
+  collect-images-metadata:
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    if: ${{ inputs.release_tag }}
+    outputs:
+      docker_images_metadata: ${{ steps.collect-metadata.outputs.metadata }}
+    steps:
+      - name: Download all images metadata artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: image-metadata-*
+          path: ./images-metadata
+          merge-multiple: true
+
+      - name: Collect images metadata from artifacts
+        id: collect-metadata
+        run: |
+          if [ -d "./images-metadata" ] && [ "$(ls -A ./images-metadata 2>/dev/null)" ]; then
+            echo "Found images metadata files:"
+            # Collect all JSON files and merge them into a single array
+            metadata=$(find ./images-metadata -name "*.json" -exec cat {} \; | jq -s -c '.')
+            echo "Collected images metadata: $metadata"
+          else
+            echo "No images metadata artifacts found"
+            metadata="[]"
+          fi
+
+          echo "metadata=$metadata" >> "$GITHUB_OUTPUT"
+
+  notify-slack:
+    runs-on: ubuntu-latest
+    needs: collect-images-metadata
+    if: ${{ inputs.release_tag && needs.collect-images-metadata.outputs.docker_images_metadata != '[]' }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Send Slack notification
+        run: |
+          images_metadata='${{ needs.collect-images-metadata.outputs.docker_images_metadata }}'
+          workflow_url="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          footer="Repository: ${{ github.repository }} | Commit: \`${{ github.sha }}\` | View: <$workflow_url|workflow run>"
+
+          . ${GITHUB_WORKSPACE}/.github/actions/common/func.sh
+
+          echo "$images_metadata" | slack_format_docker_images_metadata_message "${{ inputs.release_tag }}" "$footer"  \
+          | curl -s --fail-with-body -d@- "${{ secrets.SLACK_WEB_HOOK_URL }}"
+
+  notify-slack-when-failed:
+    runs-on: ubuntu-latest
+    needs: collect-images-metadata
+    if: ${{ inputs.release_tag && failure() }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Send Failure Slack notification
+        run: |
+          workflow_url="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          footer="Repository: ${{ github.repository }} | Commit: \`${{ github.sha }}\`"
+
+          . ${GITHUB_WORKSPACE}/.github/actions/common/func.sh
+
+          slack_format_failure_message "Docker Build failed for Redis: ${{ inputs.release_tag  || 'unknown'}}" "$workflow_url" "$footer" \
+          | curl -s --fail-with-body -d@- "${{ secrets.SLACK_WEB_HOOK_URL }}"

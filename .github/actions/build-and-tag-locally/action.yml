@@ -1,4 +1,5 @@
 name: Build and Test
+description: Build and test redis docker image
 
 inputs:
   distribution:
@@ -18,6 +19,21 @@ inputs:
     required: false
   registry_repository:
     description: 'Repository to push the image to'
+    required: false
+  release_tag:
+    description: 'Release tag to build'
+    required: false
+  redisearch_version:
+    description: 'Redisearch version to build'
+    required: false
+  redisjson_version:
+    description: 'Redisjson version to build'
+    required: false
+  redisbloom_version:
+    description: 'Redisbloom version to build'
+    required: false
+  redistimeseries_version:
+    description: 'Redistimeseries version to build'
     required: false
 
 runs:
@@ -54,9 +70,6 @@ runs:
           linux/i386)
             plaform_name="i386"
             ;;
-          linux/mips64le)
-            plaform_name="mips64le"
-            ;;
           linux/ppc64le)
             plaform_name="ppc64le"
             ;;
@@ -88,7 +101,6 @@ runs:
         password: ${{ inputs.registry_password }}
 
     - name: Build
-      id: build
       uses: docker/build-push-action@v6
       with:
         context: ${{ inputs.distribution }}
@@ -96,80 +108,20 @@ runs:
         load: true
         platforms: ${{ inputs.platform }}
         tags: ${{ github.sha }}:${{ steps.platform.outputs.display_name }}
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
-      env:
-        BUILDKIT_PROGRESS: plain
-
-    - name: Capture build logs on failure
-      shell: bash
-      if: failure() && steps.build.outcome == 'failure'
-      run: |
-        mkdir -p /tmp/build-logs
-        
-        echo "Build failed for ${{ inputs.distribution }} on ${{ inputs.platform }}"
-        echo "Capturing detailed logs for troubleshooting..."
-        
-        # Get docker history for the built image (might not exist if build failed early)
-        docker history ${{ github.sha }}:${{ steps.platform.outputs.display_name }} > /tmp/build-logs/image-history.log 2>&1 || echo "Failed to get image history"
-        
-        # Get docker inspect output (might not exist if build failed early)
-        docker inspect ${{ github.sha }}:${{ steps.platform.outputs.display_name }} > /tmp/build-logs/image-inspect.json 2>&1 || echo "Failed to inspect image"
-        
-        # Get docker build cache info
-        docker buildx du > /tmp/build-logs/buildx-du.log 2>&1 || echo "Failed to get build cache info"
-        
-        # Get system info
-        uname -a > /tmp/build-logs/system-info.log 2>&1
-        docker info > /tmp/build-logs/docker-info.log 2>&1
-        
-        # Create a summary file
-        {
-          echo "Build failure summary for ${{ inputs.distribution }} on ${{ inputs.platform }}"
-          echo "Date: $(date)"
-          echo "GitHub SHA: ${{ github.sha }}"
-          echo "Platform: ${{ steps.platform.outputs.display_name }}"
-          echo "Distribution: ${{ inputs.distribution }}"
-        } > /tmp/build-logs/failure-summary.txt
-        
-        # Try to extract error information from the build logs
-        echo "Analyzing build failure..."
-        
-        # Check for common error patterns
-        if docker buildx build --no-cache ${{ inputs.distribution }} --platform=${{ inputs.platform }} 2>&1 | tee /tmp/build-logs/build-error.log | grep -q "ERROR"; then
-          echo "Found ERROR in build output"
-          grep -A 10 -B 5 "ERROR" /tmp/build-logs/build-error.log > /tmp/build-logs/error-context.log || true
-        fi
-        
-        echo "Log capture complete"
-
-    - name: Upload build failure logs
-      if: failure() && steps.build.outcome == 'failure'
-      uses: actions/upload-artifact@v4
-      with:
-        name: build-failure-${{ steps.platform.outputs.display_name }}-${{ inputs.distribution }}
-        path: /tmp/build-logs/
-        retention-days: 30
-        if-no-files-found: warn
-
-    - name: Save image
-      shell: bash
-      run: |
-        docker save -o /tmp/image-${{ steps.platform.outputs.display_name }}.tar ${{ github.sha }}:${{ steps.platform.outputs.display_name }}
-    
-    - name: Upload image
-      uses: actions/upload-artifact@v4
-      with:
-        name: ${{ steps.platform.outputs.display_name }}-${{ inputs.distribution }}-docker-image.tar
-        path: /tmp/image-${{ steps.platform.outputs.display_name }}.tar
-        retention-days: 45
+        cache-from: type=gha,scope=${{ inputs.distribution }}-${{ steps.platform.outputs.display_name }}
+        cache-to: type=gha,mode=max,scope=${{ inputs.distribution }}-${{ steps.platform.outputs.display_name }}
+        build-args: |
+          REDISEARCH_VERSION=${{ inputs.redisearch_version }}
+          REDISJSON_VERSION=${{ inputs.redisjson_version }}
+          REDISBLOOM_VERSION=${{ inputs.redisbloom_version }}
+          REDISTIMESERIES_VERSION=${{ inputs.redistimeseries_version }}
 
     - name: Run container
       shell: bash
       if: ${{ contains(fromJSON('["amd64", "i386", "arm64"]'), steps.platform.outputs.display_name) }}
       run: |
         docker run -d --name sanity-test-${{ steps.platform.outputs.display_name }} ${{ github.sha }}:${{ steps.platform.outputs.display_name }}
-    
+
     - name: Container Logs
       if: ${{ contains(fromJSON('["amd64", "i386", "arm64"]'), steps.platform.outputs.display_name) }}
       shell: bash
@@ -182,7 +134,7 @@ runs:
       run: |
         docker exec sanity-test-${{ steps.platform.outputs.display_name }} redis-cli ping
         docker exec sanity-test-${{ steps.platform.outputs.display_name }} redis-cli info server
-  
+
     - name: Verify installed modules
       if: ${{ contains(fromJSON('["amd64", "arm64"]'), steps.platform.outputs.display_name) }}
       shell: bash
@@ -202,7 +154,7 @@ runs:
           echo "The following modules are missing: ${missing_modules[*]}"
           exit 1
         fi
-  
+
     - name: Test RedisBloom
       if: ${{ contains(fromJSON('["amd64", "arm64"]'), steps.platform.outputs.display_name) }}
       shell: bash
@@ -212,7 +164,7 @@ runs:
         [ "$(docker exec sanity-test-${{ steps.platform.outputs.display_name }} redis-cli BF.EXISTS popular_keys "redis:hash")" = "1" ] || { echo "RedisBloom test failed: 'redis:hash' not found"; exit 1; }
         [ "$(docker exec sanity-test-${{ steps.platform.outputs.display_name }} redis-cli BF.EXISTS popular_keys "redis:list")" = "0" ] || { echo "RedisBloom test failed: 'redis:list' found unexpectedly"; exit 1; }
         echo "RedisBloom test passed successfully"
-      
+
     - name: Test RediSearch
       if: ${{ contains(fromJSON('["amd64", "arm64"]'), steps.platform.outputs.display_name) }}
       shell: bash
@@ -257,6 +209,7 @@ runs:
           echo "ReJSON test failed: expected 'allkeys-lru', got $result"
           exit 1
         fi
+
     - name: Test the entrypoint
       id: test_entrypoint
       if: ${{ contains(fromJSON('["amd64", "i386", "arm64"]'), steps.platform.outputs.display_name) }}
@@ -277,12 +230,73 @@ runs:
         path: test/report-entrypoint.xml
         reporter: java-junit
 
+    - name: Format registry tag
+      id: format-registry-tag
+      shell: bash
+      run: |
+        printf "tag=%s:%s%s-%s-%s" \
+          "${{ inputs.registry_repository }}" \
+          "${{ inputs.release_tag != '' && format('{0}-', inputs.release_tag || '') }}" \
+          "${{ github.run_id }}" \
+          "${{ inputs.distribution }}" \
+          "${{ steps.platform.outputs.display_name }}" \
+          | tr '[:upper:]' '[:lower:]' >> "$GITHUB_OUTPUT"
+
+    - name: Image labels
+      if: ${{ inputs.publish_image == 'true' && contains(fromJSON('["amd64", "arm64"]'), steps.platform.outputs.display_name) }}
+      id: get-image-labels
+      uses: ./.github/actions/create-image-labels
+      with:
+          redis_version: ${{ inputs.release_tag }}
+          redisearch_version: ${{ inputs.redisearch_version }}
+          redisjson_version: ${{ inputs.redisjson_version }}
+          redisbloom_version: ${{ inputs.redisbloom_version }}
+          redistimeseries_version: ${{ inputs.redistimeseries_version }}
+
     - name: Push image
       uses: docker/build-push-action@v6
       if: ${{ inputs.publish_image == 'true' && contains(fromJSON('["amd64", "arm64"]'), steps.platform.outputs.display_name) }}
       with:
         context: ${{ inputs.distribution }}
         push: true
-        tags: ${{ inputs.registry_repository }}:${{ github.sha }}-${{ inputs.distribution }}
+        tags: ${{ steps.format-registry-tag.outputs.tag }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
+        build-args: |
+          REDISEARCH_VERSION=${{ inputs.redisearch_version }}
+          REDISJSON_VERSION=${{ inputs.redisjson_version }}
+          REDISBLOOM_VERSION=${{ inputs.redisbloom_version }}
+          REDISTIMESERIES_VERSION=${{ inputs.redistimeseries_version }}
+        labels: |
+            ${{ steps.get-image-labels.outputs.image_labels }}
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+
+    - name: Save image metadata to artifact
+      shell: bash
+      run: |
+        if [[ "${{ inputs.publish_image }}" == "true" && "${{ contains(fromJSON('["amd64", "arm64"]'), steps.platform.outputs.display_name) }}" == "true" ]]; then
+          # Create a JSON file with structured image metadata
+          mkdir -p /tmp/image-metadata
+          cat > "/tmp/image-metadata/${{ inputs.distribution }}-${{ steps.platform.outputs.display_name }}.json" << 'EOF'
+          {
+            "version": "${{ inputs.release_tag }}",
+            "arch": "${{ steps.platform.outputs.display_name }}",
+            "distro": "${{ inputs.distribution }}",
+            "commit": "${{ github.sha }}",
+            "url": "${{ steps.format-registry-tag.outputs.tag }}"
+          }
+        EOF
+          echo "Image metadata saved:"
+          cat "/tmp/image-metadata/${{ inputs.distribution }}-${{ steps.platform.outputs.display_name }}.json"
+        else
+          echo "Image not published for this platform/distribution combination"
+        fi
+
+    - name: Upload image metadata artifact
+      uses: actions/upload-artifact@v4
+      if: ${{ inputs.publish_image == 'true' && contains(fromJSON('["amd64", "arm64"]'), steps.platform.outputs.display_name) }}
+      with:
+        name: image-metadata-${{ inputs.distribution }}-${{ steps.platform.outputs.display_name }}
+        path: /tmp/image-metadata/${{ inputs.distribution }}-${{ steps.platform.outputs.display_name }}.json
+        retention-days: 1

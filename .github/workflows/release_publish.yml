@@ -1,0 +1,166 @@
+# This workflow publishes a release by creating a version tag.
+# It is intended to be run with workflow_dispatch event by the automation.
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_handle:
+        description: 'Release handle JSON string containing release information'
+        required: true
+        type: string
+      workflow_uuid:
+        description: 'Optional UUID to identify this workflow run'
+        required: false
+      pr_to_official_library:
+        default: false
+      release_tag:
+        default: ""
+        required: false
+
+env:
+  TARGET_OFFICIAL_IMAGES_REPO: docker-library/official-images
+  #TARGET_OFFICIAL_IMAGES_REPO: Peter-Sh/official-images
+  FORKED_OFFICIAL_IMAGES_REPO: redis-developer/docker-library-official-images
+  PR_USER_MENTIONS: "@adamiBs @yossigo @adobrzhansky @maxb-io @dagansandler @Peter-Sh"
+  #PR_USER_MENTIONS: ""
+
+# UUID is used to help automation to identify workflow run in the list of workflow runs.
+run-name: "Release Publish${{ github.event.inputs.workflow_uuid && format(': {0}', github.event.inputs.workflow_uuid) || '' }}"
+
+jobs:
+  publish-release:
+    runs-on: ["ubuntu-latest"]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Parse release handle and validate
+        id: parse-release
+        shell: bash
+        run: |
+          # Parse the JSON input
+          RELEASE_HANDLE='${{ github.event.inputs.release_handle }}'
+          echo "Parsing release handle JSON:"
+          echo "$RELEASE_HANDLE" | jq .
+
+          # Extract release_commit_sha
+          RELEASE_COMMIT_SHA=$(echo "$RELEASE_HANDLE" | jq -r '.release_commit_sha // empty')
+
+          # Validate that release_commit_sha exists and is not empty
+          if [ -z "$RELEASE_COMMIT_SHA" ] || [ "$RELEASE_COMMIT_SHA" = "null" ]; then
+            echo "Error: release_commit_sha is missing or empty in release_handle"
+            echo "Release handle content: $RELEASE_HANDLE"
+            exit 1
+          fi
+
+          # Extract release_version for tag creation
+          RELEASE_VERSION=$(echo "$RELEASE_HANDLE" | jq -r '.release_version // empty')
+
+          if [ -z "$RELEASE_VERSION" ] || [ "$RELEASE_VERSION" = "null" ]; then
+            echo "Error: release_version is missing or empty in release_handle"
+            echo "Release handle content: $RELEASE_HANDLE"
+            exit 1
+          fi
+
+          echo "Successfully parsed release handle:"
+          echo "  release_commit_sha: $RELEASE_COMMIT_SHA"
+          echo "  release_version: $RELEASE_VERSION"
+
+          # Set outputs for next steps
+          echo "release_commit_sha=$RELEASE_COMMIT_SHA" >> $GITHUB_OUTPUT
+          echo "release_version=$RELEASE_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Create version tag
+        uses: redis-developer/redis-oss-release-automation/.github/actions/create-tag-verified@main
+        with:
+          tag: v${{ steps.parse-release.outputs.release_version }}
+          ref: ${{ steps.parse-release.outputs.release_commit_sha }}
+          gh_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Checkout official-images repo
+        uses: actions/checkout@v4
+        with:
+          path: official-images
+          repository: ${{ github.event.inputs.pr_to_official_library == 'true' && env.TARGET_OFFICIAL_IMAGES_REPO || env.FORKED_OFFICIAL_IMAGES_REPO }}
+
+      - name: Generate stackbrew library content
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Extract major version from release version (e.g., "8.2.1" -> "8")
+          MAJOR_VERSION=$(echo "${{ steps.parse-release.outputs.release_version }}" | cut -d. -f1)
+          echo "Major version: $MAJOR_VERSION"
+
+          # Generate updated stackbrew content using the release automation Docker image
+          docker run --rm \
+            -v ${{ github.workspace }}:/workspace \
+            -w /workspace \
+            -e FORCE_COLOR=1 \
+            $(echo "ghcr.io/${{ github.repository }}/release-automation:latest" | tr '[:upper:]' '[:lower:]') \
+            update-stackbrew-file $MAJOR_VERSION --input official-images/library/redis --output official-images/library/redis
+          cd official-images && git diff --color
+          cd -
+
+      - name: Create pull request to official-images
+        id: create-pr
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ secrets.GH_TOKEN_FOR_PR }}
+          draft: true
+          push-to-fork: ${{ github.event.inputs.pr_to_official_library == 'true' && env.FORKED_OFFICIAL_IMAGES_REPO || '' }}
+          path: official-images
+          branch: redis-${{ steps.parse-release.outputs.release_version }}
+          commit-message: "Redis: Update to ${{ steps.parse-release.outputs.release_version }}"
+          title: "Redis: Update to ${{ steps.parse-release.outputs.release_version }}"
+          body: |
+            Automated update for Redis ${{ steps.parse-release.outputs.release_version }}
+
+            Release commit: ${{ steps.parse-release.outputs.release_commit_sha }}
+            Release tag: v${{ steps.parse-release.outputs.release_version }}
+            Compare: ${{ github.server_url }}/${{ github.repository }}/compare/v${{ steps.parse-release.outputs.release_version }}^1...v${{ steps.parse-release.outputs.release_version }}
+
+            ${{ env.PR_USER_MENTIONS }}
+
+      - name: PR creation results
+        run: |
+          echo "Pull Request Number: ${{ steps.create-pr.outputs.pull-request-number }}"
+          echo "Pull Request URL: ${{ steps.create-pr.outputs.pull-request-url }}"
+
+          # Create release_info.json artifact
+          cat > result.json << EOF
+          {
+            "pull_request_number": "${{ steps.create-pr.outputs.pull-request-number }}",
+            "pull_request_url": "${{ steps.create-pr.outputs.pull-request-url }}"
+          }
+          EOF
+
+          echo "Created result.json for release_info:"
+          cat result.json
+
+      - name: Upload release info artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: release_info
+          path: result.json
+          retention-days: 400
+
+      - name: Send Slack notification
+        run: |
+          workflow_url="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          footer="Repository: ${{ github.repository }} | Commit: \`${{ github.sha }}\` | View: <$workflow_url|workflow run>"
+
+          . ${GITHUB_WORKSPACE}/.github/actions/common/func.sh
+
+          slack_format_docker_PR_message "${{ steps.parse-release.outputs.release_version }}" "${{ steps.create-pr.outputs.pull-request-url }}" "$footer" \
+          | curl -s --fail-with-body -d@- "${{ secrets.SLACK_WEB_HOOK_URL }}"
+
+      - name: Send Failure Slack notification
+        if: failure()
+        run: |
+          workflow_url="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          footer="Repository: ${{ github.repository }} | Commit: \`${{ github.sha }}\`"
+
+          . ${GITHUB_WORKSPACE}/.github/actions/common/func.sh
+
+          slack_format_failure_message "Docker PR failed for Redis: ${{ steps.parse-release.outputs.release_version || 'unknown'}}" "$workflow_url" "$footer" \
+          | curl -s --fail-with-body -d@- "${{ secrets.SLACK_WEB_HOOK_URL }}"

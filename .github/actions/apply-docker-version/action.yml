@@ -1,0 +1,36 @@
+inputs:
+  release_tag:
+    description: 'Release tag to build'
+    required: true
+  release_version_branch:
+    description: 'Release version branch to commit to'
+    required: true
+
+outputs:
+  changed_files:
+    description: 'List of files that were modified'
+    value: ${{ steps.apply-version.outputs.changed_files }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Checkout common functions
+      uses: actions/checkout@v4
+      with:
+        repository: redis-developer/redis-oss-release-automation
+        ref: main
+        path: redis-oss-release-automation
+
+    - name: Apply docker version
+      id: apply-version
+      shell: bash
+      run: |
+        ${{ github.action_path }}/apply-docker-version.sh ${{ inputs.release_tag }}
+
+    - name: Create verified commit
+      if: steps.apply-version.outputs.changed_files != ''
+      uses: iarekylew00t/verified-bot-commit@v1
+      with:
+        message: ${{ inputs.release_tag }}
+        files: ${{ steps.apply-version.outputs.changed_files }}
+        ref: ${{ inputs.release_version_branch }}
