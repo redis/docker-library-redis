@@ -6,7 +6,7 @@ on:
 
 jobs:
   build-and-test-unstable:
-    uses: redis/docker-library-redis/.github/workflows/pre-merge.yml@unstable
+    uses: redis/docker-library-redis/.github/workflows/pre-merge.yml@unstable-alignment
     with:
       release_tag: unstable
       redisearch_version: master
