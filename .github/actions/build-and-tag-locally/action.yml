@@ -254,9 +254,21 @@ runs:
       id: format-registry-tag
       shell: bash
       run: |
-        printf "tag=%s:%s%s-%s-%s" \
+        # Determine tag prefix based on custom_build and release_tag
+        if [[ -z "${{ inputs.custom_build }}" ]]; then
+          # custom_build is empty, use release_tag since it's a rlease
+          tag_prefix="${{ inputs.release_tag }}"
+        elif [[ "${{ inputs.release_tag }}" == "unstable" ]]; then
+          # custom_build is not empty but release_tag is unstable, use unstable
+          tag_prefix="unstable"
+        else
+          # custom_build is not empty and release_tag is not unstable, use custom
+          tag_prefix="custom"
+        fi
+
+        printf "tag=%s:%s-%s-%s-%s" \
           "${{ inputs.registry_repository }}" \
-          "${{ inputs.release_tag != '' && format('{0}-', inputs.release_tag || '') }}" \
+          "${tag_prefix}" \
           "${{ github.run_id }}" \
           "${{ inputs.distribution }}" \
           "${{ steps.platform.outputs.display_name }}" \

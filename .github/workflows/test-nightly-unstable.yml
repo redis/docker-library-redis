@@ -13,5 +13,5 @@ jobs:
       redisjson_version: master
       redisbloom_version: master
       redistimeseries_version: master
-      publish_image: false
+      publish_image: true
       custom_build: branch
