@@ -122,6 +122,7 @@ runs:
         fi
 
     - name: Build
+      id: build
       uses: docker/build-push-action@v6
       with:
         context: ${{ inputs.distribution }}
@@ -129,8 +130,8 @@ runs:
         load: true
         platforms: ${{ inputs.platform }}
         tags: ${{ github.sha }}:${{ steps.platform.outputs.display_name }}
-        cache-from: type=gha${{ inputs.run_type == 'release' && format(',scope={0}-{1}', inputs.distribution, steps.platform.outputs.display_name) || '' }}
-        cache-to: type=gha,mode=max${{ inputs.run_type == 'release' && format(',scope={0}-{1}', inputs.distribution, steps.platform.outputs.display_name) || '' }}
+        cache-from: ${{ inputs.run_type == 'release' && format('type=gha,scope={0}-{1}', inputs.distribution, steps.platform.outputs.display_name) || '' }}
+        cache-to: ${{ inputs.run_type == 'release' && format('type=gha,mode=max,scope={0}-{1}', inputs.distribution, steps.platform.outputs.display_name) || '' }}
         build-args: |
           REDISEARCH_VERSION=${{ inputs.redisearch_version }}
           REDISJSON_VERSION=${{ inputs.redisjson_version }}
@@ -345,8 +346,8 @@ runs:
         context: ${{ inputs.distribution }}
         push: true
         tags: ${{ steps.format-registry-tag.outputs.tag }}
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
+        cache-from: ${{ inputs.run_type == 'release' && 'type=gha' || '' }}
+        cache-to: ${{ inputs.run_type == 'release' && 'type=gha,mode=max' || '' }}
         build-args: |
           REDISEARCH_VERSION=${{ inputs.redisearch_version }}
           REDISJSON_VERSION=${{ inputs.redisjson_version }}
