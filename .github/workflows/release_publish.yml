@@ -12,17 +12,17 @@ on:
         description: 'Optional UUID to identify this workflow run'
         required: false
       pr_to_official_library:
+        description: 'Open a PR to official library repo'
         default: false
       release_tag:
+        description: 'Release tag to publish'
         default: ""
         required: false
 
 env:
   TARGET_OFFICIAL_IMAGES_REPO: docker-library/official-images
-  #TARGET_OFFICIAL_IMAGES_REPO: Peter-Sh/official-images
   FORKED_OFFICIAL_IMAGES_REPO: redis-developer/docker-library-official-images
   PR_USER_MENTIONS: "@adamiBs @yossigo @adobrzhansky @maxb-io @dagansandler @Peter-Sh"
-  #PR_USER_MENTIONS: ""
 
 # UUID is used to help automation to identify workflow run in the list of workflow runs.
 run-name: "Release Publish${{ github.event.inputs.workflow_uuid && format(': {0}', github.event.inputs.workflow_uuid) || '' }}"

@@ -1,5 +1,7 @@
 name: Test Nightly Unstable Build and Package
 on:
+  schedule:
+    - cron: '0 11 * * *'  # Run every day at 11:00 AM UTC
   push:
     branches:
       - unstable-alignment
@@ -15,3 +17,4 @@ jobs:
       redistimeseries_version: master
       publish_image: true
       custom_build: branch
+      run_type: nightly
