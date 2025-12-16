@@ -41,7 +41,6 @@ get_container_user_uid_gid_on_the_host() {
 	container_user="$1"
 	dir=$(mktemp -d -p .)
 	docker run --rm -v "$(pwd)/$dir":/w -w /w --entrypoint=/bin/sh "$REDIS_IMG" -c "chown $container_user ."
-	sleep $CONTAINER_INIT_WAIT  # Wait for container to fully initialize
 	stat -c "%u %g" "$dir"
 	sudo rm -rf "$dir"
 }
@@ -55,6 +54,42 @@ if [ "$REDIS_UID" == "$HOST_UID" ]; then
 fi
 
 # Helper functions #
+
+# Wait for Redis server or sentiel to be ready in a container by pinging it
+# Arguments:
+#   $1 - container name/id
+# Returns:
+#   0 if Redis responds with PONG within timeout
+#   1 if timeout CONTAINER_INIT_WAIT occurs
+wait_for_redis_server_in_container() {
+	local container="$1"
+	local timeout="${CONTAINER_INIT_WAIT:-3}"
+	local elapsed=0
+	local sleep_interval=0.1
+
+	if [ -z "$container" ]; then
+		return 1
+	fi
+
+	while [[ "$elapsed" < "$timeout" ]]; do
+		# Try to ping Redis server
+		if response=$(docker exec "$container" redis-cli ping 2>/dev/null) && [ "$response" = "PONG" ]; then
+			return 0
+		fi
+
+		if response=$(docker exec "$container" redis-cli -p 26379 ping 2>/dev/null) && [ "$response" = "PONG" ]; then
+			return 0
+		fi
+
+		# Sleep and increment elapsed time
+		sleep "$sleep_interval"
+		elapsed=$(awk "BEGIN {print $elapsed + $sleep_interval}")
+	done
+
+	echo "Timeout: Redis server did not respond within ${timeout}s"
+	docker stop "$container" >/dev/null
+	return 1
+}
 
 # creates one entry of directory structure
 # used in combination with iterate_dir_structure_with
@@ -181,7 +216,6 @@ run_docker_and_test_ownership() {
 	fi
 
 	docker_output=$($docker_run 2>&1)
-	sleep $CONTAINER_INIT_WAIT  # Wait for container to fully initialize
 
 	if [ "$TEST_VERBOSE" ]; then
 		echo "After:"
@@ -270,14 +304,9 @@ run_redis_docker_and_check_uid_gid() {
 	docker_cmd="$*"
 	# shellcheck disable=SC2086
 	container=$(docker run $docker_flags -d "$REDIS_IMG" $docker_cmd)
-	sleep $CONTAINER_INIT_WAIT  # Wait for container to fully initialize
 	ret=$?
-
 	assertTrue "Container '$docker_flags $REDIS_IMG $docker_cmd' created" "[ $ret -eq 0 ]"
-	if [ $ret -gt 0 ]; then
-		echo "returning"
-		return 1
-	fi
+	wait_for_redis_server_in_container "$container" || return 1
 
 	cmdline=$(docker exec "$container" cat /proc/1/cmdline|tr -d \\0)
 	assertContains "$docker_flags $docker_cmd, cmdline: $cmdline" "$cmdline" "$expected_cmd"
@@ -302,7 +331,10 @@ run_redis_docker_and_check_modules() {
 	docker_cmd="$1"
 	# shellcheck disable=SC2086
 	container=$(docker run --rm -d "$REDIS_IMG" $docker_cmd)
-	sleep $CONTAINER_INIT_WAIT  # Wait for container to fully initialize
+	ret=$?
+	assertTrue "Container '$docker_flags $REDIS_IMG $docker_cmd' created" "[ $ret -eq 0 ]"
+	wait_for_redis_server_in_container "$container" || return 1
+
 	info=$(docker exec "$container" redis-cli info)
 
 	[ "$PLATFORM" ] && [ "$PLATFORM" != "amd64" ] && startSkipping
@@ -321,16 +353,22 @@ assert_redis_output_has_no_config_perm_error() {
 	assertNotContains "cmd: $docker_cmd, docker output contains '$s': " "$docker_output" "$s"
 }
 
-assert_redis_unstable() {
-	assertContains "$1" "Redis server v=255.255.255"
+assert_redis_v8() {
+	# Accept both v=8 (normal) and v=255 (dev)
+	if echo "$1" | grep -q "Redis server v=8"; then
+		return 0
+	elif echo "$1" | grep -q "Redis server v=255"; then
+		return 0
+	else
+		assertContains "$1" "Redis server v=8/v255"
+	fi
 }
 
 # Tests #
 
 test_redis_version() {
 	ret=$(docker run --rm "$REDIS_IMG" -v|tail -n 1)
-	sleep $CONTAINER_INIT_WAIT  # Wait for container to fully initialize
-	assert_redis_unstable "$ret"
+	assert_redis_v8 "$ret"
 }
 
 test_data_dir_owner_and_perms_changed_by_server_when_data_is_RO() {
@@ -506,7 +544,7 @@ test_redis_start_reached_when_config_dir_does_not_exist() {
 test_redis_start_reached_when_chown_on_data_dir_is_denied() {
 	assert_internal() {
 		# shellcheck disable=SC2317
-		assert_redis_unstable "$docker_output"
+		assert_redis_v8 "$docker_output"
 	}
 	dir_structure="
 		.        dir  $HOST_OWNER -> $HOST_UID 0333 -> 0700
@@ -553,7 +591,9 @@ test_redis_server_persistence_with_bind_mount() {
 	chmod 0444 "$dir"
 
 	container=$(docker run --rm -d -v "$(pwd)/$dir":/data "$REDIS_IMG" --appendonly yes)
-	sleep $CONTAINER_INIT_WAIT  # Wait for container to fully initialize
+	ret=$?
+	assertTrue "Container '$docker_flags $REDIS_IMG $docker_cmd' created" "[ $ret -eq 0 ]"
+	wait_for_redis_server_in_container "$container" || return 1
 
 	result=$(echo save | docker exec -i "$container" redis-cli)
 	assertEquals "OK" "$result"
@@ -568,7 +608,10 @@ test_redis_server_persistence_with_bind_mount() {
 	sudo chown -R "$HOST_OWNER" "$dir"
 
 	container2=$(docker run --rm -d -v "$(pwd)/$dir":/data "$REDIS_IMG")
-	sleep $CONTAINER_INIT_WAIT  # Wait for container to fully initialize
+	ret=$?
+	assertTrue "Container '$docker_flags $REDIS_IMG $docker_cmd' created" "[ $ret -eq 0 ]"
+	wait_for_redis_server_in_container "$container2" || return 1
+
 	value=$(echo "GET FOO" | docker exec -i "$container2" redis-cli)
 	assertEquals "$container" "$value"
 
@@ -586,7 +629,9 @@ test_redis_server_persistence_with_volume() {
 	docker run --rm -v test_redis:/data --entrypoint=/bin/sh "$REDIS_IMG" -c 'chown -R 0:0 /data'
 
 	container=$(docker run --rm -d -v test_redis:/data "$REDIS_IMG" --appendonly yes)
-	sleep $CONTAINER_INIT_WAIT  # Wait for container to fully initialize
+	ret=$?
+	assertTrue "Container '$docker_flags $REDIS_IMG $docker_cmd' created" "[ $ret -eq 0 ]"
+	wait_for_redis_server_in_container "$container" || return 1
 
 	result=$(echo save | docker exec -i "$container" redis-cli)
 	assertEquals "OK" "$result"
@@ -601,7 +646,10 @@ test_redis_server_persistence_with_volume() {
 	docker run --rm -v test_redis:/data --entrypoint=/bin/sh "$REDIS_IMG" -c 'chown -R 0:0 /data && chmod 0000 -R /data'
 
 	container2=$(docker run --rm -d -v test_redis:/data "$REDIS_IMG")
-	sleep $CONTAINER_INIT_WAIT  # Wait for container to fully initialize
+	ret=$?
+	assertTrue "Container '$docker_flags $REDIS_IMG $docker_cmd' created" "[ $ret -eq 0 ]"
+	wait_for_redis_server_in_container "$container2" || return 1
+
 	value=$(echo "GET FOO" | docker exec -i "$container2" redis-cli)
 	assertEquals "$container" "$value"
 

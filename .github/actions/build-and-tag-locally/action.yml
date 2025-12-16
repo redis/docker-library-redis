@@ -308,7 +308,6 @@ runs:
       id: format-registry-tag
       shell: bash
       run: |
-        # Determine tag prefix based on custom_build and release_tag
         if [[ "${{ inputs.run_type }}" == "release" ]]; then
           tag_prefix="${{ inputs.release_tag }}"
         elif [[ "${{ inputs.run_type }}" == "unstable" || "${{ inputs.run_type }}" == "nightly" ]]; then
