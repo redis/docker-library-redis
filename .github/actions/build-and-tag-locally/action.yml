@@ -307,6 +307,7 @@ runs:
 
     - name: Format registry tag
       id: format-registry-tag
+      if: ${{ inputs.publish_image == 'true' && contains(fromJSON('["amd64", "arm64"]'), steps.platform.outputs.display_name) }}
       shell: bash
       run: |
         if [[ "${{ inputs.run_type }}" == "release" ]]; then
