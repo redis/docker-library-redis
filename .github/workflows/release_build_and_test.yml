@@ -26,7 +26,7 @@ on:
       redistimeseries_version:
         description: 'Redistimeseries version to build'
         required: false
-      custom_build:
+      custom_ref_type:
         description: 'Custom type, either branch, tag or commit. Empty for releases'
         required: false
       run_type:
@@ -73,7 +73,7 @@ jobs:
           release_version_branch: ${{ steps.ensure-branch.outputs.release_version_branch }}
 
   build-and-test:
-    uses: ./.github/workflows/pre-merge.yml
+    uses: ./.github/workflows/build-n-test.yml
     needs: prepare-release
     if: always() && (needs.prepare-release.result == 'success' || needs.prepare-release.result == 'skipped')
     secrets: inherit
@@ -84,22 +84,19 @@ jobs:
       redisjson_version: ${{ github.event.inputs.redisjson_version }}
       redisbloom_version: ${{ github.event.inputs.redisbloom_version }}
       redistimeseries_version: ${{ github.event.inputs.redistimeseries_version }}
-      custom_build: ${{ github.event.inputs.custom_build }}
+      custom_ref_type: ${{ github.event.inputs.custom_ref_type }}
       run_type: ${{ github.event.inputs.run_type }}
 
   merge-back-to-release-branch:
     needs: [prepare-release, build-and-test]
-    if: success()
+    if: success() && github.event.inputs.run_type == 'release' && github.event.inputs.release_tag != 'unstable'
     runs-on: ["ubuntu-latest"]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.inputs.release_tag == 'unstable' && 'unstable' || '' }}
 
       - name: Ensure Release Branch
         id: ensure-branch
-        if: github.event.inputs.release_tag != 'unstable'
         uses: redis-developer/redis-oss-release-automation/.github/actions/ensure-release-branch@main
         with:
           release_tag: ${{ github.event.inputs.release_tag }}
@@ -108,7 +105,6 @@ jobs:
 
       - name: Merge back to release branch
         id: merge-back
-        if: github.event.inputs.release_tag != 'unstable'
         uses: redis-developer/redis-oss-release-automation/.github/actions/merge-branches-verified@main
         with:
           from_branch: ${{ steps.ensure-branch.outputs.release_version_branch }}

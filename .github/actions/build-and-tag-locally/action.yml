@@ -35,11 +35,11 @@ inputs:
   redistimeseries_version:
     description: 'Redistimeseries version to build'
     required: false
-  custom_build:
+  custom_ref_type:
     description: 'Type of custom release, branch tag or commit. Empty for release'
     required: false
   run_type:
-    description: 'Run type, either release, nightly, unstable or custom'
+    description: 'Run type, either release, pr, nightly, unstable or custom'
     required: true
 
 runs:
@@ -108,13 +108,13 @@ runs:
 
     - name: Redis release archive
       shell: bash
-      if: inputs.run_type != 'release'
+      if: inputs.run_type != 'release' && inputs.run_type != 'pr'
       run: |
-        if [[ "${{ inputs.custom_build }}" == "branch" ]]; then
+        if [[ "${{ inputs.custom_ref_type }}" == "branch" ]]; then
             echo "REDIS_DOWNLOAD_URL=https://github.com/redis/redis/archive/refs/heads/${{ inputs.release_tag }}.tar.gz" | tee -a "$GITHUB_ENV"
-        elif [[ "${{ inputs.custom_build }}" == "tag" ]]; then
+        elif [[ "${{ inputs.custom_ref_type }}" == "tag" ]]; then
             echo "REDIS_DOWNLOAD_URL=https://github.com/redis/redis/archive/refs/tags/${{ inputs.release_tag }}.tar.gz" | tee -a "$GITHUB_ENV"
-        elif [[ "${{ inputs.custom_build }}" == "commit" ]]; then
+        elif [[ "${{ inputs.custom_ref_type }}" == "commit" ]]; then
             echo "REDIS_DOWNLOAD_URL=https://github.com/redis/redis/archive/${{ inputs.release_tag }}.tar.gz" | tee -a "$GITHUB_ENV"
         else
             echo "Wrong custom_build type, available options are tag, branch and commit"
@@ -137,8 +137,8 @@ runs:
           REDISJSON_VERSION=${{ inputs.redisjson_version }}
           REDISBLOOM_VERSION=${{ inputs.redisbloom_version }}
           REDISTIMESERIES_VERSION=${{ inputs.redistimeseries_version }}
-          ${{ inputs.run_type != 'release' && 'CUSTOM_BUILD=true' || '' }}
-          ${{ inputs.run_type != 'release' && format('REDIS_DOWNLOAD_URL={0}', env.REDIS_DOWNLOAD_URL) || '' }}
+          ${{ (inputs.run_type != 'release' && inputs.run_type != 'pr') && 'CUSTOM_BUILD=true' || '' }}
+          ${{ (inputs.run_type != 'release' && inputs.run_type != 'pr') && format('REDIS_DOWNLOAD_URL={0}', env.REDIS_DOWNLOAD_URL) || '' }}
 
     - name: Capture build logs on failure
       shell: bash
