@@ -144,7 +144,6 @@ RUN set -eux; \
 	redis-cli --version; \
 	redis-server --version;
 RUN mkdir /data && chown redis:redis /data
-VOLUME /data
 WORKDIR /data
 
 COPY docker-entrypoint.sh /usr/local/bin/
