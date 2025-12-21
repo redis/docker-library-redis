@@ -1,0 +1,153 @@
+# This workflow is a part of release automation process.
+# It is intended to be run with workflow_dispatch event by the automation.
+# In addition to regular tag builds, it also supports publishing unstable builds.
+
+# Warning: Workflow does switch branches and this may lead to confusion when changing workflow actions.
+# The usual safety rule is to make changes to workflow or actions in base branch (e.g, release/8.X)
+# Version branches (e.g, 8.0.10-rc5-int8) will merge changes from base branch automatically.
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Release tag to build'
+        required: true
+      workflow_uuid:
+        description: 'Optional UUID to identify this workflow run'
+        required: false
+      redisearch_version:
+        description: 'Redisearch version to build'
+        required: false
+      redisjson_version:
+        description: 'Redisjson version to build'
+        required: false
+      redisbloom_version:
+        description: 'Redisbloom version to build'
+        required: false
+      redistimeseries_version:
+        description: 'Redistimeseries version to build'
+        required: false
+      custom_ref_type:
+        description: 'Custom type, either branch, tag or commit. Empty for releases'
+        required: false
+      run_type:
+        description: 'Run type, either release, unstable or custom'
+        required: true
+        default: "custom"
+
+# UUID is used to help automation to identify workflow run in the list of workflow runs.
+run-name: "${{ github.event.inputs.run_type }} build and test${{ github.event.inputs.workflow_uuid && format(': {0}', github.event.inputs.workflow_uuid) || '' }}"
+
+jobs:
+  prepare-release:
+    runs-on: ["ubuntu-latest"]
+    if: github.event.inputs.run_type == 'release'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Validate Redis Release Archive
+        uses: redis-developer/redis-oss-release-automation/.github/actions/validate-redis-release-archive@main
+        with:
+          release_tag: ${{ github.event.inputs.release_tag }}
+
+      - name: Ensure Release Branch
+        id: ensure-branch
+        uses: redis-developer/redis-oss-release-automation/.github/actions/ensure-release-branch@main
+        with:
+          release_tag: ${{ github.event.inputs.release_tag }}
+          allow_modify: true
+          gh_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Apply Docker Version
+        id: apply-version
+        uses: ./.github/actions/apply-docker-version
+        with:
+          release_tag: ${{ github.event.inputs.release_tag }}
+          release_version_branch: ${{ steps.ensure-branch.outputs.release_version_branch }}
+
+  build-and-test:
+    uses: ./.github/workflows/build-n-test.yml
+    needs: prepare-release
+    if: always() && (needs.prepare-release.result == 'success' || needs.prepare-release.result == 'skipped')
+    secrets: inherit
+    with:
+      release_tag: ${{ github.event.inputs.release_tag }}
+      publish_image: true
+      redisearch_version: ${{ github.event.inputs.redisearch_version }}
+      redisjson_version: ${{ github.event.inputs.redisjson_version }}
+      redisbloom_version: ${{ github.event.inputs.redisbloom_version }}
+      redistimeseries_version: ${{ github.event.inputs.redistimeseries_version }}
+      custom_ref_type: ${{ github.event.inputs.custom_ref_type }}
+      run_type: ${{ github.event.inputs.run_type }}
+
+  merge-back-to-release-branch:
+    needs: [prepare-release, build-and-test]
+    if: success() && github.event.inputs.run_type == 'release' && github.event.inputs.release_tag != 'unstable'
+    runs-on: ["ubuntu-latest"]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Ensure Release Branch
+        id: ensure-branch
+        uses: redis-developer/redis-oss-release-automation/.github/actions/ensure-release-branch@main
+        with:
+          release_tag: ${{ github.event.inputs.release_tag }}
+          allow_modify: false
+          gh_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Merge back to release branch
+        id: merge-back
+        uses: redis-developer/redis-oss-release-automation/.github/actions/merge-branches-verified@main
+        with:
+          from_branch: ${{ steps.ensure-branch.outputs.release_version_branch }}
+          to_branch: ${{ steps.ensure-branch.outputs.release_branch }}
+          gh_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create release handle JSON
+        shell: bash
+        run: |
+          if [ -n "${{ steps.merge-back.outputs.merge_commit_sha }}" ]; then
+            RELEASE_COMMIT_SHA="${{ steps.merge-back.outputs.merge_commit_sha }}"
+          elif [ -n "${{ steps.merge-back.outputs.target_before_merge_sha }}" ]; then
+            RELEASE_COMMIT_SHA="${{ steps.merge-back.outputs.target_before_merge_sha }}"
+          else
+            echo "Error: No commit SHA found, both merge_commit_sha and target_before_merge_sha are empty" >&2
+            exit 1
+          fi
+
+          # Get docker images metadata from build-and-test job
+          DOCKER_IMAGES_METADATA='${{ needs.build-and-test.outputs.docker_images_metadata }}'
+
+          # Validate that DOCKER_IMAGES_METADATA is valid JSON
+          if ! echo "$DOCKER_IMAGES_METADATA" | jq . > /dev/null 2>&1; then
+            echo "Warning: docker_images_metadata is not valid JSON, using empty array"
+            DOCKER_IMAGES_METADATA="[]"
+          fi
+
+          cat > result.json << EOF
+          {
+            "release_commit_sha": "$RELEASE_COMMIT_SHA",
+            "release_version": "${{ github.event.inputs.release_tag }}",
+            "release_version_branch": "${{ steps.ensure-branch.outputs.release_version_branch }}",
+            "release_branch": "${{ steps.ensure-branch.outputs.release_branch }}",
+            "docker_images_metadata": $DOCKER_IMAGES_METADATA
+          }
+          EOF
+
+          echo "Created result.json for release_handle:"
+          cat result.json
+
+      - name: Upload release handle artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: release_handle
+          path: result.json
+          retention-days: 400
