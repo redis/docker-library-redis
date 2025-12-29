@@ -28,5 +28,4 @@ jobs:
       redisjson_version: master
       redisbloom_version: master
       redistimeseries_version: master
-      custom_ref_type: branch
       run_type: unstable

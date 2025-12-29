@@ -35,9 +35,6 @@ inputs:
   redistimeseries_version:
     description: 'Redistimeseries version to build'
     required: false
-  custom_ref_type:
-    description: 'Type of custom release, branch tag or commit. Empty for release'
-    required: false
   run_type:
     description: 'Run type, either release, pr, nightly, unstable or custom'
     required: true
@@ -109,16 +106,24 @@ runs:
     - name: Redis release archive
       shell: bash
       if: inputs.run_type != 'release' && inputs.run_type != 'pr'
+      env:
+        TAG: ${{ inputs.release_tag }}
       run: |
-        if [[ "${{ inputs.custom_ref_type }}" == "branch" ]]; then
-            echo "REDIS_DOWNLOAD_URL=https://github.com/redis/redis/archive/refs/heads/${{ inputs.release_tag }}.tar.gz" | tee -a "$GITHUB_ENV"
-        elif [[ "${{ inputs.custom_ref_type }}" == "tag" ]]; then
-            echo "REDIS_DOWNLOAD_URL=https://github.com/redis/redis/archive/refs/tags/${{ inputs.release_tag }}.tar.gz" | tee -a "$GITHUB_ENV"
-        elif [[ "${{ inputs.custom_ref_type }}" == "commit" ]]; then
-            echo "REDIS_DOWNLOAD_URL=https://github.com/redis/redis/archive/${{ inputs.release_tag }}.tar.gz" | tee -a "$GITHUB_ENV"
-        else
-            echo "Wrong custom_build type, available options are tag, branch and commit"
-            exit 1
+        # Figure out the correct URL for the Redis release archive
+        REDIS_DOWNLOAD_URL=""
+        for URL in \
+          "https://github.com/redis/redis/archive/refs/tags/$TAG.tar.gz" \
+          "https://github.com/redis/redis/archive/refs/heads/$TAG.tar.gz" \
+          "https://github.com/redis/redis/archive/$TAG.tar.gz"; do
+          if curl --fail -sS -IL -w "%{http_code} %{url}\n" "$URL" -o /dev/null; then
+            REDIS_DOWNLOAD_URL=$URL
+            echo "REDIS_DOWNLOAD_URL=$URL" | tee -a "$GITHUB_ENV"
+            break
+          fi
+        done
+        if [ -z "$REDIS_DOWNLOAD_URL" ]; then
+          echo "Failed to find Redis release archive"
+          exit 1
         fi
 
     - name: Build

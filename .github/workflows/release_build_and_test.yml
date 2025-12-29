@@ -26,9 +26,6 @@ on:
       redistimeseries_version:
         description: 'Redistimeseries version to build'
         required: false
-      custom_ref_type:
-        description: 'Custom type, either branch, tag or commit. Empty for releases'
-        required: false
       run_type:
         description: 'Run type, either release, unstable or custom'
         required: true
@@ -84,7 +81,6 @@ jobs:
       redisjson_version: ${{ github.event.inputs.redisjson_version }}
       redisbloom_version: ${{ github.event.inputs.redisbloom_version }}
       redistimeseries_version: ${{ github.event.inputs.redistimeseries_version }}
-      custom_ref_type: ${{ github.event.inputs.custom_ref_type }}
       run_type: ${{ github.event.inputs.run_type }}
 
   merge-back-to-release-branch:
