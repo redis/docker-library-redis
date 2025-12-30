@@ -62,12 +62,12 @@ jobs:
             --entrypoint /bin/bash \
             test-image:latest \
             -c "
-              cd release-automation
+              cd /release-automation
               set -e
               echo '=== Installing test dependencies ==='
-              pip install pytest pytest-cov
+              uv sync --frozen --all-extras
               echo '=== Running tests ==='
-              pytest -v tests/
+              uv run pytest
             "
 
       - name: Log in to Container Registry
