@@ -1,0 +1,124 @@
+# Test workflow to verify GH_TOKEN_FOR_PR has correct permissions
+# This creates a meaningless PR to test token access
+
+name: Test Token Access
+
+on:
+  push:
+  workflow_dispatch:
+    inputs:
+      target_repo:
+        description: 'Target repository (e.g., redis-developer/docker-library-official-images)'
+        required: false
+        default: 'redis-developer/docker-library-official-images'
+        type: string
+
+env:
+  FORKED_OFFICIAL_IMAGES_REPO: redis-developer/docker-library-official-images
+
+run-name: "Test Token Access - ${{ github.event.inputs.target_repo || 'default' }}"
+
+jobs:
+  test-token:
+    runs-on: ["ubuntu-latest"]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Checkout target repo
+        uses: actions/checkout@v4
+        with:
+          path: test-repo
+          repository: ${{ github.event.inputs.target_repo || env.FORKED_OFFICIAL_IMAGES_REPO }}
+
+      - name: Make a trivial change
+        run: |
+          cd test-repo
+          echo "# Test PR - $(date -u +%Y-%m-%dT%H:%M:%SZ)" >> TEST_TOKEN_ACCESS.md
+          echo "" >> TEST_TOKEN_ACCESS.md
+          echo "This is a test PR to verify token permissions." >> TEST_TOKEN_ACCESS.md
+          echo "Created by workflow run: ${{ github.run_id }}" >> TEST_TOKEN_ACCESS.md
+          echo "" >> TEST_TOKEN_ACCESS.md
+          echo "This PR can be safely closed." >> TEST_TOKEN_ACCESS.md
+
+          git status
+          git diff
+
+      - name: Create test pull request
+        id: create-pr
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ secrets.GH_TOKEN_FOR_PR_2 }}
+          draft: true
+          push-to-fork: ${{ env.FORKED_OFFICIAL_IMAGES_REPO }}
+          path: test-repo
+          branch: test-token-access-${{ github.run_id }}
+          commit-message: "TEST: Token access verification - ${{ github.run_id }}"
+          title: "TEST: Token Access Verification - Run ${{ github.run_id }}"
+          body: |
+            ## Test PR - Token Access Verification
+
+            This is an automated test PR to verify that the `GH_TOKEN_FOR_PR` secret has the correct permissions.
+
+            **Workflow Run:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+            **Created:** $(date -u +%Y-%m-%dT%H:%M:%SZ)
+
+            ### What this tests:
+            - ✅ Token can authenticate
+            - ✅ Token can create branches
+            - ✅ Token can push commits
+            - ✅ Token can create pull requests
+
+            ---
+
+            **This PR can be safely closed and the branch deleted.**
+
+      - name: PR creation results
+        run: |
+          echo "✅ Token test successful!"
+          echo ""
+          echo "Pull Request Number: ${{ steps.create-pr.outputs.pull-request-number }}"
+          echo "Pull Request URL: ${{ steps.create-pr.outputs.pull-request-url }}"
+          echo ""
+          echo "The token has the necessary permissions to:"
+          echo "  - Create branches in the fork"
+          echo "  - Push commits"
+          echo "  - Create pull requests"
+          echo ""
+          echo "You can now close this PR and delete the branch."
+
+      - name: Create test results artifact
+        run: |
+          cat > test_results.json << EOF
+          {
+            "test_status": "success",
+            "pull_request_number": "${{ steps.create-pr.outputs.pull-request-number }}",
+            "pull_request_url": "${{ steps.create-pr.outputs.pull-request-url }}",
+            "workflow_run_id": "${{ github.run_id }}",
+            "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          }
+          EOF
+
+          echo "Test results:"
+          cat test_results.json
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        with:
+          name: token-test-results
+          path: test_results.json
+          retention-days: 7
+
+      - name: Test failed
+        if: failure()
+        run: |
+          echo "❌ Token test failed!"
+          echo ""
+          echo "The GH_TOKEN_FOR_PR secret may not have the correct permissions."
+          echo "Please verify:"
+          echo "  1. The token exists and is valid"
+          echo "  2. The token has 'repo' scope"
+          echo "  3. The token has access to the target repository"
+          echo "  4. The fork repository exists and is accessible"
+          exit 1
+
