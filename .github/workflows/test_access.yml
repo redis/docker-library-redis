@@ -4,7 +4,6 @@
 name: Test Token Access
 
 on:
-  push:
   workflow_dispatch:
     inputs:
       target_repo:
@@ -14,7 +13,8 @@ on:
         type: string
 
 env:
-  FORKED_OFFICIAL_IMAGES_REPO: redis-developer/docker-library-official-images
+  #FORKED_OFFICIAL_IMAGES_REPO: redis-developer/docker-library-official-images
+  FORKED_OFFICIAL_IMAGES_REPO: Sh-Peter/official-images
 
 run-name: "Test Token Access - ${{ github.event.inputs.target_repo || 'default' }}"
 
