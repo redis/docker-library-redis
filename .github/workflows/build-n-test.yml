@@ -28,10 +28,6 @@ on:
         required: false
         type: boolean
         default: false
-      custom_ref_type:
-        description: 'Custom type, either branch, tag or commit. Empty for releases'
-        required: false
-        type: string
       run_type:
         description: 'Run type, either release, pr, unstable, nightly or custom'
         required: false
@@ -95,7 +91,6 @@ jobs:
           redisjson_version: ${{ inputs.redisjson_version }}
           redisbloom_version: ${{ inputs.redisbloom_version }}
           redistimeseries_version: ${{ inputs.redistimeseries_version }}
-          custom_ref_type: ${{ inputs.custom_ref_type }}
           run_type: ${{ inputs.run_type }}
 
   collect-images-metadata:
