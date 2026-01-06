@@ -1,0 +1,31 @@
+name: Pull Request Build and Test
+
+on:
+  pull_request:
+    branches:
+      - master
+      - release/*
+      - unstable
+
+jobs:
+  build-and-test:
+    uses: ./.github/workflows/build-n-test.yml
+    if: github.event_name == 'pull_request' && github.base_ref != 'unstable'
+    secrets: inherit
+    with:
+      release_tag: ''
+      publish_image: false
+      run_type: pr
+
+  build-and-test-unstable:
+    uses: ./.github/workflows/build-n-test.yml
+    if: github.event_name == 'pull_request' && github.base_ref == 'unstable'
+    secrets: inherit
+    with:
+      release_tag: unstable
+      publish_image: false
+      redisearch_version: master
+      redisjson_version: master
+      redisbloom_version: master
+      redistimeseries_version: master
+      run_type: unstable

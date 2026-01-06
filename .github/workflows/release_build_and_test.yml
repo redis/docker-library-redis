@@ -1,5 +1,6 @@
 # This workflow is a part of release automation process.
 # It is intended to be run with workflow_dispatch event by the automation.
+# In addition to regular tag builds, it also supports publishing unstable builds.
 
 # Warning: Workflow does switch branches and this may lead to confusion when changing workflow actions.
 # The usual safety rule is to make changes to workflow or actions in base branch (e.g, release/8.X)
@@ -13,13 +14,30 @@ on:
       workflow_uuid:
         description: 'Optional UUID to identify this workflow run'
         required: false
+      redisearch_version:
+        description: 'Redisearch version to build'
+        required: false
+      redisjson_version:
+        description: 'Redisjson version to build'
+        required: false
+      redisbloom_version:
+        description: 'Redisbloom version to build'
+        required: false
+      redistimeseries_version:
+        description: 'Redistimeseries version to build'
+        required: false
+      run_type:
+        description: 'Run type, either release, unstable or custom'
+        required: true
+        default: "custom"
 
 # UUID is used to help automation to identify workflow run in the list of workflow runs.
-run-name: "Release Build and Test${{ github.event.inputs.workflow_uuid && format(': {0}', github.event.inputs.workflow_uuid) || '' }}"
+run-name: "${{ github.event.inputs.run_type }} build and test${{ github.event.inputs.workflow_uuid && format(': {0}', github.event.inputs.workflow_uuid) || '' }}"
 
 jobs:
   prepare-release:
     runs-on: ["ubuntu-latest"]
+    if: github.event.inputs.run_type == 'release'
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -52,16 +70,22 @@ jobs:
           release_version_branch: ${{ steps.ensure-branch.outputs.release_version_branch }}
 
   build-and-test:
-    uses: ./.github/workflows/pre-merge.yml
+    uses: ./.github/workflows/build-n-test.yml
     needs: prepare-release
+    if: always() && (needs.prepare-release.result == 'success' || needs.prepare-release.result == 'skipped')
     secrets: inherit
     with:
       release_tag: ${{ github.event.inputs.release_tag }}
       publish_image: true
+      redisearch_version: ${{ github.event.inputs.redisearch_version }}
+      redisjson_version: ${{ github.event.inputs.redisjson_version }}
+      redisbloom_version: ${{ github.event.inputs.redisbloom_version }}
+      redistimeseries_version: ${{ github.event.inputs.redistimeseries_version }}
+      run_type: ${{ github.event.inputs.run_type }}
 
   merge-back-to-release-branch:
     needs: [prepare-release, build-and-test]
-    if: success()
+    if: success() && github.event.inputs.run_type == 'release' && github.event.inputs.release_tag != 'unstable'
     runs-on: ["ubuntu-latest"]
     steps:
       - name: Checkout code

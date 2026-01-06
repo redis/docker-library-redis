@@ -14,8 +14,13 @@ RUN set -eux; \
 # we need setpriv package as busybox provides very limited functionality
 		setpriv \
 	;
-ENV REDIS_DOWNLOAD_URL=https://github.com/redis/redis/archive/refs/tags/8.4.0.tar.gz
-ENV REDIS_DOWNLOAD_SHA=b947d9015622669b5bee8ec954f658b3278d42dbefae23a92d9b7704bfe143f9
+ARG REDIS_DOWNLOAD_URL=https://github.com/redis/redis/archive/refs/tags/8.4.0.tar.gz
+ARG REDIS_DOWNLOAD_SHA=b947d9015622669b5bee8ec954f658b3278d42dbefae23a92d9b7704bfe143f9
+ARG REDISEARCH_VERSION
+ARG REDISJSON_VERSION
+ARG REDISBLOOM_VERSION
+ARG REDISTIMESERIES_VERSION
+ARG CUSTOM_BUILD=false
 RUN set -eux; \
 	\
 	apk add --no-cache --virtual .build-deps \
@@ -73,7 +78,9 @@ RUN set -eux; \
 # install required python packages for RedisJSON module
 	pip install -q --upgrade setuptools &&  pip install -q --upgrade pip && PIP_BREAK_SYSTEM_PACKAGES=1 pip install -q addict toml jinja2 ramp-packer ;\
 	wget -O redis.tar.gz "$REDIS_DOWNLOAD_URL"; \
-	echo "$REDIS_DOWNLOAD_SHA *redis.tar.gz" | sha256sum -c -; \
+	if [ $CUSTOM_BUILD = false ]; then \
+		echo "$REDIS_DOWNLOAD_SHA *redis.tar.gz" | sha256sum -c -; \
+	fi; \
 	mkdir -p /usr/src/redis; \
 	tar -xzf redis.tar.gz -C /usr/src/redis --strip-components=1; \
 	rm redis.tar.gz; \
@@ -107,6 +114,21 @@ RUN set -eux; \
 	export RUST_DYN_CRT=1; \
 	export BUILD_TLS=yes; \
 	if [ "$BUILD_WITH_MODULES" = "yes" ]; then \
+		if [ $CUSTOM_BUILD = true ]; then \
+			# Update modules versions
+			if [ -n "$REDISEARCH_VERSION" ]; then \
+				sed -i "s/^MODULE_VERSION = .*/MODULE_VERSION = $REDISEARCH_VERSION/" /usr/src/redis/modules/redisearch/Makefile; \
+			fi; \
+			if [ -n "$REDISJSON_VERSION" ]; then \
+				sed -i "s/^MODULE_VERSION = .*/MODULE_VERSION = $REDISJSON_VERSION/" /usr/src/redis/modules/redisjson/Makefile; \
+			fi; \
+			if [ -n "$REDISBLOOM_VERSION" ]; then \
+				sed -i "s/^MODULE_VERSION = .*/MODULE_VERSION = $REDISBLOOM_VERSION/" /usr/src/redis/modules/redisbloom/Makefile; \
+			fi; \
+			if [ -n "$REDISTIMESERIES_VERSION" ]; then \
+				sed -i "s/^MODULE_VERSION = .*/MODULE_VERSION = $REDISTIMESERIES_VERSION/" /usr/src/redis/modules/redistimeseries/Makefile; \
+			fi; \
+		fi; \
 		make -C /usr/src/redis/modules/redisjson get_source; \
 		sed -i 's/^RUST_FLAGS=$/RUST_FLAGS += -C target-feature=-crt-static/' /usr/src/redis/modules/redisjson/src/Makefile ; \
 		grep -E 'RUST_FLAGS' /usr/src/redis/modules/redisjson/src/Makefile; \

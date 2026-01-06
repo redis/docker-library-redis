@@ -1,21 +1,37 @@
 
 name: Build and Test
 on:
-  pull_request:
-    branches:
-      - master
-      - release/*
   workflow_call:
     inputs:
       release_tag:
         description: 'Release tag to build'
         required: true
         type: string
+      redisearch_version:
+        description: 'Redisearch version to build'
+        required: false
+        type: string
+      redisjson_version:
+        description: 'Redisjson version to build'
+        required: false
+        type: string
+      redisbloom_version:
+        description: 'Redisbloom version to build'
+        required: false
+        type: string
+      redistimeseries_version:
+        description: 'Redistimeseries version to build'
+        required: false
+        type: string
       publish_image:
         description: 'Publish Docker image to GHCR'
         required: false
         type: boolean
         default: false
+      run_type:
+        description: 'Run type, either release, pr, unstable, nightly or custom'
+        required: false
+        type: string
     outputs:
       docker_images_metadata:
         description: 'Array of structured Docker images metadata that were published'
@@ -48,8 +64,16 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          ref: >-
+            ${{ (github.ref_name == 'unstable'
+            || github.event_name == 'workflow_call'
+            || github.event_name == 'schedule')
+            && 'unstable'
+            || ''
+            }}
       - name: Ensure release branch
-        if: ${{ inputs.release_tag }}
+        if: inputs.release_tag != '' && inputs.run_type == 'release'
         uses: redis-developer/redis-oss-release-automation/.github/actions/ensure-release-branch@main
         with:
           release_tag: ${{ inputs.release_tag }}
@@ -60,14 +84,19 @@ jobs:
           platform: ${{ matrix.platform }}
           registry_username: ${{ github.actor }}
           registry_password: ${{ secrets.GITHUB_TOKEN }}
-          publish_image: ${{ inputs.publish_image || vars.PUBLISH_IMAGE }}
+          publish_image: ${{ inputs.publish_image }}
           registry_repository: ${{ format('ghcr.io/{0}', github.repository) }}
           release_tag: ${{ inputs.release_tag }}
+          redisearch_version: ${{ inputs.redisearch_version }}
+          redisjson_version: ${{ inputs.redisjson_version }}
+          redisbloom_version: ${{ inputs.redisbloom_version }}
+          redistimeseries_version: ${{ inputs.redistimeseries_version }}
+          run_type: ${{ inputs.run_type }}
 
   collect-images-metadata:
     runs-on: ubuntu-latest
     needs: build-and-test
-    if: ${{ inputs.release_tag }}
+    if: ${{ inputs.release_tag && inputs.run_type == 'release' }}
     outputs:
       docker_images_metadata: ${{ steps.collect-metadata.outputs.metadata }}
     steps:
@@ -96,7 +125,7 @@ jobs:
   notify-slack:
     runs-on: ubuntu-latest
     needs: collect-images-metadata
-    if: ${{ inputs.release_tag && needs.collect-images-metadata.outputs.docker_images_metadata != '[]' }}
+    if: ${{ inputs.release_tag && needs.collect-images-metadata.outputs.docker_images_metadata != '[]' && inputs.run_type == 'release' }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -115,7 +144,7 @@ jobs:
   notify-slack-when-failed:
     runs-on: ubuntu-latest
     needs: collect-images-metadata
-    if: ${{ inputs.release_tag && failure() }}
+    if: ${{ inputs.release_tag && failure() && inputs.run_type == 'release' }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
