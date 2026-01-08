@@ -40,6 +40,15 @@ on:
         required: false
         type: string
         default: ''
+      slack_fanout_msg_links:
+        description: 'Post message links to the announcement channel'
+        required: false
+        type: boolean
+        default: false
+      override_release_branch:
+        description: 'Use this release branch instead of release/X.X (for testing)'
+        required: false
+        type: string
 
 # UUID is used to help automation to identify workflow run in the list of workflow runs.
 run-name: "${{ github.event.inputs.run_type }} build and test${{ github.event.inputs.workflow_uuid && format(': {0}', github.event.inputs.workflow_uuid) || '' }}"
@@ -47,10 +56,55 @@ run-name: "${{ github.event.inputs.run_type }} build and test${{ github.event.in
 jobs:
   prepare-release:
     runs-on: ["ubuntu-latest"]
-    if: github.event.inputs.run_type == 'release'
+    outputs:
+      redis_version_is_ga: ${{ steps.redis-version-info.outputs.redis_version_is_ga }}
+      redis_version_is_rc: ${{ steps.redis-version-info.outputs.redis_version_is_rc }}
+      redis_version_is_public: ${{ steps.redis-version-info.outputs.redis_version_is_public }}
+      # regular version means version is in X.X.X[-sss] format, not unstable and not custom
+      redis_version_is_regular: ${{ steps.redis-version-info.outputs.redis_version_is_regular }}
+      slack_channel_id: ${{ steps.slack-routing.outputs.slack_channel_id }}
+      slack_thread_ts: ${{ steps.slack-routing.outputs.slack_thread_ts }}
+      slack_fanout_msg_links: ${{ steps.slack-routing.outputs.slack_fanout_msg_links }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Install release automation dependencies
+        uses: ./.github/actions/release-automation-install
+
+      - name: Redis version info
+        id: redis-version-info
+        run: |
+          redis_version_is_public=""
+          redis_version_is_regular=""
+          if uv run redis-version check ${{ github.event.inputs.release_tag }} is-ga; then
+            echo "redis_version_is_ga=1" | tee -a $GITHUB_OUTPUT
+            redis_version_is_public=1
+          elif uv run redis-version check ${{ github.event.inputs.release_tag }} is-rc; then
+            echo "redis_version_is_rc=1" | tee -a $GITHUB_OUTPUT
+            redis_version_is_public=1
+          fi
+          if [ -n "$redis_version_is_public" ]; then
+            echo "redis_version_is_public=1" | tee -a $GITHUB_OUTPUT
+          fi
+          if uv run redis-version major ${{ github.event.inputs.release_tag }}; then
+            echo "redis_version_is_regular=1" | tee -a $GITHUB_OUTPUT
+          fi
+
+      - name: Setup slack message routing
+        id: slack-routing
+        run: |
+          if [ -n "${{ steps.redis-version-info.outputs.redis_version_is_public }}" ]; then
+            # For public releases always post notifications to announcement channel
+            echo "slack_channel_id=${{ vars.SLACK_CHANNEL_ID }}" | tee -a $GITHUB_OUTPUT
+            # Duplicate slack message links to the requested thread (if any)
+            echo "slack_fanout_msg_links=1" | tee -a $GITHUB_OUTPUT
+          else
+            echo "slack_channel_id=${{ github.event.inputs.slack_channel_id }}" | tee -a $GITHUB_OUTPUT
+          fi
+          if [ -n "${{ github.event.inputs.slack_thread_ts }}" ]; then
+            echo "slack_thread_ts=${{ github.event.inputs.slack_thread_ts }}" | tee -a $GITHUB_OUTPUT
+          fi
 
       - name: Log in to Container Registry
         uses: docker/login-action@v3
@@ -60,20 +114,24 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Validate Redis Release Archive
+        if: steps.redis-version-info.outputs.redis_version_is_regular == '1'
         uses: redis-developer/redis-oss-release-automation/.github/actions/validate-redis-release-archive@main
         with:
           release_tag: ${{ github.event.inputs.release_tag }}
 
+
       - name: Ensure Release Branch
         id: ensure-branch
+        if: steps.redis-version-info.outputs.redis_version_is_regular == '1'
         uses: redis-developer/redis-oss-release-automation/.github/actions/ensure-release-branch@main
         with:
           release_tag: ${{ github.event.inputs.release_tag }}
           allow_modify: true
           gh_token: ${{ secrets.GITHUB_TOKEN }}
-          release_branch: slack_bot
+          release_branch: ${{ github.event.inputs.override_release_branch }}
 
       - name: Apply Docker Version
+        if: steps.redis-version-info.outputs.redis_version_is_regular == '1'
         id: apply-version
         uses: ./.github/actions/apply-docker-version
         with:
@@ -83,7 +141,6 @@ jobs:
   build-and-test:
     uses: ./.github/workflows/build-n-test.yml
     needs: prepare-release
-    if: always() && (needs.prepare-release.result == 'success' || needs.prepare-release.result == 'skipped')
     secrets: inherit
     with:
       release_tag: ${{ github.event.inputs.release_tag }}
@@ -93,27 +150,29 @@ jobs:
       redisbloom_version: ${{ github.event.inputs.redisbloom_version }}
       redistimeseries_version: ${{ github.event.inputs.redistimeseries_version }}
       run_type: ${{ github.event.inputs.run_type }}
-      slack_channel_id: ${{ github.event.inputs.slack_channel_id }}
-      slack_thread_ts: ${{ github.event.inputs.slack_thread_ts }}
+      slack_channel_id: ${{ needs.prepare-release.outputs.slack_channel_id }}
+      slack_thread_ts: ${{ needs.prepare-release.outputs.slack_thread_ts }}
+      override_release_branch: ${{ github.event.inputs.override_release_branch }}
 
-  merge-back-to-release-branch:
+  finalize_release:
     needs: [prepare-release, build-and-test]
-    if: success() && github.event.inputs.run_type == 'release' && github.event.inputs.release_tag != 'unstable'
     runs-on: ["ubuntu-latest"]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Ensure Release Branch
+        if: needs.prepare-release.outputs.redis_version_is_regular == '1'
         id: ensure-branch
         uses: redis-developer/redis-oss-release-automation/.github/actions/ensure-release-branch@main
         with:
           release_tag: ${{ github.event.inputs.release_tag }}
           allow_modify: false
           gh_token: ${{ secrets.GITHUB_TOKEN }}
-          release_branch: slack_bot
+          release_branch: ${{ github.event.inputs.override_release_branch }}
 
       - name: Merge back to release branch
+        if: needs.prepare-release.outputs.redis_version_is_public == '1'
         id: merge-back
         uses: redis-developer/redis-oss-release-automation/.github/actions/merge-branches-verified@main
         with:
@@ -125,16 +184,7 @@ jobs:
         id: create-release-handle
         shell: bash
         run: |
-          if [ -n "${{ steps.merge-back.outputs.merge_commit_sha }}" ]; then
-            RELEASE_COMMIT_SHA="${{ steps.merge-back.outputs.merge_commit_sha }}"
-          elif [ -n "${{ steps.merge-back.outputs.target_before_merge_sha }}" ]; then
-            RELEASE_COMMIT_SHA="${{ steps.merge-back.outputs.target_before_merge_sha }}"
-          else
-            echo "Error: No commit SHA found, both merge_commit_sha and target_before_merge_sha are empty" >&2
-            exit 1
-          fi
-
-          # Get docker images metadata from build-and-test job
+          # Get docker images metadata from build-and-test job (required field)
           DOCKER_IMAGES_METADATA='${{ needs.build-and-test.outputs.docker_images_metadata }}'
 
           # Validate that DOCKER_IMAGES_METADATA is valid JSON
@@ -143,35 +193,34 @@ jobs:
             DOCKER_IMAGES_METADATA="[]"
           fi
 
-          cat > result.json << EOF
-          {
-            "release_commit_sha": "$RELEASE_COMMIT_SHA",
-            "release_version": "${{ github.event.inputs.release_tag }}",
-            "release_version_branch": "${{ steps.ensure-branch.outputs.release_version_branch }}",
-            "release_branch": "${{ steps.ensure-branch.outputs.release_branch }}",
-            "docker_images_metadata": $DOCKER_IMAGES_METADATA
-          }
-          EOF
+          # Determine release_commit_sha
+          RELEASE_COMMIT_SHA="${{ steps.merge-back.outputs.merge_commit_sha }}"
+          if [ -z "$RELEASE_COMMIT_SHA" ]; then
+            RELEASE_COMMIT_SHA="${{ steps.merge-back.outputs.target_before_merge_sha }}"
+          fi
+
+          # Create JSON with all fields, then filter out empty ones
+          jq -n \
+            --argjson docker_images_metadata "$DOCKER_IMAGES_METADATA" \
+            --arg release_commit_sha "$RELEASE_COMMIT_SHA" \
+            --arg release_version "${{ github.event.inputs.release_tag }}" \
+            --arg release_version_branch "${{ steps.ensure-branch.outputs.release_version_branch }}" \
+            --arg release_branch "${{ steps.ensure-branch.outputs.release_branch }}" \
+            --arg slack_ts "${{ needs.build-and-test.outputs.slack_ts }}" \
+            --arg slack_channel_id "${{ github.event.inputs.slack_channel_id || vars.SLACK_CHANNEL_ID }}" \
+            --arg slack_message_url "${{ needs.build-and-test.outputs.slack_url }}" \
+            '{
+              docker_images_metadata: $docker_images_metadata,
+              release_commit_sha: $release_commit_sha,
+              release_version: $release_version,
+              release_version_branch: $release_version_branch,
+              release_branch: $release_branch,
+              slack_ts: $slack_ts,
+              slack_channel_id: $slack_channel_id,
+              slack_message_url: $slack_message_url
+            } | with_entries(select(.value != ""))' > result.json
 
           echo "Created result.json for release_handle:"
-          cat result.json
-
-      - name: Add Slack notification info to release handle
-        if: always() && steps.create-release-handle.outcome == 'success' && needs.build-and-test.outputs.slack_ts != ''
-        shell: bash
-        run: |
-          # Add Slack notification details to result.json
-          jq --arg slack_ts "${{ needs.build-and-test.outputs.slack_ts }}" \
-             --arg slack_channel_id "${{ github.event.inputs.slack_channel_id || vars.SLACK_CHANNEL_ID }}" \
-             --arg slack_message_url "${{ needs.build-and-test.outputs.slack_url }}" \
-             '. + {
-               slack_ts: $slack_ts,
-               slack_channel_id: $slack_channel_id,
-               slack_message_url: $slack_message_url
-             }' result.json > result_with_slack.json
-          mv result_with_slack.json result.json
-
-          echo "Updated result.json with Slack notification info:"
           cat result.json | jq '.'
 
       - name: Upload release handle artifact
@@ -181,3 +230,16 @@ jobs:
           name: release_handle
           path: result.json
           retention-days: 400
+
+      - name: Post announcement link to Slack
+        if: |
+          needs.build-and-test.outputs.slack_url != '' &&
+          needs.prepare-release.slack_fanout_msg_links == '1' &&
+          github.event.inputs.slack_channel_id != ''
+        uses: ./.github/actions/slack-notification
+        with:
+          slack_func: slack_format_simple_msg
+          slack_channel_id: ${{ github.event.inputs.slack_channel_id }}
+          slack_thread_ts: ${{ github.event.inputs.slack_thread_ts }}
+          message: ${{ needs.build-and-test.outputs.slack_url }}
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}

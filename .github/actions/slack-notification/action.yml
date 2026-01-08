@@ -32,10 +32,10 @@ inputs:
 outputs:
   slack_ts:
     description: 'Slack message timestamp'
-    value: ${{ steps.send-images.outputs.slack_ts || steps.send-pr.outputs.slack_ts || steps.send-failure.outputs.slack_ts }}
+    value: ${{ steps.send-images.outputs.slack_ts || steps.send-pr.outputs.slack_ts || steps.send-failure.outputs.slack_ts || steps.send-simple.outputs.slack_ts }}
   slack_url:
     description: 'URL to the Slack message'
-    value: ${{ steps.send-images.outputs.slack_url || steps.send-pr.outputs.slack_url || steps.send-failure.outputs.slack_url }}
+    value: ${{ steps.send-images.outputs.slack_url || steps.send-pr.outputs.slack_url || steps.send-failure.outputs.slack_url || steps.send-simple.outputs.slack_url }}
 
 runs:
   using: "composite"
@@ -132,6 +132,43 @@ runs:
         "$msg for Redis: ${{ inputs.release_tag || 'unknown'}}" \
         "$workflow_url" \
         "$footer" \
+        "${{ inputs.slack_thread_ts }}" \
+        > "$msgfile"
+
+        # Send message
+        send_result=$(mktemp)
+        if ! slack_send_with_token "$SLACK_BOT_TOKEN" < "$msgfile" > "$send_result"; then
+          echo "Error sending message:"
+          cat "$msgfile"
+          exit 1
+        fi
+
+        # Handle result
+        slack_handle_message_result "${{ inputs.slack_channel_id }}" "$(cat "$msgfile")" < "$send_result"
+
+    - name: Send Simple Slack notification
+      id: send-simple
+      if: inputs.slack_func == 'slack_format_simple_msg'
+      shell: bash
+      env:
+        SLACK_BOT_TOKEN: ${{ inputs.SLACK_BOT_TOKEN }}
+      run: |
+        set -e
+
+        msg='${{ inputs.message }}'
+        if [ -z "$msg" ]; then
+          echo "Error: message is required for slack_format_simple_msg"
+          exit 1
+        fi
+
+        export GITHUB_ACTION_PATH="${{ github.action_path }}"
+        . ${{ github.action_path }}/slack_docker.sh
+
+        # Generate message
+        msgfile=$(mktemp)
+        slack_format_simple_msg \
+        "${{ inputs.slack_channel_id }}" \
+        "$msg" \
         "${{ inputs.slack_thread_ts }}" \
         > "$msgfile"
 
