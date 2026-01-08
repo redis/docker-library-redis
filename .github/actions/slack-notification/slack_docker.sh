@@ -1,8 +1,13 @@
 #!/bin/bash
 
-SCRIPT_DIR="$(dirname -- "$( readlink -f -- "$0"; )")"
-# shellcheck disable=SC1091
-. "$SCRIPT_DIR/../common/func.sh"
+if [ -z "$GITHUB_ACTION_PATH" ]; then
+    SCRIPT_DIR="$(dirname -- "$( readlink -f -- "$0"; )")"
+    # shellcheck disable=SC1091
+    . "$SCRIPT_DIR/../common/func.sh"
+else
+    . "$GITHUB_ACTION_PATH/../common/func.sh"
+fi
+
 
 source_helper_file slack.sh
 
