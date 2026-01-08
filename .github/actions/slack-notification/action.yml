@@ -58,6 +58,7 @@ runs:
         workflow_url="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
         footer="Repository: ${{ github.repository }} | Commit: \`${{ github.sha }}\` | View: <$workflow_url|workflow run>"
 
+        export GITHUB_ACTION_PATH="${{ github.action_path }}"
         . ${{ github.action_path }}/slack_docker.sh
 
         msgfile=$(mktemp)
@@ -86,6 +87,7 @@ runs:
         workflow_url="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
         footer="Repository: ${{ github.repository }} | Commit: \`${{ github.sha }}\` | View: <$workflow_url|workflow run>"
 
+        export GITHUB_ACTION_PATH="${{ github.action_path }}"
         . ${{ github.action_path }}/slack_docker.sh
 
         msgfile=$(mktemp)
@@ -120,6 +122,7 @@ runs:
           exit 1
         fi
 
+        export GITHUB_ACTION_PATH="${{ github.action_path }}"
         . ${{ github.action_path }}/slack_docker.sh
 
         # Generate message
