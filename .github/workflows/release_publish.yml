@@ -13,11 +13,17 @@ on:
         required: false
       pr_to_official_library:
         description: 'Open a PR to official library repo'
+        type: boolean
         default: false
       release_tag:
         description: 'Release tag to publish'
         default: ""
         required: false
+      slack_channel_id:
+        description: 'Slack channel ID to post notifications to'
+        required: false
+        type: string
+        default: ''
 
 env:
   TARGET_OFFICIAL_IMAGES_REPO: docker-library/official-images
@@ -121,46 +127,64 @@ jobs:
 
             ${{ env.PR_USER_MENTIONS }}
 
-      - name: PR creation results
+      - name: Create Release info
+        id: create-release-info
         run: |
-          echo "Pull Request Number: ${{ steps.create-pr.outputs.pull-request-number }}"
-          echo "Pull Request URL: ${{ steps.create-pr.outputs.pull-request-url }}"
-
           # Create release_info.json artifact
           cat > result.json << EOF
           {
+            "release_version": "${{ steps.parse-release.outputs.release_version }}",
             "pull_request_number": "${{ steps.create-pr.outputs.pull-request-number }}",
-            "pull_request_url": "${{ steps.create-pr.outputs.pull-request-url }}"
+            "pull_request_url": "${{ steps.create-pr.outputs.pull-request-url }}",
+            "run_id": ${{ github.run_id }}
           }
           EOF
 
           echo "Created result.json for release_info:"
           cat result.json
 
+      - name: Send Success Slack notification
+        id: slack-success
+        uses: ./.github/actions/slack-notification
+        with:
+          slack_func: slack_format_docker_PR_message
+          slack_channel_id: ${{ github.event.inputs.slack_channel_id || vars.SLACK_CHANNEL_ID }}
+          release_tag: v${{ steps.parse-release.outputs.release_version }}
+          pr_url: ${{ steps.create-pr.outputs.pull-request-url }}
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+
+      - name: Add Slack notification info to release info
+        if: always() && steps.create-release-info.outcome == 'success' && steps.slack-success.outputs.slack_ts != ''
+        shell: bash
+        run: |
+          # Add Slack notification details to result.json
+          jq --arg slack_ts "${{ steps.slack-success.outputs.slack_ts }}" \
+             --arg slack_channel_id "${{ github.event.inputs.slack_channel_id || vars.SLACK_CHANNEL_ID }}" \
+             --arg slack_message_url "${{ steps.slack-success.outputs.slack_url }}" \
+             '. + {
+               slack_ts: $slack_ts,
+               slack_channel_id: $slack_channel_id,
+               slack_message_url: $slack_message_url
+             }' result.json > result_with_slack.json
+          mv result_with_slack.json result.json
+
+          echo "Updated result.json with Slack notification info:"
+          cat result.json | jq '.'
+
       - name: Upload release info artifact
+        if: always() && steps.create-release-info.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
           name: release_info
           path: result.json
           retention-days: 400
 
-      - name: Send Slack notification
-        run: |
-          workflow_url="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          footer="Repository: ${{ github.repository }} | Commit: \`${{ github.sha }}\` | View: <$workflow_url|workflow run>"
-
-          . ${GITHUB_WORKSPACE}/.github/actions/common/func.sh
-
-          slack_format_docker_PR_message "${{ steps.parse-release.outputs.release_version }}" "${{ steps.create-pr.outputs.pull-request-url }}" "$footer" \
-          | curl -s --fail-with-body -d@- "${{ secrets.SLACK_WEB_HOOK_URL }}"
-
       - name: Send Failure Slack notification
         if: failure()
-        run: |
-          workflow_url="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          footer="Repository: ${{ github.repository }} | Commit: \`${{ github.sha }}\`"
-
-          . ${GITHUB_WORKSPACE}/.github/actions/common/func.sh
-
-          slack_format_failure_message "Docker PR failed for Redis: ${{ steps.parse-release.outputs.release_version || 'unknown'}}" "$workflow_url" "$footer" \
-          | curl -s --fail-with-body -d@- "${{ secrets.SLACK_WEB_HOOK_URL }}"
+        uses: ./.github/actions/slack-notification
+        with:
+          slack_func: slack_format_failure_message
+          slack_channel_id: ${{ github.event.inputs.slack_channel_id || vars.SLACK_CHANNEL_ID }}
+          release_tag: v${{ steps.parse-release.outputs.release_version }}
+          message: "Docker PR failed"
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}

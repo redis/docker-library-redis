@@ -32,10 +32,26 @@ on:
         description: 'Run type, either release, pr, unstable, nightly or custom'
         required: false
         type: string
+      slack_channel_id:
+        description: 'Slack channel ID to post notifications to'
+        required: false
+        type: string
+        default: ''
+      slack_thread_ts:
+        description: 'Thread timestamp to post message as a reply (optional)'
+        required: false
+        type: string
+        default: ''
     outputs:
       docker_images_metadata:
         description: 'Array of structured Docker images metadata that were published'
         value: ${{ jobs.collect-images-metadata.outputs.docker_images_metadata }}
+      slack_ts:
+        description: 'Slack message timestamp'
+        value: ${{ jobs.notify-slack.outputs.slack_ts }}
+      slack_url:
+        description: 'URL to the Slack message'
+        value: ${{ jobs.notify-slack.outputs.slack_url }}
 
 jobs:
   build-and-test:
@@ -78,6 +94,7 @@ jobs:
         with:
           release_tag: ${{ inputs.release_tag }}
           gh_token: ${{ secrets.GITHUB_TOKEN }}
+          release_branch: slack_bot
       - uses: ./.github/actions/build-and-tag-locally
         with:
           distribution: ${{ matrix.distribution }}
@@ -126,20 +143,24 @@ jobs:
     runs-on: ubuntu-latest
     needs: collect-images-metadata
     if: ${{ inputs.release_tag && needs.collect-images-metadata.outputs.docker_images_metadata != '[]' && inputs.run_type == 'release' }}
+    outputs:
+      slack_ts: ${{ steps.slack-success.outputs.slack_ts }}
+      slack_url: ${{ steps.slack-success.outputs.slack_url }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Send Slack notification
-        run: |
-          images_metadata='${{ needs.collect-images-metadata.outputs.docker_images_metadata }}'
-          workflow_url="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          footer="Repository: ${{ github.repository }} | Commit: \`${{ github.sha }}\` | View: <$workflow_url|workflow run>"
-
-          . ${GITHUB_WORKSPACE}/.github/actions/common/func.sh
-
-          echo "$images_metadata" | slack_format_docker_images_metadata_message "${{ inputs.release_tag }}" "$footer"  \
-          | curl -s --fail-with-body -d@- "${{ secrets.SLACK_WEB_HOOK_URL }}"
+        id: slack-success
+        continue-on-error: true
+        uses: ./.github/actions/slack-notification
+        with:
+          slack_func: slack_format_docker_images_metadata_message
+          slack_channel_id: ${{ inputs.slack_channel_id || vars.SLACK_CHANNEL_ID }}
+          release_tag: ${{ inputs.release_tag }}
+          images_metadata: ${{ needs.collect-images-metadata.outputs.docker_images_metadata }}
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          slack_thread_ts: ${{ inputs.slack_thread_ts }}
 
   notify-slack-when-failed:
     runs-on: ubuntu-latest
@@ -150,11 +171,12 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Send Failure Slack notification
-        run: |
-          workflow_url="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          footer="Repository: ${{ github.repository }} | Commit: \`${{ github.sha }}\`"
-
-          . ${GITHUB_WORKSPACE}/.github/actions/common/func.sh
-
-          slack_format_failure_message "Docker Build failed for Redis: ${{ inputs.release_tag  || 'unknown'}}" "$workflow_url" "$footer" \
-          | curl -s --fail-with-body -d@- "${{ secrets.SLACK_WEB_HOOK_URL }}"
+        continue-on-error: true
+        uses: ./.github/actions/slack-notification
+        with:
+          slack_func: slack_format_failure_message
+          slack_channel_id: ${{ inputs.slack_channel_id || vars.SLACK_CHANNEL_ID }}
+          release_tag: ${{ inputs.release_tag }}
+          message: "Docker Build failed"
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          slack_thread_ts: ${{ inputs.slack_thread_ts }}
