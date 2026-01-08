@@ -54,7 +54,7 @@ slack_format_docker_images_metadata_message() {
                 ]
                 }
             ]
-        } | if $slack_thread_ts != "" then . + {slack_thread_ts: $slack_thread_ts} else . end
+        } | if $slack_thread_ts != "" then . + {thread_ts: $slack_thread_ts} else . end
         '
 }
 
@@ -103,7 +103,7 @@ EOF
 
     # Add slack_thread_ts if provided
     if [ -n "$slack_thread_ts" ]; then
-        echo "$payload" | jq --arg slack_thread_ts "$slack_thread_ts" '. + {slack_thread_ts: $slack_thread_ts}'
+        echo "$payload" | jq --arg slack_thread_ts "$slack_thread_ts" '. + {thread_ts: $slack_thread_ts}'
     else
         echo "$payload"
     fi
@@ -161,7 +161,7 @@ EOF
 
     # Add slack_thread_ts if provided
     if [ -n "$slack_thread_ts" ]; then
-        echo "$payload" | jq --arg slack_thread_ts "$slack_thread_ts" '. + {slack_thread_ts: $slack_thread_ts}'
+        echo "$payload" | jq --arg slack_thread_ts "$slack_thread_ts" '. + {thread_ts: $slack_thread_ts}'
     else
         echo "$payload"
     fi
