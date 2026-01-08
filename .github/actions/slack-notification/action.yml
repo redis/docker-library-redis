@@ -22,6 +22,9 @@ inputs:
   message:
     description: 'Message to send in case of failure'
     required: false
+  slack_thread_ts:
+    description: 'Thread timestamp to post message as a reply (optional)'
+    required: false
   SLACK_BOT_TOKEN:
     description: 'Slack bot token for API authentication'
     required: true
@@ -58,7 +61,7 @@ runs:
         . ${{ github.action_path }}/../common/slack.sh
 
         msgfile=$(mktemp)
-        echo "$IMAGES_METADATA" | slack_format_docker_images_metadata_message "${{ inputs.slack_channel_id }}" "${{ inputs.release_tag }}" "$footer"  \
+        echo "$IMAGES_METADATA" | slack_format_docker_images_metadata_message "${{ inputs.slack_channel_id }}" "${{ inputs.release_tag }}" "$footer" "${{ inputs.slack_thread_ts }}"  \
         > "$msgfile"
 
         send_result=$(mktemp)
@@ -86,7 +89,7 @@ runs:
         . ${{ github.action_path }}/../common/slack.sh
 
         msgfile=$(mktemp)
-        slack_format_docker_PR_message "${{ inputs.slack_channel_id }}" "${{ inputs.release_tag }}" "${{ inputs.pr_url }}" "$footer" \
+        slack_format_docker_PR_message "${{ inputs.slack_channel_id }}" "${{ inputs.release_tag }}" "${{ inputs.pr_url }}" "$footer" "${{ inputs.slack_thread_ts }}" \
         > "$msgfile"
 
         send_result=$(mktemp)
@@ -126,6 +129,7 @@ runs:
         "$msg for Redis: ${{ inputs.release_tag || 'unknown'}}" \
         "$workflow_url" \
         "$footer" \
+        "${{ inputs.slack_thread_ts }}" \
         > "$msgfile"
 
         # Send message

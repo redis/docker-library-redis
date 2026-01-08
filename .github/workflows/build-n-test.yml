@@ -37,6 +37,11 @@ on:
         required: false
         type: string
         default: ''
+      slack_thread_ts:
+        description: 'Thread timestamp to post message as a reply (optional)'
+        required: false
+        type: string
+        default: ''
     outputs:
       docker_images_metadata:
         description: 'Array of structured Docker images metadata that were published'
@@ -155,6 +160,7 @@ jobs:
           release_tag: ${{ inputs.release_tag }}
           images_metadata: ${{ needs.collect-images-metadata.outputs.docker_images_metadata }}
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          slack_thread_ts: ${{ inputs.slack_thread_ts }}
 
   notify-slack-when-failed:
     runs-on: ubuntu-latest
@@ -173,3 +179,4 @@ jobs:
           release_tag: ${{ inputs.release_tag }}
           message: "Docker Build failed"
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          slack_thread_ts: ${{ inputs.slack_thread_ts }}

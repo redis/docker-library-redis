@@ -35,6 +35,11 @@ on:
         required: false
         type: string
         default: ''
+      slack_thread_ts:
+        description: 'Thread timestamp to post message as a reply (optional)'
+        required: false
+        type: string
+        default: ''
 
 # UUID is used to help automation to identify workflow run in the list of workflow runs.
 run-name: "${{ github.event.inputs.run_type }} build and test${{ github.event.inputs.workflow_uuid && format(': {0}', github.event.inputs.workflow_uuid) || '' }}"

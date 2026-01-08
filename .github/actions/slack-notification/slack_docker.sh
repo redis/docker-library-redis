@@ -8,7 +8,13 @@ source_helper_file slack.sh
 
 slack_format_docker_images_metadata_message() {
     # Format the structured images metadata into a Slack message
-    jq --arg channel "$1" --arg release_tag "$2" --arg footer "$3" '
+    # Parameters: channel, release_tag, footer, slack_thread_ts (optional)
+    local channel="$1"
+    local release_tag="$2"
+    local footer="$3"
+    local slack_thread_ts="$4"
+
+    jq --arg channel "$channel" --arg release_tag "$release_tag" --arg footer "$footer" --arg slack_thread_ts "$slack_thread_ts" '
         {
             channel: $channel,
             icon_emoji: ":redis-circle:",
@@ -43,18 +49,20 @@ slack_format_docker_images_metadata_message() {
                 ]
                 }
             ]
-            }
+        } | if $slack_thread_ts != "" then . + {slack_thread_ts: $slack_thread_ts} else . end
         '
 }
 
 slack_format_docker_PR_message() {
-    channel=$1
-    release_tag=$2
-    url=$3
-    footer=$4
+    local channel=$1
+    local release_tag=$2
+    local url=$3
+    local footer=$4
+    local slack_thread_ts=$5
 
 # Create Slack message payload
-    cat << EOF
+    local payload
+    payload=$(cat << EOF
 {
 "channel": "$channel",
 "icon_emoji": ":redis-circle:",
@@ -86,13 +94,23 @@ slack_format_docker_PR_message() {
 ]
 }
 EOF
+)
+
+    # Add slack_thread_ts if provided
+    if [ -n "$slack_thread_ts" ]; then
+        echo "$payload" | jq --arg slack_thread_ts "$slack_thread_ts" '. + {slack_thread_ts: $slack_thread_ts}'
+    else
+        echo "$payload"
+    fi
 }
 
 slack_format_failure_message() {
-    channel=$1
-    header=$2
-    workflow_url=$3
-    footer=$4
+    local channel=$1
+    local header=$2
+    local workflow_url=$3
+    local footer=$4
+    local slack_thread_ts=$5
+
     if [ -z "$header" ]; then
         header=" "
     fi
@@ -101,7 +119,8 @@ slack_format_failure_message() {
     fi
 
 # Create Slack message payload
-    cat << EOF
+    local payload
+    payload=$(cat << EOF
 {
 "channel": "$channel",
 "icon_emoji": ":redis-circle:",
@@ -133,4 +152,12 @@ slack_format_failure_message() {
 ]
 }
 EOF
+)
+
+    # Add slack_thread_ts if provided
+    if [ -n "$slack_thread_ts" ]; then
+        echo "$payload" | jq --arg slack_thread_ts "$slack_thread_ts" '. + {slack_thread_ts: $slack_thread_ts}'
+    else
+        echo "$payload"
+    fi
 }
