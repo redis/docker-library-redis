@@ -58,7 +58,7 @@ runs:
         workflow_url="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
         footer="Repository: ${{ github.repository }} | Commit: \`${{ github.sha }}\` | View: <$workflow_url|workflow run>"
 
-        . ${{ github.action_path }}/../common/slack.sh
+        . ${{ github.action_path }}/slack_docker.sh
 
         msgfile=$(mktemp)
         echo "$IMAGES_METADATA" | slack_format_docker_images_metadata_message "${{ inputs.slack_channel_id }}" "${{ inputs.release_tag }}" "$footer" "${{ inputs.slack_thread_ts }}"  \
@@ -86,7 +86,7 @@ runs:
         workflow_url="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
         footer="Repository: ${{ github.repository }} | Commit: \`${{ github.sha }}\` | View: <$workflow_url|workflow run>"
 
-        . ${{ github.action_path }}/../common/slack.sh
+        . ${{ github.action_path }}/slack_docker.sh
 
         msgfile=$(mktemp)
         slack_format_docker_PR_message "${{ inputs.slack_channel_id }}" "${{ inputs.release_tag }}" "${{ inputs.pr_url }}" "$footer" "${{ inputs.slack_thread_ts }}" \
@@ -120,7 +120,7 @@ runs:
           exit 1
         fi
 
-        . ${{ github.action_path }}/../common/slack.sh
+        . ${{ github.action_path }}/slack_docker.sh
 
         # Generate message
         msgfile=$(mktemp)

@@ -94,6 +94,7 @@ jobs:
       redistimeseries_version: ${{ github.event.inputs.redistimeseries_version }}
       run_type: ${{ github.event.inputs.run_type }}
       slack_channel_id: ${{ github.event.inputs.slack_channel_id }}
+      slack_thread_ts: ${{ github.event.inputs.slack_thread_ts }}
 
   merge-back-to-release-branch:
     needs: [prepare-release, build-and-test]
