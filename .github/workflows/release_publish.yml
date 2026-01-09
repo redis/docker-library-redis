@@ -167,11 +167,14 @@ jobs:
             ${{ env.PR_USER_MENTIONS }}
 
       - name: Validate PR creation
-        if: !steps.create-pr.outputs.pull-request-number
+        env:
+          PULL_REQUEST_NUMBER: ${{ steps.create-pr.outputs.pull-request-number }}
         shell: bash
         run: |
-          echo "::error::Failed to create PR, pull-request-number is empty"
-          exit 1
+          if [ -z "$PULL_REQUEST_NUMBER" ]; then
+            echo "::error::Failed to create PR, pull-request-number is empty"
+            exit 1
+          fi
 
       # Since publish is only for public releases, always send notifications to the announcement channel first
       - name: Send Success Slack notification
