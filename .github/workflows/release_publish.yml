@@ -97,12 +97,12 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           # Extract major version from release version (e.g., "8.2.1" -> "8")
-          MAJOR_VERSION=$(uv --directory release-automation run redis-version major "${{ steps.parse-release.outputs.release_version }}")
+          MAJOR_VERSION=$(uv --directory release-automation run release-automation redis-version major "${{ steps.parse-release.outputs.release_version }}")
 
           echo "Major version: $MAJOR_VERSION"
 
           # Generate updated stackbrew content using uv
-          uv --directory release-automation run update-stackbrew-file $MAJOR_VERSION --input official-images/library/redis --output official-images/library/redis
+          uv --directory release-automation run release-automation update-stackbrew-file $MAJOR_VERSION --input official-images/library/redis --output official-images/library/redis
           cd official-images && git diff --color
           cd -
 

@@ -95,7 +95,7 @@ jobs:
 
           # regular version means version is in X.X.X[-sss] format, not unstable and not custom
           redis_version_is_regular=""
-          if uv --directory release-automation run redis-version major "$INPUTS_RELEASE_TAG"; then
+          if uv --directory release-automation run release-automation redis-version major "$INPUTS_RELEASE_TAG"; then
             redis_version_is_regular=1
           fi
 
