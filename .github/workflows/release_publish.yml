@@ -84,6 +84,45 @@ jobs:
           ref: ${{ steps.parse-release.outputs.release_commit_sha }}
           gh_token: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Sync forked official-images repo
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN_FOR_PR_2 }}
+        run: |
+          echo "Syncing fork ${{ env.FORKED_OFFICIAL_IMAGES_REPO }} with upstream ${{ env.TARGET_OFFICIAL_IMAGES_REPO }}"
+
+          # Use GitHub API to sync the fork with upstream
+          # POST /repos/{owner}/{repo}/merge-upstream
+          response=$(curl -L \
+            -X POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/${{ env.FORKED_OFFICIAL_IMAGES_REPO }}/merge-upstream" \
+            -d '{"branch":"master"}')
+
+          echo "API Response:"
+          echo "$response" | jq '.'
+
+          # Check if sync was successful
+          if echo "$response" | jq -e '.message' > /dev/null 2>&1; then
+            message=$(echo "$response" | jq -r '.message')
+            if [ "$message" = "This branch is not behind the upstream docker-library:master" ]; then
+              echo "Fork is already up to date"
+            elif echo "$message" | grep -q "Successfully fetched and fast-forwarded"; then
+              echo "Successfully synced fork with upstream"
+            else
+              echo "Warning: Unexpected response message: $message"
+            fi
+          elif echo "$response" | jq -e '.merge_type' > /dev/null 2>&1; then
+            merge_type=$(echo "$response" | jq -r '.merge_type')
+            echo "Successfully synced fork (merge type: $merge_type)"
+          else
+            echo "Error: Failed to sync fork"
+            echo "$response"
+            exit 1
+          fi
+
       - name: Checkout official-images repo
         uses: actions/checkout@v4
         with:
