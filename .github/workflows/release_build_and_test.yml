@@ -250,7 +250,7 @@ jobs:
       - name: Post announcement link to Slack
         if: |
           needs.build-and-test.outputs.slack_url != '' &&
-          needs.prepare-release.slack_fanout_msg_links == '1' &&
+          needs.prepare-release.outputs.slack_fanout_msg_links == '1' &&
           github.event.inputs.slack_channel_id != ''
         uses: ./.github/actions/slack-notification
         with:
