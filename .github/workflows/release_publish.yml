@@ -103,7 +103,7 @@ jobs:
           echo "Major version: $MAJOR_VERSION"
 
           # Generate updated stackbrew content using uv
-          uv --directory release-automation run release-automation update-stackbrew-file $MAJOR_VERSION --input official-images/library/redis --output official-images/library/redis
+          uv --directory release-automation run release-automation update-stackbrew-file $MAJOR_VERSION --input ../official-images/library/redis --output ../official-images/library/redis
           cd official-images && git diff --color
           cd -
 
@@ -127,17 +127,20 @@ jobs:
 
             ${{ env.PR_USER_MENTIONS }}
 
+      # Since publish is only for public releases, always send notifications to the announcement channel first
       - name: Send Success Slack notification
         id: slack-success
         continue-on-error: true
         uses: ./.github/actions/slack-notification
         with:
           slack_func: slack_format_docker_PR_message
-          slack_channel_id: ${{ github.event.inputs.slack_channel_id || vars.SLACK_CHANNEL_ID }}
+          slack_channel_id: ${{ vars.SLACK_CHANNEL_ID }}
           release_tag: v${{ steps.parse-release.outputs.release_version }}
           pr_url: ${{ steps.create-pr.outputs.pull-request-url }}
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
 
+      # Post link to message in the announcement channel to the slack thread if requested
+      # This makes user to see the link to the "official" message if he started the release in the thread
       - name: Post announcement link to Slack
         continue-on-error: true
         if: |
