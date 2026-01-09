@@ -146,6 +146,17 @@ runs:
         # Handle result
         slack_handle_message_result "${{ inputs.slack_channel_id }}" "$(cat "$msgfile")" < "$send_result"
 
+    - name: Debug slack_func input
+      shell: bash
+      run: |
+        echo "slack_func input value: '${{ inputs.slack_func }}'"
+        echo "Expected value: 'slack_format_simple_msg'"
+        if [ "${{ inputs.slack_func }}" = "slack_format_simple_msg" ]; then
+          echo "Match: YES"
+        else
+          echo "Match: NO"
+        fi
+
     - name: Send Simple Slack notification
       id: send-simple
       if: inputs.slack_func == 'slack_format_simple_msg'
