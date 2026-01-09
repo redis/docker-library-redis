@@ -32,7 +32,7 @@ env:
   PR_USER_MENTIONS: "@adamiBs @yossigo @adobrzhansky @maxb-io @dagansandler @Peter-Sh"
 
 # UUID is used to help automation to identify workflow run in the list of workflow runs.
-run-name: "Release Publish${{ github.event.inputs.workflow_uuid && format(': {0}', github.event.inputs.workflow_uuid) || '' }}"
+run-name: "release publish${{ github.event.inputs.workflow_uuid && format(': {0}', github.event.inputs.workflow_uuid) || '' }}"
 
 jobs:
   publish-release:
