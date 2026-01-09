@@ -159,7 +159,7 @@ jobs:
         uses: ./.github/actions/slack-notification
         with:
           slack_func: slack_format_docker_images_metadata_message
-          slack_channel_id: ${{ inputs.slack_channel_id || vars.SLACK_CHANNEL_ID }}
+          slack_channel_id: ${{ inputs.slack_channel_id }}
           release_tag: ${{ inputs.release_tag }}
           images_metadata: ${{ needs.collect-images-metadata.outputs.docker_images_metadata }}
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
