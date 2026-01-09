@@ -9,7 +9,7 @@ inputs:
     required: true
   release_tag:
     description: 'Release tag to build'
-    required: true
+    required: false
   images_metadata:
     description: 'JSON structure of Docker images metadata'
     required: false
@@ -155,11 +155,17 @@ runs:
       run: |
         set -e
 
+        echo "Starting simple Slack notification..."
+        echo "Channel: ${{ inputs.slack_channel_id }}"
+        echo "Thread TS: ${{ inputs.slack_thread_ts }}"
+
         msg='${{ inputs.message }}'
         if [ -z "$msg" ]; then
           echo "Error: message is required for slack_format_simple_msg"
           exit 1
         fi
+
+        echo "Message: $msg"
 
         export GITHUB_ACTION_PATH="${{ github.action_path }}"
         . ${{ github.action_path }}/slack_docker.sh
@@ -172,6 +178,9 @@ runs:
         "${{ inputs.slack_thread_ts }}" \
         > "$msgfile"
 
+        echo "Generated message payload:"
+        cat "$msgfile" | jq '.'
+
         # Send message
         send_result=$(mktemp)
         if ! slack_send_with_token "$SLACK_BOT_TOKEN" < "$msgfile" > "$send_result"; then
@@ -179,6 +188,9 @@ runs:
           cat "$msgfile"
           exit 1
         fi
+
+        echo "Message sent successfully. Response:"
+        cat "$send_result" | jq '.'
 
         # Handle result
         slack_handle_message_result "${{ inputs.slack_channel_id }}" "$(cat "$msgfile")" < "$send_result"

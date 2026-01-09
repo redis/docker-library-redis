@@ -70,8 +70,7 @@ jobs:
       - name: Install release automation dependencies
         uses: ./.github/actions/release-automation-install
 
-      - name: Redis version info
-        id: redis-version-info
+      - name: Validate inputs
         env:
           INPUTS_RELEASE_TAG: ${{ github.event.inputs.release_tag }}
           INPUTS_RELEASE_TYPE: ${{ github.event.inputs.release_type }}
@@ -256,6 +255,7 @@ jobs:
         with:
           slack_func: slack_format_simple_msg
           slack_channel_id: ${{ github.event.inputs.slack_channel_id }}
+          release_tag: ${{ github.event.inputs.release_tag }}
           slack_thread_ts: ${{ github.event.inputs.slack_thread_ts }}
           message: ${{ needs.build-and-test.outputs.slack_url }}
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
