@@ -15,12 +15,13 @@ on:
         description: 'Open a PR to official library repo'
         type: boolean
         default: false
-      release_tag:
-        description: 'Release tag to publish'
-        default: ""
-        required: false
       slack_channel_id:
-        description: 'Slack channel ID to post notifications to'
+        description: 'Slack channel ID to duplicate links to announcement messages to'
+        required: false
+        type: string
+        default: ''
+      slack_thread_ts:
+        description: 'Thread timestamp to post message as a reply (optional)'
         required: false
         type: string
         default: ''
@@ -126,24 +127,9 @@ jobs:
 
             ${{ env.PR_USER_MENTIONS }}
 
-      - name: Create Release info
-        id: create-release-info
-        run: |
-          # Create release_info.json artifact
-          cat > result.json << EOF
-          {
-            "release_version": "${{ steps.parse-release.outputs.release_version }}",
-            "pull_request_number": "${{ steps.create-pr.outputs.pull-request-number }}",
-            "pull_request_url": "${{ steps.create-pr.outputs.pull-request-url }}",
-            "run_id": ${{ github.run_id }}
-          }
-          EOF
-
-          echo "Created result.json for release_info:"
-          cat result.json
-
       - name: Send Success Slack notification
         id: slack-success
+        continue-on-error: true
         uses: ./.github/actions/slack-notification
         with:
           slack_func: slack_format_docker_PR_message
@@ -152,22 +138,43 @@ jobs:
           pr_url: ${{ steps.create-pr.outputs.pull-request-url }}
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
 
-      - name: Add Slack notification info to release info
-        if: always() && steps.create-release-info.outcome == 'success' && steps.slack-success.outputs.slack_ts != ''
+      - name: Post announcement link to Slack
+        continue-on-error: true
+        if: |
+          github.event.inputs.slack_channel_id != '' &&
+          steps.slack-success.outputs.slack_url != ''
+        uses: ./.github/actions/slack-notification
+        with:
+          slack_func: slack_format_simple_msg
+          slack_channel_id: ${{ github.event.inputs.slack_channel_id }}
+          slack_thread_ts: ${{ github.event.inputs.slack_thread_ts }}
+          message: ${{ steps.slack-success.outputs.slack_url }}
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+
+      - name: Create Release info
+        id: create-release-info
         shell: bash
         run: |
-          # Add Slack notification details to result.json
-          jq --arg slack_ts "${{ steps.slack-success.outputs.slack_ts }}" \
-             --arg slack_channel_id "${{ github.event.inputs.slack_channel_id || vars.SLACK_CHANNEL_ID }}" \
-             --arg slack_message_url "${{ steps.slack-success.outputs.slack_url }}" \
-             '. + {
-               slack_ts: $slack_ts,
-               slack_channel_id: $slack_channel_id,
-               slack_message_url: $slack_message_url
-             }' result.json > result_with_slack.json
-          mv result_with_slack.json result.json
+          # Create release_info.json with all fields, then filter out empty ones
+          jq -n \
+            --arg release_version "${{ steps.parse-release.outputs.release_version }}" \
+            --arg pull_request_number "${{ steps.create-pr.outputs.pull-request-number }}" \
+            --arg pull_request_url "${{ steps.create-pr.outputs.pull-request-url }}" \
+            --argjson run_id "${{ github.run_id }}" \
+            --arg slack_ts "${{ steps.slack-success.outputs.slack_ts }}" \
+            --arg slack_channel_id "${{ github.event.inputs.slack_channel_id || vars.SLACK_CHANNEL_ID }}" \
+            --arg slack_message_url "${{ steps.slack-success.outputs.slack_url }}" \
+            '{
+              release_version: $release_version,
+              pull_request_number: $pull_request_number,
+              pull_request_url: $pull_request_url,
+              run_id: $run_id,
+              slack_ts: $slack_ts,
+              slack_channel_id: $slack_channel_id,
+              slack_message_url: $slack_message_url
+            } | with_entries(select(.value != ""))' > result.json
 
-          echo "Updated result.json with Slack notification info:"
+          echo "Created result.json for release_info:"
           cat result.json | jq '.'
 
       - name: Upload release info artifact
