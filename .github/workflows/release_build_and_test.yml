@@ -78,7 +78,7 @@ jobs:
           INPUTS_RUN_TYPE: ${{ github.event.inputs.run_type }}
         shell: bash
         run: |
-          if ! [[ "$INPUTS_RELEASE_TYPE" =~ "public|internal" ]]; then
+          if ! [[ "$INPUTS_RELEASE_TYPE" =~ ^(public|internal)$ ]]; then
             echo "::error::Invalid release type: $INPUTS_RELEASE_TYPE"
             exit 1
           fi
@@ -88,7 +88,7 @@ jobs:
             exit 1
           fi
 
-          if ! [[ "$INPUTS_RUN_TYPE" =~ ^(unstable|custom)$ ]] && [ "$INPUTS_RELEASE_TYPE" = "public" ]; then
+          if [ "$INPUTS_RUN_TYPE" != "release" ] && [ "$INPUTS_RELEASE_TYPE" = "public" ]; then
             echo "::error::Public release may have only run type 'release'"
             exit 1
           fi
