@@ -110,7 +110,7 @@ jobs:
         id: create-pr
         uses: peter-evans/create-pull-request@v7
         with:
-          token: ${{ secrets.GH_TOKEN_FOR_PR }}
+          token: ${{ secrets.GH_TOKEN_FOR_PR_2 }}
           draft: true
           push-to-fork: ${{ github.event.inputs.pr_to_official_library == 'true' && env.FORKED_OFFICIAL_IMAGES_REPO || '' }}
           path: official-images
