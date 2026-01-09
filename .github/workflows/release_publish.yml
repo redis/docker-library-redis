@@ -89,21 +89,20 @@ jobs:
           path: official-images
           repository: ${{ github.event.inputs.pr_to_official_library == 'true' && env.TARGET_OFFICIAL_IMAGES_REPO || env.FORKED_OFFICIAL_IMAGES_REPO }}
 
+      - name: Install release automation dependencies
+        uses: ./.github/actions/release-automation-install
+
       - name: Generate stackbrew library content
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           # Extract major version from release version (e.g., "8.2.1" -> "8")
-          MAJOR_VERSION=$(echo "${{ steps.parse-release.outputs.release_version }}" | cut -d. -f1)
+          MAJOR_VERSION=$(uv --directory release-automation run release-automation redis-version major "${{ steps.parse-release.outputs.release_version }}")
+
           echo "Major version: $MAJOR_VERSION"
 
-          # Generate updated stackbrew content using the release automation Docker image
-          docker run --rm \
-            -v ${{ github.workspace }}:/workspace \
-            -w /workspace \
-            -e FORCE_COLOR=1 \
-            $(echo "ghcr.io/${{ github.repository }}/release-automation:latest" | tr '[:upper:]' '[:lower:]') \
-            update-stackbrew-file $MAJOR_VERSION --input official-images/library/redis --output official-images/library/redis
+          # Generate updated stackbrew content using uv
+          uv --directory release-automation run release-automation update-stackbrew-file $MAJOR_VERSION --input official-images/library/redis --output official-images/library/redis
           cd official-images && git diff --color
           cd -
 
@@ -111,7 +110,7 @@ jobs:
         id: create-pr
         uses: peter-evans/create-pull-request@v7
         with:
-          token: ${{ secrets.GH_TOKEN_FOR_PR }}
+          token: ${{ secrets.GH_TOKEN_FOR_PR_2 }}
           draft: true
           push-to-fork: ${{ github.event.inputs.pr_to_official_library == 'true' && env.FORKED_OFFICIAL_IMAGES_REPO || '' }}
           path: official-images

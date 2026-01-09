@@ -1,0 +1,37 @@
+name: 'Release Automation Install'
+description: 'Install uv if not present and run uv sync in release-automation directory'
+
+runs:
+  using: "composite"
+  steps:
+    - name: Check if uv is installed
+      id: check-uv
+      shell: bash
+      run: |
+        if command -v uv &> /dev/null; then
+          echo "uv_installed=true" >> $GITHUB_OUTPUT
+          echo "uv is already installed"
+          uv --version
+        else
+          echo "uv_installed=false" >> $GITHUB_OUTPUT
+          echo "uv is not installed"
+        fi
+
+    - name: Install uv
+      if: steps.check-uv.outputs.uv_installed == 'false'
+      shell: bash
+      run: |
+        curl -LsSf https://astral.sh/uv/install.sh | sh
+        echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+
+    - name: Verify uv installation
+      shell: bash
+      run: |
+        uv --version
+
+    - name: Run uv sync in release-automation directory
+      shell: bash
+      working-directory: release-automation
+      run: |
+        uv sync
+

@@ -42,6 +42,10 @@ on:
         required: false
         type: string
         default: ''
+      override_release_branch:
+        description: 'Use this release branch instead of release/X.X (for testing)'
+        required: false
+        type: string
     outputs:
       docker_images_metadata:
         description: 'Array of structured Docker images metadata that were published'
@@ -94,7 +98,7 @@ jobs:
         with:
           release_tag: ${{ inputs.release_tag }}
           gh_token: ${{ secrets.GITHUB_TOKEN }}
-          release_branch: slack_bot
+          release_branch: ${{ inputs.override_release_branch }}
       - uses: ./.github/actions/build-and-tag-locally
         with:
           distribution: ${{ matrix.distribution }}

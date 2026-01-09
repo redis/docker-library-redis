@@ -166,3 +166,19 @@ EOF
         echo "$payload"
     fi
 }
+
+slack_format_simple_msg() {
+    local channel=$1
+    local message=$2
+    local slack_thread_ts=$3
+
+    # Create simple Slack message payload with just text
+    jq -n \
+        --arg channel "$channel" \
+        --arg text "$message" \
+        --arg slack_thread_ts "$slack_thread_ts" \
+        '{
+            channel: $channel,
+            text: $text
+        } | if $slack_thread_ts != "" then . + {thread_ts: $slack_thread_ts} else . end'
+}
