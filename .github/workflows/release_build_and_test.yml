@@ -11,6 +11,13 @@ on:
       release_tag:
         description: 'Release tag to build'
         required: true
+      release_type:
+        description: 'Release type: either public or internal'
+        required: true
+      run_type:
+        description: 'Run type, either release, unstable or custom'
+        required: true
+        default: "custom"
       workflow_uuid:
         description: 'Optional UUID to identify this workflow run'
         required: false
@@ -26,10 +33,6 @@ on:
       redistimeseries_version:
         description: 'Redistimeseries version to build'
         required: false
-      run_type:
-        description: 'Run type, either release, unstable or custom'
-        required: true
-        default: "custom"
       slack_channel_id:
         description: 'Slack channel ID to post notifications to'
         required: false
@@ -57,11 +60,6 @@ jobs:
   prepare-release:
     runs-on: ["ubuntu-latest"]
     outputs:
-      redis_version_is_ga: ${{ steps.redis-version-info.outputs.redis_version_is_ga }}
-      redis_version_is_rc: ${{ steps.redis-version-info.outputs.redis_version_is_rc }}
-      redis_version_is_public: ${{ steps.redis-version-info.outputs.redis_version_is_public }}
-      # regular version means version is in X.X.X[-sss] format, not unstable and not custom
-      redis_version_is_regular: ${{ steps.redis-version-info.outputs.redis_version_is_regular }}
       slack_channel_id: ${{ steps.slack-routing.outputs.slack_channel_id }}
       slack_thread_ts: ${{ steps.slack-routing.outputs.slack_thread_ts }}
       slack_fanout_msg_links: ${{ steps.slack-routing.outputs.slack_fanout_msg_links }}
@@ -74,36 +72,55 @@ jobs:
 
       - name: Redis version info
         id: redis-version-info
+        env:
+          INPUTS_RELEASE_TAG: ${{ github.event.inputs.release_tag }}
+          INPUTS_RELEASE_TYPE: ${{ github.event.inputs.release_type }}
+          INPUTS_RUN_TYPE: ${{ github.event.inputs.run_type }}
+        shell: bash
         run: |
-          redis_version_is_public=""
+          if ! [[ "$INPUTS_RELEASE_TYPE" =~ "public|internal" ]]; then
+            echo "::error::Invalid release type: $INPUTS_RELEASE_TYPE"
+            exit 1
+          fi
+
+          if ! [[ "$INPUTS_RUN_TYPE" =~ ^(release|unstable|custom)$ ]]; then
+            echo "::error::Invalid run type: $INPUTS_RUN_TYPE"
+            exit 1
+          fi
+
+          if ! [[ "$INPUTS_RUN_TYPE" =~ ^(unstable|custom)$ ]] && [ "$INPUTS_RELEASE_TYPE" = "public" ]; then
+            echo "::error::Public release may have only run type 'release'"
+            exit 1
+          fi
+
+          # regular version means version is in X.X.X[-sss] format, not unstable and not custom
           redis_version_is_regular=""
-          if uv run redis-version check ${{ github.event.inputs.release_tag }} is-ga; then
-            echo "redis_version_is_ga=1" | tee -a $GITHUB_OUTPUT
-            redis_version_is_public=1
-          elif uv run redis-version check ${{ github.event.inputs.release_tag }} is-rc; then
-            echo "redis_version_is_rc=1" | tee -a $GITHUB_OUTPUT
-            redis_version_is_public=1
+          if uv --directory release-automation run redis-version major "$INPUTS_RELEASE_TAG"; then
+            redis_version_is_regular=1
           fi
-          if [ -n "$redis_version_is_public" ]; then
-            echo "redis_version_is_public=1" | tee -a $GITHUB_OUTPUT
-          fi
-          if uv run redis-version major ${{ github.event.inputs.release_tag }}; then
-            echo "redis_version_is_regular=1" | tee -a $GITHUB_OUTPUT
+
+          if [ "$INPUTS_RUN_TYPE" == "release" ] && [ -z "$redis_version_is_regular" ]; then
+            echo "::error::Release must be a regular version in X.Y.Z[-suffix] format"
+            exit 1
           fi
 
       - name: Setup slack message routing
         id: slack-routing
+        env:
+          INPUTS_SLACK_CHANNEL_ID: ${{ github.event.inputs.slack_channel_id }}
+          INPUTS_SLACK_THREAD_TS: ${{ github.event.inputs.slack_thread_ts }}
+          INPUTS_RELEASE_TYPE: ${{ github.event.inputs.release_type }}
         run: |
-          if [ -n "${{ steps.redis-version-info.outputs.redis_version_is_public }}" ]; then
+          if [ "$INPUTS_RELEASE_TYPE" == "public" ]; then
             # For public releases always post notifications to announcement channel
             echo "slack_channel_id=${{ vars.SLACK_CHANNEL_ID }}" | tee -a $GITHUB_OUTPUT
             # Duplicate slack message links to the requested thread (if any)
             echo "slack_fanout_msg_links=1" | tee -a $GITHUB_OUTPUT
           else
-            echo "slack_channel_id=${{ github.event.inputs.slack_channel_id }}" | tee -a $GITHUB_OUTPUT
+            echo "slack_channel_id=$INPUTS_SLACK_CHANNEL_ID" | tee -a $GITHUB_OUTPUT
           fi
-          if [ -n "${{ github.event.inputs.slack_thread_ts }}" ]; then
-            echo "slack_thread_ts=${{ github.event.inputs.slack_thread_ts }}" | tee -a $GITHUB_OUTPUT
+          if [ -n "$INPUTS_SLACK_THREAD_TS" ]; then
+            echo "slack_thread_ts=$INPUTS_SLACK_THREAD_TS" | tee -a $GITHUB_OUTPUT
           fi
 
       - name: Log in to Container Registry
@@ -114,7 +131,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Validate Redis Release Archive
-        if: steps.redis-version-info.outputs.redis_version_is_regular == '1'
+        if: github.event.inputs.run_type == 'release'
         uses: redis-developer/redis-oss-release-automation/.github/actions/validate-redis-release-archive@main
         with:
           release_tag: ${{ github.event.inputs.release_tag }}
@@ -122,7 +139,7 @@ jobs:
 
       - name: Ensure Release Branch
         id: ensure-branch
-        if: steps.redis-version-info.outputs.redis_version_is_regular == '1'
+        if: github.event.inputs.run_type == 'release'
         uses: redis-developer/redis-oss-release-automation/.github/actions/ensure-release-branch@main
         with:
           release_tag: ${{ github.event.inputs.release_tag }}
@@ -131,7 +148,7 @@ jobs:
           release_branch: ${{ github.event.inputs.override_release_branch }}
 
       - name: Apply Docker Version
-        if: steps.redis-version-info.outputs.redis_version_is_regular == '1'
+        if: github.event.inputs.run_type == 'release'
         id: apply-version
         uses: ./.github/actions/apply-docker-version
         with:
@@ -162,7 +179,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Ensure Release Branch
-        if: needs.prepare-release.outputs.redis_version_is_regular == '1'
+        if: github.event.inputs.run_type == 'release'
         id: ensure-branch
         uses: redis-developer/redis-oss-release-automation/.github/actions/ensure-release-branch@main
         with:
@@ -172,7 +189,7 @@ jobs:
           release_branch: ${{ github.event.inputs.override_release_branch }}
 
       - name: Merge back to release branch
-        if: needs.prepare-release.outputs.redis_version_is_public == '1'
+        if: github.event.inputs.release_type == 'public'
         id: merge-back
         uses: redis-developer/redis-oss-release-automation/.github/actions/merge-branches-verified@main
         with:
@@ -224,7 +241,6 @@ jobs:
           cat result.json | jq '.'
 
       - name: Upload release handle artifact
-        if: always() && steps.create-release-handle.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
           name: release_handle
