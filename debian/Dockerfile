@@ -5,7 +5,6 @@ RUN set -eux; \
 	groupadd -r -g 999 redis; \
 	useradd -r -g redis -u 999 redis
 
-RUN exit 222
 # runtime dependencies
 RUN set -eux; \
 	apt-get update; \
@@ -38,8 +37,8 @@ RUN set -eux; \
 	\
 	arch="$(dpkg --print-architecture | awk -F- '{ print $NF }')"; \
 	case "$arch" in \
-		'amd64') export BUILD_WITH_MODULES=yes; export INSTALL_RUST_TOOLCHAIN=yes; export DISABLE_WERRORS=yes ;; \
-		'arm64') export BUILD_WITH_MODULES=yes; export INSTALL_RUST_TOOLCHAIN=yes; export DISABLE_WERRORS=yes ;; \
+		'amd64') export BUILD_WITH_MODULES=no; export INSTALL_RUST_TOOLCHAIN=yes; export DISABLE_WERRORS=yes ;; \
+		'arm64') export BUILD_WITH_MODULES=no; export INSTALL_RUST_TOOLCHAIN=yes; export DISABLE_WERRORS=yes ;; \
 		*) echo >&2 "Modules are NOT supported! unsupported architecture: '$arch'"; export BUILD_WITH_MODULES=no ;; \
 	esac; \
 	if [ "$BUILD_WITH_MODULES" = "yes" ]; then \
