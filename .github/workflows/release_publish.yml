@@ -252,6 +252,7 @@ jobs:
       - name: Post failure notification link to Slack
         continue-on-error: true
         if: |
+          failure() &&
           github.event.inputs.slack_channel_id != '' &&
           steps.slack-failure.outputs.slack_url != ''
         uses: ./.github/actions/slack-notification
