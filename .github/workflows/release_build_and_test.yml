@@ -248,15 +248,15 @@ jobs:
 
 
   notify-slack-thread:
+    if: |
+      always() &&
+      needs.build-and-test.outputs.slack_url != '' &&
+      needs.prepare-release.outputs.slack_fanout_msg_links == '1' &&
+      github.event.inputs.slack_channel_id != ''
     needs: [prepare-release, build-and-test]
     runs-on: ["ubuntu-latest"]
     steps:
     - name: Post announcement link to Slack
-      if: |
-        always() &&
-        needs.build-and-test.outputs.slack_url != '' &&
-        needs.prepare-release.outputs.slack_fanout_msg_links == '1' &&
-        github.event.inputs.slack_channel_id != ''
       uses: ./.github/actions/slack-notification
       with:
         slack_func: slack_format_simple_msg
