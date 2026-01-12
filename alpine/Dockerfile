@@ -112,6 +112,7 @@ RUN set -eux; \
 	\
 # Disable static linking the C runtime for RediSearch's rust submodule
 	export RUST_DYN_CRT=1; \
+	export PATH="/usr/lib/llvm21/bin:$PATH"; \
 	export BUILD_TLS=yes; \
 	if [ "$BUILD_WITH_MODULES" = "yes" ]; then \
 		if [ $CUSTOM_BUILD = true ]; then \
