@@ -5,6 +5,9 @@ RUN set -eux; \
 	groupadd -r -g 999 redis; \
 	useradd -r -g redis -u 999 redis
 
+# add the LLVM APT repository key once (vendored in this repository)
+COPY llvm-snapshot.gpg.key /etc/apt/trusted.gpg.d/apt.llvm.org.asc
+
 # runtime dependencies
 RUN set -eux; \
 	apt-get update; \
@@ -43,9 +46,7 @@ RUN set -eux; \
 		*) echo >&2 "Modules are NOT supported! unsupported architecture: '$arch'"; export BUILD_WITH_MODULES=no ;; \
 	esac; \
 	if [ "$BUILD_WITH_MODULES" = "yes" ]; then \
-		wget -O- https://apt.llvm.org/llvm-snapshot.gpg.key \
-			| gpg --dearmor -o /usr/share/keyrings/llvm-snapshot-keyring.gpg; \
-		echo "deb [signed-by=/usr/share/keyrings/llvm-snapshot-keyring.gpg] http://apt.llvm.org/trixie/ llvm-toolchain-trixie-21 main" \
+	echo "deb http://apt.llvm.org/trixie/ llvm-toolchain-trixie-21 main" \
 			> /etc/apt/sources.list.d/llvm-toolchain.list; \
 		apt-get update; \
 		apt-get install -y --no-install-recommends \
