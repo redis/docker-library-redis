@@ -256,6 +256,9 @@ jobs:
     needs: [prepare-release, build-and-test]
     runs-on: ["ubuntu-latest"]
     steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
     - name: Post announcement link to Slack
       uses: ./.github/actions/slack-notification
       with:
