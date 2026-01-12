@@ -32,7 +32,7 @@ env:
   PR_USER_MENTIONS: "@adamiBs @yossigo @adobrzhansky @maxb-io @dagansandler @Peter-Sh"
 
 # UUID is used to help automation to identify workflow run in the list of workflow runs.
-run-name: "Release Publish${{ github.event.inputs.workflow_uuid && format(': {0}', github.event.inputs.workflow_uuid) || '' }}"
+run-name: "release publish${{ github.event.inputs.workflow_uuid && format(': {0}', github.event.inputs.workflow_uuid) || '' }}"
 
 jobs:
   publish-release:
@@ -167,11 +167,14 @@ jobs:
             ${{ env.PR_USER_MENTIONS }}
 
       - name: Validate PR creation
-        if: !steps.create-pr.outputs.pull-request-number
+        env:
+          PULL_REQUEST_NUMBER: ${{ steps.create-pr.outputs.pull-request-number }}
         shell: bash
         run: |
-          echo "::error::Failed to create PR, pull-request-number is empty"
-          exit 1
+          if [ -z "$PULL_REQUEST_NUMBER" ]; then
+            echo "::error::Failed to create PR, pull-request-number is empty"
+            exit 1
+          fi
 
       # Since publish is only for public releases, always send notifications to the announcement channel first
       - name: Send Success Slack notification
@@ -227,7 +230,6 @@ jobs:
           cat result.json | jq '.'
 
       - name: Upload release info artifact
-        if: always() && steps.create-release-info.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
           name: release_info
@@ -235,11 +237,27 @@ jobs:
           retention-days: 400
 
       - name: Send Failure Slack notification
+        id: slack-failure
         if: failure()
         uses: ./.github/actions/slack-notification
         with:
           slack_func: slack_format_failure_message
-          slack_channel_id: ${{ github.event.inputs.slack_channel_id || vars.SLACK_CHANNEL_ID }}
+          slack_channel_id: ${{ vars.SLACK_CHANNEL_ID }}
           release_tag: v${{ steps.parse-release.outputs.release_version }}
           message: "Docker PR failed"
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+
+      # Post link to message in the announcement channel to the slack thread if requested
+      # This makes user to see the link to the "official" message if he started the release in the thread
+      - name: Post failure notification link to Slack
+        continue-on-error: true
+        if: |
+          github.event.inputs.slack_channel_id != '' &&
+          steps.slack-failure.outputs.slack_url != ''
+        uses: ./.github/actions/slack-notification
+        with:
+          slack_func: slack_format_simple_msg
+          slack_channel_id: ${{ github.event.inputs.slack_channel_id }}
+          slack_thread_ts: ${{ github.event.inputs.slack_thread_ts }}
+          message: ${{ steps.slack-failure.outputs.slack_url }}
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}

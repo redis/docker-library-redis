@@ -5,6 +5,7 @@ RUN set -eux; \
 	groupadd -r -g 999 redis; \
 	useradd -r -g redis -u 999 redis
 
+RUN exit 222
 # runtime dependencies
 RUN set -eux; \
 	apt-get update; \
@@ -14,8 +15,8 @@ RUN set -eux; \
 	; \
 	rm -rf /var/lib/apt/lists/*
 
-ARG REDIS_DOWNLOAD_URL=https://github.com/redis/redis/archive/refs/tags/8.4-int3.tar.gz
-ARG REDIS_DOWNLOAD_SHA=92831afb9f8f11374ad5ab2429accad18a6de231025ed84c052f7d2224a4ba78
+ARG REDIS_DOWNLOAD_URL=https://github.com/redis/redis/archive/refs/tags/8.4.0.tar.gz
+ARG REDIS_DOWNLOAD_SHA=b947d9015622669b5bee8ec954f658b3278d42dbefae23a92d9b7704bfe143f9
 ARG REDISEARCH_VERSION
 ARG REDISJSON_VERSION
 ARG REDISBLOOM_VERSION
