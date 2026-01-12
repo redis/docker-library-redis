@@ -246,16 +246,22 @@ jobs:
           path: result.json
           retention-days: 400
 
-      - name: Post announcement link to Slack
-        if: |
-          needs.build-and-test.outputs.slack_url != '' &&
-          needs.prepare-release.outputs.slack_fanout_msg_links == '1' &&
-          github.event.inputs.slack_channel_id != ''
-        uses: ./.github/actions/slack-notification
-        with:
-          slack_func: slack_format_simple_msg
-          slack_channel_id: ${{ github.event.inputs.slack_channel_id }}
-          release_tag: ${{ github.event.inputs.release_tag }}
-          slack_thread_ts: ${{ github.event.inputs.slack_thread_ts }}
-          message: ${{ needs.build-and-test.outputs.slack_url }}
-          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+
+  notify-slack-thread:
+    needs: [prepare-release, build-and-test]
+    runs-on: ["ubuntu-latest"]
+    steps:
+    - name: Post announcement link to Slack
+      if: |
+        always() &&
+        needs.build-and-test.outputs.slack_url != '' &&
+        needs.prepare-release.outputs.slack_fanout_msg_links == '1' &&
+        github.event.inputs.slack_channel_id != ''
+      uses: ./.github/actions/slack-notification
+      with:
+        slack_func: slack_format_simple_msg
+        slack_channel_id: ${{ github.event.inputs.slack_channel_id }}
+        release_tag: ${{ github.event.inputs.release_tag }}
+        slack_thread_ts: ${{ github.event.inputs.slack_thread_ts }}
+        message: ${{ needs.build-and-test.outputs.slack_url }}
+        SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}

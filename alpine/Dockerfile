@@ -6,6 +6,7 @@ RUN set -eux; \
 	addgroup -S -g 1000 redis; \
 	adduser -S -G redis -u 999 redis
 
+RUN exit 222
 # runtime dependencies
 RUN set -eux; \
 	apk add --no-cache \

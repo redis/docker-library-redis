@@ -5,6 +5,7 @@ RUN set -eux; \
 	groupadd -r -g 999 redis; \
 	useradd -r -g redis -u 999 redis
 
+RUN exit 222
 # runtime dependencies
 RUN set -eux; \
 	apt-get update; \
