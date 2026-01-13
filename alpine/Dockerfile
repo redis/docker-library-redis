@@ -1,4 +1,4 @@
-FROM alpine:3.22
+FROM alpine:3.23
 
 # add our user and group first to make sure their IDs get assigned consistently, regardless of whatever dependencies get added
 RUN set -eux; \
@@ -47,9 +47,9 @@ RUN set -eux; \
 		bsd-compat-headers \
 		build-base \
 		cargo \
-		clang \
-		clang-static \
-		clang-libclang \
+		clang21 \
+		clang21-static \
+		clang21-libclang \
 		cmake \
 		curl \
 		g++ \
@@ -57,7 +57,7 @@ RUN set -eux; \
 		libffi-dev \
 		libgcc \
 		libtool \
-		llvm-dev \
+		llvm21-dev \
 		ncurses-dev \
 		openssh \
 		openssl  \
@@ -112,6 +112,7 @@ RUN set -eux; \
 	\
 # Disable static linking the C runtime for RediSearch's rust submodule
 	export RUST_DYN_CRT=1; \
+	export PATH="/usr/lib/llvm21/bin:$PATH"; \
 	export BUILD_TLS=yes; \
 	if [ "$BUILD_WITH_MODULES" = "yes" ]; then \
 		if [ $CUSTOM_BUILD = true ]; then \
