@@ -49,6 +49,8 @@ runs:
 
     - name: Validate slack_func input
       shell: bash
+      env:
+        INPUTS_SLACK_FUNC: ${{ inputs.slack_func }}
       run: |
         valid_functions=(
           "slack_format_docker_images_metadata_message"
@@ -57,23 +59,22 @@ runs:
           "slack_format_simple_msg"
         )
 
-        slack_func="${{ inputs.slack_func }}"
         is_valid=false
 
         for func in "${valid_functions[@]}"; do
-          if [ "$slack_func" = "$func" ]; then
+          if [ "$INPUTS_SLACK_FUNC" = "$func" ]; then
             is_valid=true
             break
           fi
         done
 
         if [ "$is_valid" = false ]; then
-          echo "Error: Unknown slack_func '$slack_func'"
+          echo "Error: Unknown slack_func '$INPUTS_SLACK_FUNC'"
           echo "Valid functions are: ${valid_functions[*]}"
           exit 1
         fi
 
-        echo "Using slack_func: $slack_func"
+        echo "Using slack_func: $INPUTS_SLACK_FUNC"
 
     - name: Send Images Slack notification
       id: send-images
@@ -82,15 +83,22 @@ runs:
       env:
         SLACK_BOT_TOKEN: ${{ inputs.SLACK_BOT_TOKEN }}
         IMAGES_METADATA: ${{ inputs.images_metadata }}
+        INPUTS_SLACK_CHANNEL_ID: ${{ inputs.slack_channel_id }}
+        INPUTS_RELEASE_TAG: ${{ inputs.release_tag }}
+        INPUTS_SLACK_THREAD_TS: ${{ inputs.slack_thread_ts }}
+        GITHUB_REPOSITORY: ${{ github.repository }}
+        GITHUB_RUN_ID: ${{ github.run_id }}
+        GITHUB_SHA: ${{ github.sha }}
+        GITHUB_ACTION_PATH: ${{ github.action_path }}
       run: |
-        workflow_url="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-        footer="Repository: ${{ github.repository }} | Commit: \`${{ github.sha }}\` | View: <$workflow_url|workflow run>"
+        workflow_url="https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+        footer="Repository: ${GITHUB_REPOSITORY} | Commit: \`${GITHUB_SHA}\` | View: <$workflow_url|workflow run>"
 
-        export GITHUB_ACTION_PATH="${{ github.action_path }}"
-        . ${{ github.action_path }}/slack_docker.sh
+        export GITHUB_ACTION_PATH
+        . "${GITHUB_ACTION_PATH}/slack_docker.sh"
 
         msgfile=$(mktemp)
-        echo "$IMAGES_METADATA" | slack_format_docker_images_metadata_message "${{ inputs.slack_channel_id }}" "${{ inputs.release_tag }}" "$footer" "${{ inputs.slack_thread_ts }}"  \
+        echo "$IMAGES_METADATA" | slack_format_docker_images_metadata_message "$INPUTS_SLACK_CHANNEL_ID" "$INPUTS_RELEASE_TAG" "$footer" "$INPUTS_SLACK_THREAD_TS"  \
         > "$msgfile"
 
         send_result=$(mktemp)
@@ -102,7 +110,7 @@ runs:
         fi
 
         # Handle result and set outputs
-        slack_handle_message_result "${{ inputs.slack_channel_id }}" "$(cat "$msgfile")" < "$send_result"
+        slack_handle_message_result "$INPUTS_SLACK_CHANNEL_ID" "$(cat "$msgfile")" < "$send_result"
 
     - name: Send PR Slack notification
       id: send-pr
@@ -111,15 +119,23 @@ runs:
       env:
         SLACK_BOT_TOKEN: ${{ inputs.SLACK_BOT_TOKEN }}
         IMAGES_METADATA: ${{ inputs.images_metadata }}
+        INPUTS_SLACK_CHANNEL_ID: ${{ inputs.slack_channel_id }}
+        INPUTS_RELEASE_TAG: ${{ inputs.release_tag }}
+        INPUTS_PR_URL: ${{ inputs.pr_url }}
+        INPUTS_SLACK_THREAD_TS: ${{ inputs.slack_thread_ts }}
+        GITHUB_REPOSITORY: ${{ github.repository }}
+        GITHUB_RUN_ID: ${{ github.run_id }}
+        GITHUB_SHA: ${{ github.sha }}
+        GITHUB_ACTION_PATH: ${{ github.action_path }}
       run: |
-        workflow_url="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-        footer="Repository: ${{ github.repository }} | Commit: \`${{ github.sha }}\` | View: <$workflow_url|workflow run>"
+        workflow_url="https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+        footer="Repository: ${GITHUB_REPOSITORY} | Commit: \`${GITHUB_SHA}\` | View: <$workflow_url|workflow run>"
 
-        export GITHUB_ACTION_PATH="${{ github.action_path }}"
-        . ${{ github.action_path }}/slack_docker.sh
+        export GITHUB_ACTION_PATH
+        . "${GITHUB_ACTION_PATH}/slack_docker.sh"
 
         msgfile=$(mktemp)
-        slack_format_docker_PR_message "${{ inputs.slack_channel_id }}" "${{ inputs.release_tag }}" "${{ inputs.pr_url }}" "$footer" "${{ inputs.slack_thread_ts }}" \
+        slack_format_docker_PR_message "$INPUTS_SLACK_CHANNEL_ID" "$INPUTS_RELEASE_TAG" "$INPUTS_PR_URL" "$footer" "$INPUTS_SLACK_THREAD_TS" \
         > "$msgfile"
 
         send_result=$(mktemp)
@@ -131,7 +147,7 @@ runs:
         fi
 
         # Handle result and set outputs
-        slack_handle_message_result "${{ inputs.slack_channel_id }}" "$(cat "$msgfile")" < "$send_result"
+        slack_handle_message_result "$INPUTS_SLACK_CHANNEL_ID" "$(cat "$msgfile")" < "$send_result"
 
     - name: Send Failure Slack notification
       id: send-failure
@@ -139,28 +155,36 @@ runs:
       shell: bash
       env:
         SLACK_BOT_TOKEN: ${{ inputs.SLACK_BOT_TOKEN }}
+        INPUTS_SLACK_CHANNEL_ID: ${{ inputs.slack_channel_id }}
+        INPUTS_MESSAGE: ${{ inputs.message }}
+        INPUTS_RELEASE_TAG: ${{ inputs.release_tag }}
+        INPUTS_SLACK_THREAD_TS: ${{ inputs.slack_thread_ts }}
+        GITHUB_REPOSITORY: ${{ github.repository }}
+        GITHUB_RUN_ID: ${{ github.run_id }}
+        GITHUB_SHA: ${{ github.sha }}
+        GITHUB_ACTION_PATH: ${{ github.action_path }}
       run: |
         set -e
-        workflow_url="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-        footer="Repository: ${{ github.repository }} | Commit: \`${{ github.sha }}\`"
+        workflow_url="https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+        footer="Repository: ${GITHUB_REPOSITORY} | Commit: \`${GITHUB_SHA}\`"
 
-        msg='${{ inputs.message }}'
-        if [ -z "$msg" ]; then
+        if [ -z "$INPUTS_MESSAGE" ]; then
           echo "Error: message is required"
           exit 1
         fi
 
-        export GITHUB_ACTION_PATH="${{ github.action_path }}"
-        . ${{ github.action_path }}/slack_docker.sh
+        export GITHUB_ACTION_PATH
+        . "${GITHUB_ACTION_PATH}/slack_docker.sh"
 
         # Generate message
+        release_tag="${INPUTS_RELEASE_TAG:-unknown}"
         msgfile=$(mktemp)
         slack_format_failure_message \
-        "${{ inputs.slack_channel_id }}" \
-        "$msg for Redis: ${{ inputs.release_tag || 'unknown'}}" \
+        "$INPUTS_SLACK_CHANNEL_ID" \
+        "$INPUTS_MESSAGE for Redis: $release_tag" \
         "$workflow_url" \
         "$footer" \
-        "${{ inputs.slack_thread_ts }}" \
+        "$INPUTS_SLACK_THREAD_TS" \
         > "$msgfile"
 
         # Send message
@@ -172,7 +196,7 @@ runs:
         fi
 
         # Handle result
-        slack_handle_message_result "${{ inputs.slack_channel_id }}" "$(cat "$msgfile")" < "$send_result"
+        slack_handle_message_result "$INPUTS_SLACK_CHANNEL_ID" "$(cat "$msgfile")" < "$send_result"
 
     - name: Send Simple Slack notification
       id: send-simple
@@ -180,24 +204,27 @@ runs:
       shell: bash
       env:
         SLACK_BOT_TOKEN: ${{ inputs.SLACK_BOT_TOKEN }}
+        INPUTS_SLACK_CHANNEL_ID: ${{ inputs.slack_channel_id }}
+        INPUTS_MESSAGE: ${{ inputs.message }}
+        INPUTS_SLACK_THREAD_TS: ${{ inputs.slack_thread_ts }}
+        GITHUB_ACTION_PATH: ${{ github.action_path }}
       run: |
         set -e
 
-        msg='${{ inputs.message }}'
-        if [ -z "$msg" ]; then
+        if [ -z "$INPUTS_MESSAGE" ]; then
           echo "Error: message is required for slack_format_simple_msg"
           exit 1
         fi
 
-        export GITHUB_ACTION_PATH="${{ github.action_path }}"
-        . ${{ github.action_path }}/slack_docker.sh
+        export GITHUB_ACTION_PATH
+        . "${GITHUB_ACTION_PATH}/slack_docker.sh"
 
         # Generate message
         msgfile=$(mktemp)
         slack_format_simple_msg \
-        "${{ inputs.slack_channel_id }}" \
-        "$msg" \
-        "${{ inputs.slack_thread_ts }}" \
+        "$INPUTS_SLACK_CHANNEL_ID" \
+        "$INPUTS_MESSAGE" \
+        "$INPUTS_SLACK_THREAD_TS" \
         > "$msgfile"
 
         # Send message
@@ -209,4 +236,4 @@ runs:
         fi
 
         # Handle result
-        slack_handle_message_result "${{ inputs.slack_channel_id }}" "$(cat "$msgfile")" < "$send_result"
+        slack_handle_message_result "$INPUTS_SLACK_CHANNEL_ID" "$(cat "$msgfile")" < "$send_result"

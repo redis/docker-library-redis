@@ -109,10 +109,11 @@ jobs:
           INPUTS_SLACK_CHANNEL_ID: ${{ github.event.inputs.slack_channel_id }}
           INPUTS_SLACK_THREAD_TS: ${{ github.event.inputs.slack_thread_ts }}
           INPUTS_RELEASE_TYPE: ${{ github.event.inputs.release_type }}
+          VARS_SLACK_CHANNEL_ID: ${{ vars.SLACK_CHANNEL_ID }}
         run: |
           if [ "$INPUTS_RELEASE_TYPE" == "public" ]; then
             # For public releases always post notifications to announcement channel
-            echo "slack_channel_id=${{ vars.SLACK_CHANNEL_ID }}" | tee -a $GITHUB_OUTPUT
+            echo "slack_channel_id=$VARS_SLACK_CHANNEL_ID" | tee -a $GITHUB_OUTPUT
             # Duplicate slack message links to the requested thread (if any)
             echo "slack_fanout_msg_links=1" | tee -a $GITHUB_OUTPUT
           else
@@ -199,9 +200,20 @@ jobs:
       - name: Create release handle JSON
         id: create-release-handle
         shell: bash
+        env:
+          NEEDS_DOCKER_IMAGES_METADATA: ${{ needs.build-and-test.outputs.docker_images_metadata }}
+          STEPS_MERGE_COMMIT_SHA: ${{ steps.merge-back.outputs.merge_commit_sha }}
+          STEPS_TARGET_BEFORE_MERGE_SHA: ${{ steps.merge-back.outputs.target_before_merge_sha }}
+          INPUTS_RELEASE_TAG: ${{ github.event.inputs.release_tag }}
+          STEPS_RELEASE_VERSION_BRANCH: ${{ steps.ensure-branch.outputs.release_version_branch }}
+          STEPS_RELEASE_BRANCH: ${{ steps.ensure-branch.outputs.release_branch }}
+          NEEDS_SLACK_TS: ${{ needs.build-and-test.outputs.slack_ts }}
+          INPUTS_SLACK_CHANNEL_ID: ${{ github.event.inputs.slack_channel_id }}
+          VARS_SLACK_CHANNEL_ID: ${{ vars.SLACK_CHANNEL_ID }}
+          NEEDS_SLACK_URL: ${{ needs.build-and-test.outputs.slack_url }}
         run: |
           # Get docker images metadata from build-and-test job (required field)
-          DOCKER_IMAGES_METADATA='${{ needs.build-and-test.outputs.docker_images_metadata }}'
+          DOCKER_IMAGES_METADATA="$NEEDS_DOCKER_IMAGES_METADATA"
 
           # Validate that DOCKER_IMAGES_METADATA is valid JSON
           if ! echo "$DOCKER_IMAGES_METADATA" | jq . > /dev/null 2>&1; then
@@ -210,21 +222,24 @@ jobs:
           fi
 
           # Determine release_commit_sha
-          RELEASE_COMMIT_SHA="${{ steps.merge-back.outputs.merge_commit_sha }}"
+          RELEASE_COMMIT_SHA="$STEPS_MERGE_COMMIT_SHA"
           if [ -z "$RELEASE_COMMIT_SHA" ]; then
-            RELEASE_COMMIT_SHA="${{ steps.merge-back.outputs.target_before_merge_sha }}"
+            RELEASE_COMMIT_SHA="$STEPS_TARGET_BEFORE_MERGE_SHA"
           fi
+
+          # Determine slack_channel_id
+          SLACK_CHANNEL_ID="${INPUTS_SLACK_CHANNEL_ID:-$VARS_SLACK_CHANNEL_ID}"
 
           # Create JSON with all fields, then filter out empty ones
           jq -n \
             --argjson docker_images_metadata "$DOCKER_IMAGES_METADATA" \
             --arg release_commit_sha "$RELEASE_COMMIT_SHA" \
-            --arg release_version "${{ github.event.inputs.release_tag }}" \
-            --arg release_version_branch "${{ steps.ensure-branch.outputs.release_version_branch }}" \
-            --arg release_branch "${{ steps.ensure-branch.outputs.release_branch }}" \
-            --arg slack_ts "${{ needs.build-and-test.outputs.slack_ts }}" \
-            --arg slack_channel_id "${{ github.event.inputs.slack_channel_id || vars.SLACK_CHANNEL_ID }}" \
-            --arg slack_message_url "${{ needs.build-and-test.outputs.slack_url }}" \
+            --arg release_version "$INPUTS_RELEASE_TAG" \
+            --arg release_version_branch "$STEPS_RELEASE_VERSION_BRANCH" \
+            --arg release_branch "$STEPS_RELEASE_BRANCH" \
+            --arg slack_ts "$NEEDS_SLACK_TS" \
+            --arg slack_channel_id "$SLACK_CHANNEL_ID" \
+            --arg slack_message_url "$NEEDS_SLACK_URL" \
             '{
               docker_images_metadata: $docker_images_metadata,
               release_commit_sha: $release_commit_sha,
