@@ -211,9 +211,24 @@ runs:
     - name: Sanity Tests
       if: ${{ contains(fromJSON('["amd64", "i386", "arm64"]'), steps.platform.outputs.display_name) }}
       shell: bash
+      env:
+        CONTAINER_NAME: sanity-test-${{ steps.platform.outputs.display_name }}
       run: |
-        docker exec sanity-test-${{ steps.platform.outputs.display_name }} redis-cli ping
-        docker exec sanity-test-${{ steps.platform.outputs.display_name }} redis-cli info server
+        ATTEMPTS=0
+        PING_OK=""
+        while [[ $(( ATTEMPTS++ )) < 5 ]]; do
+          if docker exec "$CONTAINER_NAME" redis-cli ping; then
+            PING_OK=1
+            break;
+          fi
+          sleep 1
+        done
+        if [ -z "$PING_OK" ]; then
+          echo "::error::Redis failed to respond after $ATTEMPTS attempts"
+          docker logs "$CONTAINER_NAME"
+          exit 1
+        fi
+        docker exec "$CONTAINER_NAME" redis-cli info server
 
     - name: Verify installed modules
       if: ${{ contains(fromJSON('["amd64", "arm64"]'), steps.platform.outputs.display_name) }}
