@@ -23,7 +23,8 @@ runs:
 
           if ! diff -u ../$distro/Dockerfile /tmp/$distro-rendered.Dockerfile; then
             echo "❌ ERROR: $distro/Dockerfile is not in sync with $distro/Dockerfile.j2"
-            echo "To fix: cd release-automation && uv run release-automation render-dockerfile -t ../$distro/Dockerfile.j2 -j ../.redis.version.json --set custom_build false -o ../$distro/Dockerfile"
+            echo "To fix: ./bin/render-all-dockerfiles.sh"
+            echo "And commit the changes."
             exit_code=1
           fi
         done
