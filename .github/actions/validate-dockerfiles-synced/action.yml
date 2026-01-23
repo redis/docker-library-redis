@@ -13,6 +13,7 @@ runs:
       run: |
         echo "Validating Dockerfiles are generated from templates..."
 
+        exit_code=0
         for distro in alpine debian; do
           uv run release-automation render-dockerfile \
             -t ../$distro/Dockerfile.j2 \
@@ -23,9 +24,11 @@ runs:
           if ! diff -u ../$distro/Dockerfile /tmp/$distro-rendered.Dockerfile; then
             echo "❌ ERROR: $distro/Dockerfile is not in sync with $distro/Dockerfile.j2"
             echo "To fix: cd release-automation && uv run release-automation render-dockerfile -t ../$distro/Dockerfile.j2 -j ../.redis.version.json --set custom_build false -o ../$distro/Dockerfile"
-            exit 1
+            exit_code=1
           fi
         done
 
-        echo "✅ All Dockerfiles are in sync with templates"
+        if [ $exit_code -eq 0 ]; then
+          echo "✅ All Dockerfiles are in sync with templates"
+        exit $exit_code
 

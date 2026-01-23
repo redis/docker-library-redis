@@ -28,6 +28,7 @@ jobs:
       run_type: pr
 
   build-and-test-unstable:
+    needs: validate-dockerfiles-synced
     uses: ./.github/workflows/build-n-test.yml
     if: github.event_name == 'pull_request' && github.base_ref == 'unstable'
     secrets: inherit
