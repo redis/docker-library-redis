@@ -1,25 +1,8 @@
 #!/bin/bash
 set -e
 
-# This script updates Redis version in Dockerfiles using environment variables
-# REDIS_ARCHIVE_URL and REDIS_ARCHIVE_SHA, then commits changes if any were made.
-
-# shellcheck disable=SC2034
-last_cmd_stdout=""
-# shellcheck disable=SC2034
-last_cmd_stderr=""
-# shellcheck disable=SC2034
-last_cmd_result=0
-# shellcheck disable=SC2034
-VERBOSITY=1
-
-
-
-SCRIPT_DIR="$(dirname -- "$( readlink -f -- "$0"; )")"
-# shellcheck disable=SC1091
-. "$SCRIPT_DIR/../common/func.sh"
-
-source_helper_file helpers.sh
+# This script updates .redis.version.json and regenerates Dockerfiles from templates
+# using environment variables REDIS_ARCHIVE_URL and REDIS_ARCHIVE_SHA.
 
 # Input TAG is expected in $1
 TAG="$1"
@@ -44,45 +27,32 @@ echo "TAG: $TAG"
 echo "REDIS_ARCHIVE_URL: $REDIS_ARCHIVE_URL"
 echo "REDIS_ARCHIVE_SHA: $REDIS_ARCHIVE_SHA"
 
-# Function to update Dockerfile
-update_dockerfile() {
-    local dockerfile="$1"
-    local updated=false
-
-    if [ ! -f "$dockerfile" ]; then
-        echo "Warning: $dockerfile not found, skipping"
-        return 1
-    fi
-
-    echo "Updating $dockerfile..."
-
-    # Update REDIS_DOWNLOAD_URL
-    if grep -q "^ARG REDIS_DOWNLOAD_URL=" "$dockerfile"; then
-        sed -i "s|^ARG REDIS_DOWNLOAD_URL=.*|ARG REDIS_DOWNLOAD_URL=$REDIS_ARCHIVE_URL|" "$dockerfile"
-    else
-        echo "Cannot update $dockerfile, ARG REDIS_DOWNLOAD_URL not found"
-        return 1
-    fi
-
-
-    # Update REDIS_DOWNLOAD_SHA
-    if grep -q "^ARG REDIS_DOWNLOAD_SHA=" "$dockerfile"; then
-        sed -i "s|^ARG REDIS_DOWNLOAD_SHA=.*|ARG REDIS_DOWNLOAD_SHA=$REDIS_ARCHIVE_SHA|" "$dockerfile"
-    else
-        echo "Cannot update $dockerfile, ARG REDIS_DOWNLOAD_SHA not found"
-        return 1
-    fi
+# Update .redis.version.json
+echo "Updating .redis.version.json..."
+cat > .redis.version.json <<EOF
+{
+	"redis_download_url": "$REDIS_ARCHIVE_URL",
+	"redis_download_sha": "$REDIS_ARCHIVE_SHA"
 }
+EOF
 
-docker_files=("debian/Dockerfile" "alpine/Dockerfile")
-# Track which files were modified
-changed_files=()
+# Render Dockerfiles from templates
+echo "Rendering Dockerfiles from templates..."
+cd release-automation
 
-for dockerfile in "${docker_files[@]}"; do
-    update_dockerfile "$dockerfile"
+for distro in alpine debian; do
+    echo "Rendering $distro/Dockerfile..."
+    uv run release-automation render-dockerfile \
+        -t ../$distro/Dockerfile.j2 \
+        -j ../.redis.version.json \
+        --set custom_build false \
+        -o ../$distro/Dockerfile
 done
 
-changed_files=($(git diff --name-only "${docker_files[@]}"))
+cd ..
+
+# Detect changed files
+changed_files=($(git diff --name-only .redis.version.json alpine/Dockerfile debian/Dockerfile))
 
 # Output the list of changed files for GitHub Actions
 if [ ${#changed_files[@]} -gt 0 ]; then
@@ -90,12 +60,14 @@ if [ ${#changed_files[@]} -gt 0 ]; then
     printf '%s\n' "${changed_files[@]}"
 
     # Set GitHub Actions output
-    changed_files_output=$(printf '%s\n' "${changed_files[@]}")
-    {
-        echo "changed_files<<EOF"
-        echo "$changed_files_output"
-        echo "EOF"
-    } >> "$GITHUB_OUTPUT"
+    if [ -n "$GITHUB_OUTPUT" ]; then
+        changed_files_output=$(printf '%s\n' "${changed_files[@]}")
+        {
+            echo "changed_files<<EOF"
+            echo "$changed_files_output"
+            echo "EOF"
+        } >> "$GITHUB_OUTPUT"
+    fi
 
     echo "Changed files output set for next step"
 else
