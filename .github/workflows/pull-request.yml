@@ -8,6 +8,12 @@ on:
       - unstable
 
 jobs:
+  validate-dockerfiles-synced:
+    name: Validate Dockerfiles Synced
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate Dockerfiles are synced with templates
+        uses: ./.github/actions/validate-dockerfiles-synced
   build-and-test:
     uses: ./.github/workflows/build-n-test.yml
     if: github.event_name == 'pull_request' && github.base_ref != 'unstable'

@@ -1,0 +1,31 @@
+name: 'Validate Dockerfiles Synced'
+description: 'Check that all Dockerfiles are generated from templates'
+
+runs:
+  using: "composite"
+  steps:
+    - name: Install release automation dependencies
+      uses: ./.github/actions/release-automation-install
+
+    - name: Validate Dockerfiles are synced with templates
+      shell: bash
+      working-directory: release-automation
+      run: |
+        echo "Validating Dockerfiles are generated from templates..."
+
+        for distro in alpine debian; do
+          uv run release-automation render-dockerfile \
+            -t ../$distro/Dockerfile.j2 \
+            -j ../.redis.version.json \
+            --set custom_build false \
+            -o /tmp/$distro-rendered.Dockerfile
+
+          if ! diff -u ../$distro/Dockerfile /tmp/$distro-rendered.Dockerfile; then
+            echo "❌ ERROR: $distro/Dockerfile is not in sync with $distro/Dockerfile.j2"
+            echo "To fix: cd release-automation && uv run release-automation render-dockerfile -t ../$distro/Dockerfile.j2 -j ../.redis.version.json --set custom_build false -o ../$distro/Dockerfile"
+            exit 1
+          fi
+        done
+
+        echo "✅ All Dockerfiles are in sync with templates"
+
