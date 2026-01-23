@@ -12,9 +12,13 @@ jobs:
     name: Validate Dockerfiles Synced
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
       - name: Validate Dockerfiles are synced with templates
         uses: ./.github/actions/validate-dockerfiles-synced
+
   build-and-test:
+    needs: validate-dockerfiles-synced
     uses: ./.github/workflows/build-n-test.yml
     if: github.event_name == 'pull_request' && github.base_ref != 'unstable'
     secrets: inherit
