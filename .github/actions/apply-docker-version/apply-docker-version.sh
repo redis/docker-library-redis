@@ -37,19 +37,7 @@ cat > .redis.version.json <<EOF
 EOF
 
 # Render Dockerfiles from templates
-echo "Rendering Dockerfiles from templates..."
-cd release-automation
-
-for distro in alpine debian; do
-    echo "Rendering $distro/Dockerfile..."
-    uv run release-automation render-dockerfile \
-        -t ../$distro/Dockerfile.j2 \
-        -j ../.redis.version.json \
-        --set custom_build false \
-        -o ../$distro/Dockerfile
-done
-
-cd ..
+./bin/render-all-dockerfiles.sh
 
 # Detect changed files
 changed_files=($(git diff --name-only .redis.version.json alpine/Dockerfile debian/Dockerfile))
