@@ -21,15 +21,12 @@ ARG REDIS_DOWNLOAD_URL={{ redis_download_url | required("redis_download_url is r
 {% if not custom_build %}
 ARG REDIS_DOWNLOAD_SHA={{ redis_download_sha | required("redis_download_sha is required") }}
 {% endif %}
-
-{%- if custom_build %}
-
+{% if custom_build %}
 ARG REDISEARCH_VERSION
 ARG REDISJSON_VERSION
 ARG REDISBLOOM_VERSION
 ARG REDISTIMESERIES_VERSION
-
-{%- endif %}
+{% endif %}
 
 RUN set -eux; \
 	\

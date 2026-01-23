@@ -24,6 +24,7 @@ ARG REDISJSON_VERSION
 ARG REDISBLOOM_VERSION
 ARG REDISTIMESERIES_VERSION
 {% endif -%}
+
 RUN set -eux; \
 	\
 	apk add --no-cache --virtual .build-deps \

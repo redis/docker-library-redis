@@ -126,6 +126,9 @@ runs:
           exit 1
         fi
 
+    - name: Install release automation dependencies
+      uses: ./.github/actions/release-automation-install
+
     - name: Render Dockerfiles for custom or unstable build
       shell: bash
       if: inputs.run_type != 'release' && inputs.run_type != 'pr'
