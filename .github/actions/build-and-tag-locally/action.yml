@@ -126,6 +126,12 @@ runs:
           exit 1
         fi
 
+    - name: Render Dockerfiles for custom or unstable build
+      shell: bash
+      if: inputs.run_type != 'release' && inputs.run_type != 'pr'
+      run: |
+        ./bin/render-all-dockerfiles.sh -s custom_build true -s redis_download_url $REDIS_DOWNLOAD_URL
+
     - name: Build
       id: build
       uses: docker/build-push-action@v6
@@ -142,7 +148,6 @@ runs:
           REDISJSON_VERSION=${{ inputs.redisjson_version }}
           REDISBLOOM_VERSION=${{ inputs.redisbloom_version }}
           REDISTIMESERIES_VERSION=${{ inputs.redistimeseries_version }}
-          ${{ (inputs.run_type != 'release' && inputs.run_type != 'pr') && 'CUSTOM_BUILD=true' || '' }}
           ${{ (inputs.run_type != 'release' && inputs.run_type != 'pr') && format('REDIS_DOWNLOAD_URL={0}', env.REDIS_DOWNLOAD_URL) || '' }}
 
     - name: Capture build logs on failure

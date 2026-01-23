@@ -19,6 +19,7 @@ RUN set -eux; \
 
 ARG REDIS_DOWNLOAD_URL=https://github.com/redis/redis/archive/refs/tags/8.6-rc1.tar.gz
 ARG REDIS_DOWNLOAD_SHA=dc387a093cb4f956953492eeb613e833b53ee23a45625bde01cc6d2497a5c0e7
+
 RUN set -eux; \
 	\
 	savedAptMark="$(apt-mark showmanual)"; \

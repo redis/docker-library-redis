@@ -15,7 +15,9 @@ RUN set -eux; \
 		setpriv \
 	;
 ARG REDIS_DOWNLOAD_URL={{ redis_download_url | required("redis_download_url is required") }}
+{% if not custom_build %}
 ARG REDIS_DOWNLOAD_SHA={{ redis_download_sha | required("redis_download_sha is required") }}
+{% endif %}
 {% if custom_build %}
 ARG REDISEARCH_VERSION
 ARG REDISJSON_VERSION

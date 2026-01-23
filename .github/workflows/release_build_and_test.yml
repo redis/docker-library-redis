@@ -70,6 +70,9 @@ jobs:
       - name: Install release automation dependencies
         uses: ./.github/actions/release-automation-install
 
+      - name: Validate Dockerfiles are synced with templates
+        uses: ./.github/actions/validate-dockerfiles-synced
+
       - name: Validate inputs
         env:
           INPUTS_RELEASE_TAG: ${{ github.event.inputs.release_tag }}
