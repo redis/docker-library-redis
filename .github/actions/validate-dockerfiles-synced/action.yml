@@ -30,5 +30,6 @@ runs:
 
         if [ $exit_code -eq 0 ]; then
           echo "✅ All Dockerfiles are in sync with templates"
+        fi
         exit $exit_code
 
