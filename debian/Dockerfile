@@ -24,7 +24,6 @@ RUN set -eux; \
 	apt-get install -y --no-install-recommends \
 		ca-certificates \
 		wget \
-		gnupg \
 		dpkg-dev \
 		gcc \
 		g++ \
