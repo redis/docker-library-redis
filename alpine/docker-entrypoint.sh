@@ -156,6 +156,11 @@ if [ "$IS_REDIS_SERVER" ] && ! [ "$IS_REDIS_SENTINEL" ]; then
 	elif [ -n "$(ls -A $modules_dir 2>/dev/null)" ]; then
 		for module in "$modules_dir"/*.so; 
 		do
+			if [ -n "$CONFIG" ] && [ -n "$(grep "loadmodule $module" "$CONFIG")" ]; then
+				echo "Skipping module $module: --loadmodule flag is already present in config file $CONFIG"
+				continue
+			fi 
+			
 			if [ ! -s "$module" ]; then
 				echo "Skipping module $module: file has no size."
 				continue
