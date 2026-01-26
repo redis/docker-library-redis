@@ -1,3 +1,6 @@
+name: Apply Docker Version
+description: Apply Docker version to .redis.version.json and render Dockerfiles
+
 inputs:
   release_tag:
     description: 'Release tag to build'
@@ -20,6 +23,9 @@ runs:
         repository: redis-developer/redis-oss-release-automation
         ref: main
         path: redis-oss-release-automation
+
+    - name: Install release automation dependencies
+      uses: ./.github/actions/release-automation-install
 
     - name: Apply docker version
       id: apply-version
