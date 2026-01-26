@@ -1,7 +1,7 @@
 #!/bin/sh
 set -e
 
-SETPRIV="/usr/bin/setpriv --reuid redis --regid redis --clear-groups"
+SETPRIV="/bin/setpriv --reuid redis --regid redis --clear-groups"
 IS_REDIS_SENTINEL=""
 IS_REDIS_SERVER=""
 CONFIG=""
@@ -10,7 +10,7 @@ SKIP_FIX_PERMS_NOTICE="Use SKIP_FIX_PERMS=1 to skip permission changes."
 
 # functions
 has_cap() {
-	/usr/bin/setpriv -d | grep -q 'Capability bounding set:.*\b'"$1"'\b'
+	/bin/setpriv -d | grep -q 'Capability bounding set:.*\b'"$1"'\b'
 }
 
 check_for_sentinel() {

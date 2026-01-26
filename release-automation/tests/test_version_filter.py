@@ -261,6 +261,54 @@ class TestVersionFilter:
         expected_versions = ["8.2.1-m02", "8.1.0-m01"]
         assert version_strings == expected_versions
 
+    def test_filter_actual_versions_with_short_rc(self):
+        """Test actual version filtering with short (without patch) versions."""
+        version_filter = VersionFilter(MockGitClient())
+
+        versions = create_version_tuples([
+            "v8.4.0",
+            "v8.4-rc1",
+            "v8.2.3",
+        ])
+
+        result = version_filter.filter_actual_versions(versions)
+
+        version_strings = [str(v[0]) for v in result]
+        expected_versions = ["8.4.0", "8.2.3"]
+        assert version_strings == expected_versions
+
+    def test_filter_actual_versions_with_short_ga(self):
+        """Test actual version filtering with short (without patch) versions."""
+        version_filter = VersionFilter(MockGitClient())
+
+        versions = create_version_tuples([
+            "v8.4",
+            "v8.4.0-rc1",
+            "v8.2.3",
+        ])
+
+        result = version_filter.filter_actual_versions(versions)
+
+        version_strings = [str(v[0]) for v in result]
+        expected_versions = ["8.4", "8.2.3"]
+        assert version_strings == expected_versions
+
+    def test_filter_actual_versions_with_short_both_ga_and_rc(self):
+        """Test actual version filtering with short (without patch) versions."""
+        version_filter = VersionFilter(MockGitClient())
+
+        versions = create_version_tuples([
+            "v8.4",
+            "v8.4-rc1",
+            "v8.2.3",
+        ])
+
+        result = version_filter.filter_actual_versions(versions)
+
+        version_strings = [str(v[0]) for v in result]
+        expected_versions = ["8.4", "8.2.3"]
+        assert version_strings == expected_versions
+
     def test_filter_actual_versions_empty(self):
         """Test actual version filtering with empty input."""
         version_filter = VersionFilter(MockGitClient())

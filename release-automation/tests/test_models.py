@@ -2,7 +2,17 @@
 
 import pytest
 
-from stackbrew_generator.models import RedisVersion, Distribution, DistroType, Release, StackbrewEntry
+from stackbrew_generator.models import (
+    ALPINE_ARCHITECTURES,
+    DEBIAN_BOOKWORM_ARCHITECTURES,
+    DEBIAN_TRIXIE_ARCHITECTURES,
+    DebianRelease,
+    Distribution,
+    DistroType,
+    RedisVersion,
+    Release,
+    StackbrewEntry,
+)
 
 
 class TestRedisVersion:
@@ -49,6 +59,25 @@ class TestRedisVersion:
         assert version.suffix == "-eol"
         assert version.is_eol is True
 
+    def test_parse_rc_internal_version(self):
+        """Test parsing RC internal version."""
+        version = RedisVersion.parse("8.2.1-rc2-int3")
+        assert version.major == 8
+        assert version.minor == 2
+        assert version.patch == 1
+        assert version.suffix == "-rc2-int3"
+        assert version.is_rc is True
+        assert version.is_internal is True
+        assert len(version.sort_key) > 0
+
+        version = RedisVersion.parse("8.4-int")
+        assert version.major == 8
+        assert version.minor == 4
+        assert version.patch == None
+        assert version.suffix == "-int"
+        assert version.is_internal is True
+        assert len(version.sort_key) > 0
+
     def test_parse_invalid_version(self):
         """Test parsing invalid version strings."""
         with pytest.raises(ValueError):
@@ -82,22 +111,67 @@ class TestRedisVersion:
 
     def test_version_comparison(self):
         """Test version comparison for sorting."""
-        v1 = RedisVersion.parse("8.2.1")
-        v2 = RedisVersion.parse("8.2.2")
-        v3 = RedisVersion.parse("8.2.1-m01")
-        v4 = RedisVersion.parse("8.3.0")
+        v8_2_1 = RedisVersion.parse("8.2.1")
+        v8_2_2 = RedisVersion.parse("8.2.2")
+        v8_2_1_m_01 = RedisVersion.parse("8.2.1-m01")
+        v8_2_1_rc_01 = RedisVersion.parse("8.2.1-rc01")
+        v8_2_1_rc_01_int_1 = RedisVersion.parse("8.2.1-rc01-int1")
+        v8_3_0 = RedisVersion.parse("8.3.0")
+        v8_3_0_rc_1 = RedisVersion.parse("8.3.0-rc1")
+        v8_3_0_rc_1_int_1 = RedisVersion.parse("8.3.0-rc1-int1")
+        v8_3_0_rc_1_int_2 = RedisVersion.parse("8.3.0-rc1-int2")
+        v8_4 = RedisVersion.parse("8.4")
+        v8_4_rc_1 = RedisVersion.parse("8.4-rc1")
+        v8_6_int = RedisVersion.parse("8.6-int")
 
         # Test numeric comparison
-        assert v1 < v2
-        assert v2 < v4
+        assert v8_2_1 < v8_2_2
+        assert v8_2_2 < v8_3_0
 
         # Test milestone vs GA (GA comes after milestone)
-        assert v3 < v1
+        assert v8_2_1_m_01 < v8_2_1
+
+        assert v8_3_0_rc_1 < v8_3_0
+
+        assert v8_2_1_rc_01 > v8_2_1_m_01
+        assert v8_2_1_rc_01_int_1 > v8_2_1_m_01
+        assert v8_2_1_rc_01_int_1 < v8_2_1_rc_01
+
+        assert v8_3_0_rc_1_int_1 < v8_3_0_rc_1_int_2
+
+        assert v8_3_0_rc_1 > v8_3_0_rc_1_int_1
+        assert v8_3_0_rc_1 > v8_3_0_rc_1_int_2
 
         # Test sorting
-        versions = [v4, v1, v3, v2]
+        versions = [
+            v8_3_0,
+            v8_2_1,
+            v8_2_1_m_01,
+            v8_2_2,
+            v8_3_0_rc_1,
+            v8_3_0_rc_1_int_1,
+            v8_3_0_rc_1_int_2,
+            v8_6_int,
+            v8_4,
+            v8_4_rc_1,
+            v8_2_1_rc_01,
+            v8_2_1_rc_01_int_1,
+        ]
         sorted_versions = sorted(versions)
-        assert sorted_versions == [v3, v1, v2, v4]
+        assert sorted_versions == [
+            v8_2_1_m_01,
+            v8_2_1_rc_01_int_1,
+            v8_2_1_rc_01,
+            v8_2_1,
+            v8_2_2,
+            v8_3_0_rc_1_int_1,
+            v8_3_0_rc_1_int_2,
+            v8_3_0_rc_1,
+            v8_3_0,
+            v8_4_rc_1,
+            v8_4,
+            v8_6_int,
+        ]
 
 
 class TestDistribution:
@@ -184,10 +258,27 @@ class TestRelease:
 class TestStackbrewEntry:
     """Tests for StackbrewEntry model."""
 
-    def test_debian_architectures(self):
-        """Test that Debian distributions get the correct architectures."""
+    def test_debian_trixie_architectures(self):
+        """Test that Debian trixie gets riscv64 architecture (no mips64le)."""
+        version = RedisVersion.parse("8.4.0")
+        distribution = Distribution(type=DistroType.DEBIAN, name=DebianRelease.TRIXIE)
+
+        entry = StackbrewEntry(
+            tags=["8.4.0", "latest"],
+            commit="abc123def456",
+            version=version,
+            distribution=distribution,
+            git_fetch_ref="refs/tags/v8.4.0",
+        )
+
+        assert entry.architectures == list(DEBIAN_TRIXIE_ARCHITECTURES)
+        assert "riscv64" in entry.architectures
+        assert "mips64le" not in entry.architectures
+
+    def test_debian_bookworm_architectures(self):
+        """Test that Debian bookworm gets mips64le architecture (no riscv64)."""
         version = RedisVersion.parse("8.2.1")
-        distribution = Distribution(type=DistroType.DEBIAN, name="bookworm")
+        distribution = Distribution(type=DistroType.DEBIAN, name=DebianRelease.BOOKWORM)
 
         entry = StackbrewEntry(
             tags=["8.2.1", "latest"],
@@ -197,8 +288,9 @@ class TestStackbrewEntry:
             git_fetch_ref="refs/tags/v8.2.1"
         )
 
-        expected_architectures = ["amd64", "arm32v5", "arm32v7", "arm64v8", "i386", "mips64le", "ppc64le", "s390x"]
-        assert entry.architectures == expected_architectures
+        assert entry.architectures == list(DEBIAN_BOOKWORM_ARCHITECTURES)
+        assert "mips64le" in entry.architectures
+        assert "riscv64" not in entry.architectures
 
     def test_alpine_architectures(self):
         """Test that Alpine distributions get the correct architectures."""
@@ -213,8 +305,7 @@ class TestStackbrewEntry:
             git_fetch_ref="refs/tags/v8.2.1"
         )
 
-        expected_architectures = ["amd64", "arm32v6", "arm32v7", "arm64v8", "i386", "ppc64le", "riscv64", "s390x"]
-        assert entry.architectures == expected_architectures
+        assert entry.architectures == list(ALPINE_ARCHITECTURES)
 
     def test_stackbrew_entry_string_format(self):
         """Test that StackbrewEntry formats correctly with architectures."""
@@ -232,7 +323,7 @@ class TestStackbrewEntry:
         output = str(entry)
 
         # Check that it contains the expected Alpine architectures
-        assert "amd64, arm32v6, arm32v7, arm64v8, i386, ppc64le, riscv64, s390x" in output
+        assert ", ".join(ALPINE_ARCHITECTURES) in output
         assert "Tags: 8.2.1-alpine, alpine" in output
         assert "GitCommit: abc123def456" in output
         assert "GitFetch: refs/tags/v8.2.1" in output
