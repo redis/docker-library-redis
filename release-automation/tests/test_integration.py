@@ -26,7 +26,7 @@ class TestIntegration:
         result = self.runner.invoke(app, ["generate-stackbrew-content", "0"])
         assert result.exit_code != 0
 
-    @patch('stackbrew_generator.git_operations.GitClient')
+    @patch('stackbrew_generator.cli.GitClient')
     def test_no_tags_found(self, mock_git_client_class):
         """Test handling when no tags are found."""
         # Mock git client to return no tags
@@ -36,7 +36,7 @@ class TestIntegration:
 
         result = self.runner.invoke(app, ["generate-stackbrew-content", "99"])
         assert result.exit_code == 1
-        assert "No tags found" in result.stderr
+        assert "No versions found for major version 99" in result.stderr
 
     @patch('stackbrew_generator.version_filter.VersionFilter.get_actual_major_redis_versions')
     def test_no_versions_found(self, mock_get_versions):

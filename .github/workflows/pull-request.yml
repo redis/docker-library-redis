@@ -1,0 +1,42 @@
+name: Pull Request Build and Test
+
+on:
+  pull_request:
+    branches:
+      - master
+      - release/*
+      - unstable
+
+jobs:
+  validate-dockerfiles-synced:
+    name: Validate Dockerfiles Synced
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Validate Dockerfiles are synced with templates
+        uses: ./.github/actions/validate-dockerfiles-synced
+
+  build-and-test:
+    needs: validate-dockerfiles-synced
+    uses: ./.github/workflows/build-n-test.yml
+    if: github.event_name == 'pull_request' && github.base_ref != 'unstable'
+    secrets: inherit
+    with:
+      release_tag: ''
+      publish_image: false
+      run_type: pr
+
+  build-and-test-unstable:
+    needs: validate-dockerfiles-synced
+    uses: ./.github/workflows/build-n-test.yml
+    if: github.event_name == 'pull_request' && github.base_ref == 'unstable'
+    secrets: inherit
+    with:
+      release_tag: unstable
+      publish_image: false
+      redisearch_version: master
+      redisjson_version: master
+      redisbloom_version: master
+      redistimeseries_version: master
+      run_type: unstable

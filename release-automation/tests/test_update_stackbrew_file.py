@@ -34,7 +34,7 @@ GitFetch: refs/tags/v8.2.1
 Directory: debian
 
 Tags: 8.2.1-alpine, 8.2-alpine, 8-alpine, 8.2.1-alpine3.22, 8.2-alpine3.22, 8-alpine3.22, alpine, alpine3.22
-Architectures: amd64, arm32v5, arm32v7, arm64v8, i386, mips64le, ppc64le, s390x
+Architectures: amd64, arm32v5, arm32v7, arm64v8, i386, riscv64, ppc64le, s390x
 GitCommit: old123commit
 GitFetch: refs/tags/v8.2.1
 Directory: alpine

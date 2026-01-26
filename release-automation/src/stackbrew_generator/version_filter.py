@@ -105,7 +105,7 @@ class VersionFilter:
         patch_versions = OrderedDict()
 
         for version, commit, tag_ref in versions:
-            patch_key = (version.major, version.minor, version.patch)
+            patch_key = (version.major, version.minor, version.patch or 0)
             if patch_key not in patch_versions:
                 patch_versions[patch_key] = (version, commit, tag_ref)
             elif patch_versions[patch_key][0].is_milestone and not version.is_milestone:

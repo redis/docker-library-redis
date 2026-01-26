@@ -354,7 +354,14 @@ assert_redis_output_has_no_config_perm_error() {
 }
 
 assert_redis_v8() {
-	assertContains "$1" "Redis server v=8"
+	# Accept both v=8 (normal) and v=255 (dev)
+	if echo "$1" | grep -q "Redis server v=8"; then
+		return 0
+	elif echo "$1" | grep -q "Redis server v=255"; then
+		return 0
+	else
+		assertContains "$1" "Redis server v=8/v255"
+	fi
 }
 
 # Tests #
