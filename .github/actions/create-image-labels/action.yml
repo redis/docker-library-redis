@@ -1,0 +1,114 @@
+name: Construct docker image labels
+description: Construct docker image labels for io.redis
+
+inputs:
+  redis_version:
+    description: 'Redis version to build'
+    required: true
+  redisjson_version:
+    description: 'redisjson to build'
+    required: false
+  redisbloom_version:
+    description: 'redisbloom to build'
+    required: false
+  redistimeseries_version:
+    description: 'redistimeseries to build'
+    required: false
+  redisearch_version:
+    description: 'redisearch to build'
+    required: false
+
+outputs:
+  image-labels:
+    description: 'JSON list of built snap files'
+    value: ${{ steps.get-labels.outputs.image_labels }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Checkout Redis repository
+      uses: actions/checkout@v4
+      with:
+        repository: redis/redis
+        path: redis
+        ref: ${{ inputs.redis_version }}
+
+    - name: Get modules versions
+      if: inputs.redisearch_version == '' || inputs.redisjson_version == '' || inputs.redistimeseries_version == '' || inputs.redisbloom_version == ''
+      shell: bash
+      run: |
+        get_module_version() {
+          local module="$1"
+          grep MODULE_VERSION modules/$module/Makefile | cut -d '=' -f2 | tr -d ' '
+        }
+        cd redis
+        if [ -z "${{ inputs.redisearch_version }}" ]; then
+          echo redisearch_version=$(get_module_version redisearch) >> $GITHUB_ENV
+        fi
+        if [ -z "${{ inputs.redisjson_version }}" ]; then
+          echo redisjson_version=$(get_module_version redisjson) >> $GITHUB_ENV
+        fi
+        if [ -z "${{ inputs.redisbloom_version }}" ]; then
+          echo redisbloom_version=$(get_module_version redisbloom) >> $GITHUB_ENV
+        fi
+        if [ -z "${{ inputs.redistimeseries_version }}" ]; then
+          echo redistimeseries_version=$(get_module_version redistimeseries) >> $GITHUB_ENV
+        fi
+
+    - name: Checkout Redisearch repository
+      uses: actions/checkout@v4
+      with:
+        repository: RediSearch/RediSearch
+        path: redisearch
+        ref: ${{ inputs.redisearch_version != '' && inputs.redisearch_version || env.redisearch_version }}
+
+    - name: Checkout Redisjson repository
+      uses: actions/checkout@v4
+      with:
+        repository: redisjson/redisjson
+        path: redisjson
+        ref: ${{ inputs.redisjson_version != '' && inputs.redisjson_version || env.redisjson_version }}
+
+    - name: Checkout RedisTimeSeries repository
+      uses: actions/checkout@v4
+      with:
+        repository: RedisTimeSeries/RedisTimeSeries
+        path: redistimeseries
+        ref: ${{ inputs.redistimeseries_version != '' && inputs.redistimeseries_version || env.redistimeseries_version }}
+
+    - name: Checkout RedisBloom repository
+      uses: actions/checkout@v4
+      with:
+        repository: RedisBloom/RedisBloom
+        path: redisbloom
+        ref: ${{ inputs.redisbloom_version != '' && inputs.redisbloom_version || env.redisbloom_version }}
+
+    - name: Get image labels
+      id: get-labels
+      shell: bash
+      run: |
+        labels=""
+        created_timestamp=$(date -u --rfc-3339=seconds)
+        labels+="org.opencontainers.image.created=$created_timestamp"$'\n'
+        # Modules revisions labels
+        modules_repos=(redisearch redisjson redistimeseries redisbloom)
+        for module in "${modules_repos[@]}"; do
+          revision=$(git -C $module rev-parse HEAD)
+          labels+="io.redis.$module.revision=$revision"$'\n'
+        done
+
+        # Redis labels
+        cd redis
+        redis_revision=$(git rev-parse HEAD)
+        labels+="io.redis.revision=$redis_revision"$'\n'
+        VER=$(sed -n 's/^.* REDIS_VERSION "\(.*\)"$/\1/g p' < src/version.h)
+        if [ "$VER" = "255.255.255" ]; then
+          labels+="io.redis.version=unstable"$'\n'
+        else
+          labels+="io.redis.version=$VER"$'\n'
+        fi
+        labels+="io.redis.source=https://github.com/redis/redis"$'\n'
+        echo "labels: $labels"
+        echo "image_labels<<EOF" >> $GITHUB_OUTPUT
+        echo "$labels" >> $GITHUB_OUTPUT
+        echo "EOF" >> $GITHUB_OUTPUT

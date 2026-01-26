@@ -67,7 +67,7 @@ class GitClient:
         console.print(f"[dim]Listing remote tags for v{major_version}.*[/dim]")
 
         cmd = [
-            "git", "ls-remote", "--refs", "--tags",
+            "git", "ls-remote", "--tags",
             self.remote, f"refs/tags/v{major_version}.*"
         ]
 
@@ -76,11 +76,28 @@ class GitClient:
         if not result.stdout.strip():
             raise GitOperationError(f"No tags found for major version {major_version}")
 
-        tags = []
+        tag_commits = {}
+
+        # always use peeled commits for annotated tags
+        # for annotated tags git ls-remote prints tag object hash, then actual commit hash with ^{} suffix
+        # https://stackoverflow.com/a/25996877
         for line in result.stdout.strip().split('\n'):
             if line:
                 commit, ref = line.split('\t', 1)
-                tags.append((commit, ref))
+                if ref.endswith('^{}'):
+                    # This is a peeled ref - extract the tag name
+                    # always rewrite tag commits with peeled ref commits
+                    tag_name = ref[:-3]  # Remove '^{}'
+                    tag_commits[tag_name] = commit
+                else:
+                    # This is a regular tag
+                    # rewrite only if not yet exists
+                    if ref not in tag_commits:
+                        tag_commits[ref] = commit
+
+        tags = []
+        for tag_ref, commit in tag_commits.items():
+                tags.append((commit, tag_ref))
 
         console.print(f"[dim]Found {len(tags)} tags[/dim]")
         return tags

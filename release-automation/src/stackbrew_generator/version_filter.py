@@ -105,14 +105,13 @@ class VersionFilter:
         patch_versions = OrderedDict()
 
         for version, commit, tag_ref in versions:
-            patch_key = (version.major, version.minor, version.patch)
+            patch_key = (version.major, version.minor, version.patch or 0)
             if patch_key not in patch_versions:
                 patch_versions[patch_key] = (version, commit, tag_ref)
             elif patch_versions[patch_key][0].is_milestone and not version.is_milestone:
                 # GA always takes precedence over milestone for the same major.minor.patch
                 patch_versions[patch_key] = (version, commit, tag_ref)
 
-        print(patch_versions.values())
         filtered_versions = []
         mainlines_with_ga = set()
 
