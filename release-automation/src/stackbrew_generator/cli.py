@@ -1,14 +1,17 @@
 """CLI interface for stackbrew library generator."""
 
+import json
 import typer
 from pathlib import Path
 from rich.console import Console
 from rich.traceback import install
 
 from .distribution import DistributionDetector
+from .dockerfile import DockerfileRenderer
 from .exceptions import StackbrewGeneratorError
 from .git_operations import GitClient
 from .logging_config import setup_logging
+from .models import RedisVersion
 from .stackbrew import StackbrewGenerator, StackbrewUpdater
 from .version_filter import VersionFilter
 
@@ -141,13 +144,6 @@ def generate_stackbrew_content(
 
 
 @app.command()
-def version() -> None:
-    """Show version information."""
-    from . import __version__
-    console.print(f"stackbrew-library-generator {__version__}")
-
-
-@app.command()
 def update_stackbrew_file(
     major_version: int = typer.Argument(
         ...,
@@ -241,6 +237,269 @@ def update_stackbrew_file(
         console.print(f"[red]Unexpected error: {e}[/red]")
         if verbose:
             console.print_exception()
+        raise typer.Exit(1)
+
+
+# Create a subcommand group for redis-version
+redis_version_app = typer.Typer(
+    name="redis-version",
+    help="Parse and extract Redis version information",
+    add_completion=False,
+)
+app.add_typer(redis_version_app, name="redis-version")
+
+
+@redis_version_app.command(name="major")
+def redis_version_major(
+    version: str = typer.Argument(
+        ...,
+        help="Redis version to parse (e.g., '8.2.1', 'v8.2.1-rc1', '7.4.0-eol')"
+    ),
+) -> None:
+    """Print the major version number.
+
+    Examples:
+        redis-version major 8.2.1          # Prints: 8
+        redis-version major v7.4.0-rc1     # Prints: 7
+    """
+    try:
+        redis_version = RedisVersion.parse(version)
+        print(redis_version.major)
+    except (ValueError, Exception) as e:
+        console.print(f"[red]Failed to parse version '{version}': {e}[/red]")
+        raise typer.Exit(2)
+
+
+@redis_version_app.command(name="minor")
+def redis_version_minor(
+    version: str = typer.Argument(
+        ...,
+        help="Redis version to parse (e.g., '8.2.1', 'v8.2.1-rc1', '7.4.0-eol')"
+    ),
+) -> None:
+    """Print the minor version number.
+
+    Examples:
+        redis-version minor 8.2.1          # Prints: 2
+        redis-version minor v7.4.0-rc1     # Prints: 4
+    """
+    try:
+        redis_version = RedisVersion.parse(version)
+        print(redis_version.minor)
+    except (ValueError, Exception) as e:
+        console.print(f"[red]Failed to parse version '{version}': {e}[/red]")
+        raise typer.Exit(2)
+
+
+@redis_version_app.command(name="patch")
+def redis_version_patch(
+    version: str = typer.Argument(
+        ...,
+        help="Redis version to parse (e.g., '8.2.1', 'v8.2.1-rc1', '7.4.0-eol')"
+    ),
+) -> None:
+    """Print the patch version number.
+
+    Examples:
+        redis-version patch 8.2.1          # Prints: 1
+        redis-version patch v7.4.0-rc1     # Prints: 0
+        redis-version patch 8.2            # Prints: (empty, no patch)
+    """
+    try:
+        redis_version = RedisVersion.parse(version)
+        if redis_version.patch is not None:
+            print(redis_version.patch)
+    except (ValueError, Exception) as e:
+        console.print(f"[red]Failed to parse version '{version}': {e}[/red]")
+        raise typer.Exit(2)
+
+
+@redis_version_app.command(name="parts")
+def redis_version_parts(
+    version: str = typer.Argument(
+        ...,
+        help="Redis version to parse (e.g., '8.2.1', 'v8.2.1-rc1', '7.4.0-eol')"
+    ),
+) -> None:
+    """Print all version parts as space-separated values: major minor patch suffix.
+
+    Examples:
+        redis-version parts 8.2.1          # Prints: 8 2 1
+        redis-version parts v7.4.0-rc1     # Prints: 7 4 0 -rc1
+        redis-version parts 8.2            # Prints: 8 2
+    """
+    try:
+        redis_version = RedisVersion.parse(version)
+        parts = [str(redis_version.major), str(redis_version.minor)]
+        parts.append(str(redis_version.patch) if redis_version.patch is not None else "0")
+        parts.append(redis_version.suffix if redis_version.suffix else "")
+        print(" ".join(parts))
+    except (ValueError, Exception) as e:
+        console.print(f"[red]Failed to parse version '{version}': {e}[/red]")
+        raise typer.Exit(2)
+
+
+@redis_version_app.command(name="check")
+def redis_version_check(
+    version: str = typer.Argument(
+        ...,
+        help="Redis version to check (e.g., '8.2.1', 'v8.2.1-rc1', '7.4.0-eol')"
+    ),
+    check: str = typer.Argument(
+        ...,
+        help="Property to check: is-internal, is-ga, is-eol, is-rc, is-milestone"
+    ),
+) -> None:
+    """Check Redis version properties.
+
+    Returns exit code:
+    - 0 if the property is True
+    - 1 if the property is False
+    - 2 if the version could not be parsed
+
+    Examples:
+        redis-version check 8.2.1 is-ga          # Returns 0 (True)
+        redis-version check 8.2.1-rc1 is-rc      # Returns 0 (True)
+        redis-version check 8.2.1-rc1 is-ga      # Returns 1 (False)
+        redis-version check invalid is-ga        # Returns 2 (Parse error)
+    """
+    # Validate check argument
+    valid_checks = {"is-internal", "is-ga", "is-eol", "is-rc", "is-milestone"}
+    if check not in valid_checks:
+        console.print(f"[red]Invalid check: {check}[/red]")
+        console.print(f"[yellow]Valid checks: {', '.join(sorted(valid_checks))}[/yellow]")
+        raise typer.Exit(2)
+
+    # Try to parse the version
+    try:
+        redis_version = RedisVersion.parse(version)
+    except (ValueError, Exception) as e:
+        console.print(f"[red]Failed to parse version '{version}': {e}[/red]")
+        raise typer.Exit(2)
+
+    # Map check string to property
+    property_map = {
+        "is-internal": redis_version.is_internal,
+        "is-ga": redis_version.is_ga,
+        "is-eol": redis_version.is_eol,
+        "is-rc": redis_version.is_rc,
+        "is-milestone": redis_version.is_milestone,
+    }
+
+    # Get the property value
+    result = property_map[check]
+
+    # Exit with appropriate code
+    if result:
+        raise typer.Exit(0)
+    else:
+        raise typer.Exit(1)
+
+
+@app.command(name="render-dockerfile", context_settings={"allow_extra_args": True, "ignore_unknown_options": True})
+def render_dockerfile(
+    ctx: typer.Context,
+    template: Path = typer.Option(
+        ...,
+        "--template",
+        "-t",
+        help="Path to Jinja2 Dockerfile template",
+        exists=True,
+        file_okay=True,
+        dir_okay=False,
+        readable=True,
+    ),
+    output_file: Path = typer.Option(
+        None,
+        "--out-file",
+        "-o",
+        help="Output file path (defaults to stdout)",
+    ),
+    json_file: Path = typer.Option(
+        None,
+        "--set-from-json",
+        "-j",
+        help="JSON file with context variables (plain object expected)",
+        exists=True,
+        file_okay=True,
+        dir_okay=False,
+        readable=True,
+    ),
+) -> None:
+    """Render a Dockerfile from a Jinja2 template.
+
+    Available context variables:
+    - custom_build (bool): Whether this is a custom build
+    - redis_download_url (str): Required, redis source tarball download URL
+    - redis_download_sha (str): Required, redis source tarball SHA256 checksum
+
+    Template features:
+    - Use {{ variable | required }} to make a variable requiredlike Ansible)
+    - Use {{ variable | required("Custom error message") }} for custom error
+    - Use {{ variable | default("value", true) }} for defaults with empty strings
+
+    Examples:
+        render-dockerfile -t debian/Dockerfile.j2 -o debian/Dockerfile -s custom_build true -j .redis.version.json
+    """
+    try:
+        renderer = DockerfileRenderer()
+
+        # Load variables from JSON file first (if provided)
+        if json_file:
+            try:
+                json_data = json.loads(json_file.read_text(encoding='utf-8'))
+                if not isinstance(json_data, dict):
+                    console.print("[red]Error: JSON file must contain a plain object[/red]")
+                    raise typer.Exit(1)
+
+                # Set variables from JSON (pass native types)
+                for var_name, var_value in json_data.items():
+                    try:
+                        renderer.set_variable(var_name, var_value)
+                    except ValueError as e:
+                        console.print(f"[red]Error setting variable '{var_name}' from JSON: {e}[/red]")
+                        raise typer.Exit(1)
+            except json.JSONDecodeError as e:
+                console.print(f"[red]Error parsing JSON file: {e}[/red]")
+                raise typer.Exit(1)
+
+        # Parse --set arguments from extra args (these override JSON values)
+        args = ctx.args
+        i = 0
+        while i < len(args):
+            if args[i] in ('--set', '-s'):
+                if i + 2 >= len(args):
+                    console.print("[red]Error: --set requires VAR VALUE[/red]")
+                    console.print("[yellow]Example: --set custom_build true[/yellow]")
+                    raise typer.Exit(1)
+                var_name = args[i + 1]
+                var_value = args[i + 2]
+                try:
+                    renderer.set_variable(var_name, var_value)
+                except ValueError as e:
+                    console.print(f"[red]Error setting variable '{var_name}': {e}[/red]")
+                    raise typer.Exit(1)
+                i += 3
+            else:
+                console.print(f"[red]Unknown argument: {args[i]}[/red]")
+                raise typer.Exit(1)
+
+        # Render template
+        rendered = renderer.render_template(template)
+
+        # Write output
+        if output_file:
+            output_file.write_text(rendered, encoding='utf-8')
+            console.print(f"[green]Rendered Dockerfile written to {output_file}[/green]")
+        else:
+            print(rendered)
+
+    except FileNotFoundError as e:
+        console.print(f"[red]{e}[/red]")
+        raise typer.Exit(1)
+    except Exception as e:
+        console.print(f"[red]Unexpected error: {e}[/red]")
+        console.print_exception()
         raise typer.Exit(1)
 
 

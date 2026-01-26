@@ -42,16 +42,20 @@ on:
         required: false
         type: string
         default: ''
+      override_release_branch:
+        description: 'Use this release branch instead of release/X.X (for testing)'
+        required: false
+        type: string
     outputs:
       docker_images_metadata:
         description: 'Array of structured Docker images metadata that were published'
         value: ${{ jobs.collect-images-metadata.outputs.docker_images_metadata }}
       slack_ts:
         description: 'Slack message timestamp'
-        value: ${{ jobs.notify-slack.outputs.slack_ts }}
+        value: ${{ jobs.notify-slack.outputs.slack_ts || jobs.notify-slack-when-failed.outputs.slack_ts }}
       slack_url:
         description: 'URL to the Slack message'
-        value: ${{ jobs.notify-slack.outputs.slack_url }}
+        value: ${{ jobs.notify-slack.outputs.slack_url || jobs.notify-slack-when-failed.outputs.slack_url }}
 
 jobs:
   build-and-test:
@@ -64,14 +68,14 @@ jobs:
           - alpine
         platform:
           - linux/amd64
-          #- linux/i386
-          #- linux/arm/v5
-          #- linux/arm/v6
-          #- linux/arm/v7
-          #- linux/ppc64le
-          #- linux/s390x
-          #- linux/arm64
-          #- linux/riscv64
+          - linux/i386
+          - linux/arm/v5
+          - linux/arm/v6
+          - linux/arm/v7
+          - linux/ppc64le
+          - linux/s390x
+          - linux/arm64
+          - linux/riscv64
         exclude:
         - distribution: alpine
           platform: linux/arm/v5
@@ -94,7 +98,7 @@ jobs:
         with:
           release_tag: ${{ inputs.release_tag }}
           gh_token: ${{ secrets.GITHUB_TOKEN }}
-          release_branch: slack_bot
+          release_branch: ${{ inputs.override_release_branch }}
       - uses: ./.github/actions/build-and-tag-locally
         with:
           distribution: ${{ matrix.distribution }}
@@ -113,7 +117,6 @@ jobs:
   collect-images-metadata:
     runs-on: ubuntu-latest
     needs: build-and-test
-    if: ${{ inputs.release_tag && inputs.run_type == 'release' }}
     outputs:
       docker_images_metadata: ${{ steps.collect-metadata.outputs.metadata }}
     steps:
@@ -142,7 +145,7 @@ jobs:
   notify-slack:
     runs-on: ubuntu-latest
     needs: collect-images-metadata
-    if: ${{ inputs.release_tag && needs.collect-images-metadata.outputs.docker_images_metadata != '[]' && inputs.run_type == 'release' }}
+    if: github.event.inputs.slack_channel_id != ''
     outputs:
       slack_ts: ${{ steps.slack-success.outputs.slack_ts }}
       slack_url: ${{ steps.slack-success.outputs.slack_url }}
@@ -156,7 +159,7 @@ jobs:
         uses: ./.github/actions/slack-notification
         with:
           slack_func: slack_format_docker_images_metadata_message
-          slack_channel_id: ${{ inputs.slack_channel_id || vars.SLACK_CHANNEL_ID }}
+          slack_channel_id: ${{ inputs.slack_channel_id }}
           release_tag: ${{ inputs.release_tag }}
           images_metadata: ${{ needs.collect-images-metadata.outputs.docker_images_metadata }}
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
@@ -165,12 +168,16 @@ jobs:
   notify-slack-when-failed:
     runs-on: ubuntu-latest
     needs: collect-images-metadata
-    if: ${{ inputs.release_tag && failure() && inputs.run_type == 'release' }}
+    if: failure() && github.event.inputs.slack_channel_id != ''
+    outputs:
+      slack_ts: ${{ steps.slack-failure.outputs.slack_ts }}
+      slack_url: ${{ steps.slack-failure.outputs.slack_url }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Send Failure Slack notification
+        id: slack-failure
         continue-on-error: true
         uses: ./.github/actions/slack-notification
         with:
