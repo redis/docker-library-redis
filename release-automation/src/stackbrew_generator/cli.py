@@ -1,11 +1,13 @@
 """CLI interface for stackbrew library generator."""
 
+import json
 import typer
 from pathlib import Path
 from rich.console import Console
 from rich.traceback import install
 
 from .distribution import DistributionDetector
+from .dockerfile import DockerfileRenderer
 from .exceptions import StackbrewGeneratorError
 from .git_operations import GitClient
 from .logging_config import setup_logging
@@ -391,6 +393,113 @@ def redis_version_check(
     if result:
         raise typer.Exit(0)
     else:
+        raise typer.Exit(1)
+
+
+@app.command(name="render-dockerfile", context_settings={"allow_extra_args": True, "ignore_unknown_options": True})
+def render_dockerfile(
+    ctx: typer.Context,
+    template: Path = typer.Option(
+        ...,
+        "--template",
+        "-t",
+        help="Path to Jinja2 Dockerfile template",
+        exists=True,
+        file_okay=True,
+        dir_okay=False,
+        readable=True,
+    ),
+    output_file: Path = typer.Option(
+        None,
+        "--out-file",
+        "-o",
+        help="Output file path (defaults to stdout)",
+    ),
+    json_file: Path = typer.Option(
+        None,
+        "--set-from-json",
+        "-j",
+        help="JSON file with context variables (plain object expected)",
+        exists=True,
+        file_okay=True,
+        dir_okay=False,
+        readable=True,
+    ),
+) -> None:
+    """Render a Dockerfile from a Jinja2 template.
+
+    Available context variables:
+    - custom_build (bool): Whether this is a custom build
+    - redis_download_url (str): Required, redis source tarball download URL
+    - redis_download_sha (str): Required, redis source tarball SHA256 checksum
+
+    Template features:
+    - Use {{ variable | required }} to make a variable requiredlike Ansible)
+    - Use {{ variable | required("Custom error message") }} for custom error
+    - Use {{ variable | default("value", true) }} for defaults with empty strings
+
+    Examples:
+        render-dockerfile -t debian/Dockerfile.j2 -o debian/Dockerfile -s custom_build true -j .redis.version.json
+    """
+    try:
+        renderer = DockerfileRenderer()
+
+        # Load variables from JSON file first (if provided)
+        if json_file:
+            try:
+                json_data = json.loads(json_file.read_text(encoding='utf-8'))
+                if not isinstance(json_data, dict):
+                    console.print("[red]Error: JSON file must contain a plain object[/red]")
+                    raise typer.Exit(1)
+
+                # Set variables from JSON (pass native types)
+                for var_name, var_value in json_data.items():
+                    try:
+                        renderer.set_variable(var_name, var_value)
+                    except ValueError as e:
+                        console.print(f"[red]Error setting variable '{var_name}' from JSON: {e}[/red]")
+                        raise typer.Exit(1)
+            except json.JSONDecodeError as e:
+                console.print(f"[red]Error parsing JSON file: {e}[/red]")
+                raise typer.Exit(1)
+
+        # Parse --set arguments from extra args (these override JSON values)
+        args = ctx.args
+        i = 0
+        while i < len(args):
+            if args[i] in ('--set', '-s'):
+                if i + 2 >= len(args):
+                    console.print("[red]Error: --set requires VAR VALUE[/red]")
+                    console.print("[yellow]Example: --set custom_build true[/yellow]")
+                    raise typer.Exit(1)
+                var_name = args[i + 1]
+                var_value = args[i + 2]
+                try:
+                    renderer.set_variable(var_name, var_value)
+                except ValueError as e:
+                    console.print(f"[red]Error setting variable '{var_name}': {e}[/red]")
+                    raise typer.Exit(1)
+                i += 3
+            else:
+                console.print(f"[red]Unknown argument: {args[i]}[/red]")
+                raise typer.Exit(1)
+
+        # Render template
+        rendered = renderer.render_template(template)
+
+        # Write output
+        if output_file:
+            output_file.write_text(rendered, encoding='utf-8')
+            console.print(f"[green]Rendered Dockerfile written to {output_file}[/green]")
+        else:
+            print(rendered)
+
+    except FileNotFoundError as e:
+        console.print(f"[red]{e}[/red]")
+        raise typer.Exit(1)
+    except Exception as e:
+        console.print(f"[red]Unexpected error: {e}[/red]")
+        console.print_exception()
         raise typer.Exit(1)
 
 

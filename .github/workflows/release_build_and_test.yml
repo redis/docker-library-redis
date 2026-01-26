@@ -147,6 +147,9 @@ jobs:
           gh_token: ${{ secrets.GITHUB_TOKEN }}
           release_branch: ${{ github.event.inputs.override_release_branch }}
 
+      - name: Validate Dockerfiles are synced with templates
+        uses: ./.github/actions/validate-dockerfiles-synced
+
       - name: Apply Docker Version
         if: github.event.inputs.run_type == 'release'
         id: apply-version
