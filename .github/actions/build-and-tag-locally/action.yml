@@ -151,7 +151,6 @@ runs:
           REDISJSON_VERSION=${{ inputs.redisjson_version }}
           REDISBLOOM_VERSION=${{ inputs.redisbloom_version }}
           REDISTIMESERIES_VERSION=${{ inputs.redistimeseries_version }}
-          ${{ (inputs.run_type != 'release' && inputs.run_type != 'pr') && format('REDIS_DOWNLOAD_URL={0}', env.REDIS_DOWNLOAD_URL) || '' }}
 
     - name: Capture build logs on failure
       shell: bash
