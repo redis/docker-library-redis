@@ -14,8 +14,8 @@ RUN set -eux; \
 	; \
 	rm -rf /var/lib/apt/lists/*
 
-ARG REDIS_DOWNLOAD_URL=https://github.com/redis/redis/archive/refs/tags/8.6-rc1.tar.gz
-ARG REDIS_DOWNLOAD_SHA=dc387a093cb4f956953492eeb613e833b53ee23a45625bde01cc6d2497a5c0e7
+ARG REDIS_DOWNLOAD_URL=https://github.com/redis/redis/archive/refs/tags/8.6.0.tar.gz
+ARG REDIS_DOWNLOAD_SHA=74261ece988fd2e1526e5aea9f8b9853217d71e2ef2dafaa624ed9579b5f4317
 
 RUN set -eux; \
 	\
