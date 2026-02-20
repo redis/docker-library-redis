@@ -10,9 +10,9 @@ from .distribution import DistributionDetector
 from .dockerfile import DockerfileRenderer
 from .exceptions import StackbrewGeneratorError
 from .git_operations import GitClient
-from .logging_config import setup_logging
+from .logging_config import setup_logging, suppress_stderr
 from .models import RedisVersion
-from .stackbrew import StackbrewGenerator, StackbrewUpdater
+from .stackbrew import StackbrewGenerator, StackbrewUpdater, extract_tags_from_stackbrew_output
 from .version_filter import VersionFilter
 
 # Install rich traceback handler
@@ -130,6 +130,74 @@ def generate_stackbrew_content(
             console.print(f"[red]{e.get_detailed_message()}[/red]")
         else:
             console.print(f"[red]Error: {e}[/red]")
+        if verbose:
+            console.print_exception()
+        raise typer.Exit(1)
+    except KeyboardInterrupt:
+        console.print("\n[yellow]Operation cancelled by user[/yellow]")
+        raise typer.Exit(130)
+    except Exception as e:
+        console.print(f"[red]Unexpected error: {e}[/red]")
+        if verbose:
+            console.print_exception()
+        raise typer.Exit(1)
+
+
+@app.command(name="generate-image-tags")
+def generate_image_tags(
+    version: str = typer.Argument(
+        ...,
+        help="Redis version (e.g., '8.6.0', '8.6.0-rc1')"
+    ),
+    directory: str = typer.Argument(
+        ...,
+        help="Distribution directory name (e.g., 'debian', 'alpine')",
+    ),
+    remote: str = typer.Option(
+        "origin",
+        "--remote",
+        help="Git remote to use for fetching tags and branches"
+    ),
+    verbose: bool = typer.Option(
+        False,
+        "--verbose",
+        "-v",
+        help="Enable verbose output"
+    ),
+) -> None:
+    """Generate Docker image tags for a Redis version and distribution.
+
+    Uses the same stackbrew generation pipeline as generate-stackbrew-content
+    to determine tags, including whether the version is latest.
+
+    Examples:
+        generate-image-tags 8.6.0 debian
+          -> 8.6.0, 8.6, 8, 8.6.0-trixie, 8.6-trixie, 8-trixie, latest, trixie
+
+        generate-image-tags 8.6.0 alpine
+          -> 8.6.0-alpine, 8.6-alpine, 8-alpine, 8.6.0-alpine3.23, ...
+
+        generate-image-tags 8.6.0-rc1 debian
+          -> 8.6.0-rc1, 8.6.0-rc1-trixie
+    """
+    setup_logging(verbose=verbose, console=console)
+
+    try:
+        redis_version = RedisVersion.parse(version)
+    except (ValueError, Exception) as e:
+        console.print(f"[red]Failed to parse version '{version}': {e}[/red]")
+        raise typer.Exit(1)
+
+    try:
+        if verbose:
+            output = _generate_stackbrew_content(redis_version.major, remote, verbose)
+        else:
+            with suppress_stderr():
+                output = _generate_stackbrew_content(redis_version.major, remote, verbose)
+        print(extract_tags_from_stackbrew_output(output, version, directory))
+
+    except StackbrewGeneratorError as e:
+        console.print(f"[red]Error: {e}[/red]")
         if verbose:
             console.print_exception()
         raise typer.Exit(1)
