@@ -157,12 +157,26 @@ jobs:
           echo "amd64_tag=${BASE}-amd64" >> "$GITHUB_OUTPUT"
           echo "arm64_tag=${BASE}-arm64" >> "$GITHUB_OUTPUT"
 
+          # For releases, also produce a clean version tag without the run_id
+          # e.g. ghcr.io/{repo}:8.6.0-debian — used by release_publish to apply Docker tags
+          if [[ "${{ inputs.run_type }}" == "release" ]]; then
+            RELEASE_TAG=$(printf "%s:%s-%s" "$REGISTRY" "$TAG_PREFIX" "${{ matrix.distribution }}" | tr '[:upper:]' '[:lower:]')
+            echo "release_tag=${RELEASE_TAG}" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Create multi-arch manifest
         run: |
           docker buildx imagetools create \
             -t ${{ steps.tags.outputs.multi_arch_tag }} \
             ${{ steps.tags.outputs.amd64_tag }} \
             ${{ steps.tags.outputs.arm64_tag }}
+
+      - name: Tag multi-arch image with clean version tag
+        if: inputs.run_type == 'release'
+        run: |
+          docker buildx imagetools create \
+            -t ${{ steps.tags.outputs.release_tag }} \
+            ${{ steps.tags.outputs.multi_arch_tag }}
 
       - name: Inspect multi-arch manifest
         run: |
