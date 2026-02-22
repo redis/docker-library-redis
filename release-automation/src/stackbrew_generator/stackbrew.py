@@ -293,31 +293,3 @@ class StackbrewUpdater:
                 break
 
         return False
-
-
-def extract_tags_from_stackbrew_output(output: str, version: str, directory: str) -> str:
-    """Extract tags for a specific version and directory from stackbrew output.
-
-    Equivalent to:
-        grep Tags: | grep <directory> | grep <version> | awk -F: '{print $2}'
-
-    Args:
-        output: Stackbrew formatted output
-        version: Redis version string to match
-        directory: Distribution directory name to match
-
-    Returns:
-        Comma-separated tags string, or empty string if no match
-    """
-    for block in output.split("\n\n"):
-        lines = block.strip().split("\n")
-        tags_line = None
-        directory_match = False
-        for line in lines:
-            if line.startswith("Tags:"):
-                tags_line = line
-            if line.startswith("Directory:") and line.split(":")[1].strip() == directory:
-                directory_match = True
-        if tags_line and directory_match and version in tags_line:
-            return tags_line.split(":", 1)[1].strip()
-    return ""

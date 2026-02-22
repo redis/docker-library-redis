@@ -10,9 +10,9 @@ from .distribution import DistributionDetector
 from .dockerfile import DockerfileRenderer
 from .exceptions import StackbrewGeneratorError
 from .git_operations import GitClient
-from .logging_config import setup_logging, suppress_stderr
+from .logging_config import setup_logging
 from .models import RedisVersion
-from .stackbrew import StackbrewGenerator, StackbrewUpdater, extract_tags_from_stackbrew_output
+from .stackbrew import StackbrewGenerator, StackbrewUpdater
 from .version_filter import VersionFilter
 
 # Install rich traceback handler
@@ -189,18 +189,40 @@ def generate_image_tags(
         raise typer.Exit(1)
 
     try:
-        if verbose:
-            output = _generate_stackbrew_content(redis_version.major, remote, verbose)
-        else:
-            with suppress_stderr():
-                output = _generate_stackbrew_content(redis_version.major, remote, verbose)
-        print(extract_tags_from_stackbrew_output(output, version, directory))
+        git_client = GitClient(remote=remote)
+        version_filter = VersionFilter(git_client)
+        distribution_detector = DistributionDetector(git_client)
+        stackbrew_generator = StackbrewGenerator()
+
+        versions = version_filter.get_actual_major_redis_versions(redis_version.major)
+
+        if not versions:
+            console.print(f"[red]No versions found for Redis {redis_version.major}.x[/red]")
+            raise typer.Exit(1)
+
+        refs_to_fetch = [commit for _, commit, _ in versions]
+        git_client.fetch_refs(refs_to_fetch)
+        releases = distribution_detector.prepare_releases_list(versions)
+        entries = stackbrew_generator.generate_stackbrew_library(releases)
+
+        tags = ""
+        for entry in entries:
+            if entry.version == redis_version and entry.distribution.type.value == directory:
+                tags = ", ".join(entry.tags)
+                break
+
+        if not tags:
+            console.print(f"[yellow]No tags found for {version} in {directory}[/yellow]")
+
+        print(tags)
 
     except StackbrewGeneratorError as e:
         console.print(f"[red]Error: {e}[/red]")
         if verbose:
             console.print_exception()
         raise typer.Exit(1)
+    except typer.Exit:
+        raise
     except KeyboardInterrupt:
         console.print("\n[yellow]Operation cancelled by user[/yellow]")
         raise typer.Exit(130)
