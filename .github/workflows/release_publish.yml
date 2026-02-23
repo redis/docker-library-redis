@@ -45,41 +45,41 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Parse release handle and validate
-        id: parse-release
-        shell: bash
-        run: |
-          # Parse the JSON input
-          RELEASE_HANDLE='${{ github.event.inputs.release_handle }}'
-          echo "Parsing release handle JSON:"
-          echo "$RELEASE_HANDLE" | jq .
+      # - name: Parse release handle and validate
+      #   id: parse-release
+      #   shell: bash
+      #   run: |
+      #     # Parse the JSON input
+      #     RELEASE_HANDLE='${{ github.event.inputs.release_handle }}'
+      #     echo "Parsing release handle JSON:"
+      #     echo "$RELEASE_HANDLE" | jq .
 
-          # Extract release_commit_sha
-          RELEASE_COMMIT_SHA=$(echo "$RELEASE_HANDLE" | jq -r '.release_commit_sha // empty')
+      #     # Extract release_commit_sha
+      #     RELEASE_COMMIT_SHA=$(echo "$RELEASE_HANDLE" | jq -r '.release_commit_sha // empty')
 
-          # Validate that release_commit_sha exists and is not empty
-          if [ -z "$RELEASE_COMMIT_SHA" ] || [ "$RELEASE_COMMIT_SHA" = "null" ]; then
-            echo "Error: release_commit_sha is missing or empty in release_handle"
-            echo "Release handle content: $RELEASE_HANDLE"
-            exit 1
-          fi
+      #     # Validate that release_commit_sha exists and is not empty
+      #     if [ -z "$RELEASE_COMMIT_SHA" ] || [ "$RELEASE_COMMIT_SHA" = "null" ]; then
+      #       echo "Error: release_commit_sha is missing or empty in release_handle"
+      #       echo "Release handle content: $RELEASE_HANDLE"
+      #       exit 1
+      #     fi
 
-          # Extract release_version for tag creation
-          RELEASE_VERSION=$(echo "$RELEASE_HANDLE" | jq -r '.release_version // empty')
+      #     # Extract release_version for tag creation
+      #     RELEASE_VERSION=$(echo "$RELEASE_HANDLE" | jq -r '.release_version // empty')
 
-          if [ -z "$RELEASE_VERSION" ] || [ "$RELEASE_VERSION" = "null" ]; then
-            echo "Error: release_version is missing or empty in release_handle"
-            echo "Release handle content: $RELEASE_HANDLE"
-            exit 1
-          fi
+      #     if [ -z "$RELEASE_VERSION" ] || [ "$RELEASE_VERSION" = "null" ]; then
+      #       echo "Error: release_version is missing or empty in release_handle"
+      #       echo "Release handle content: $RELEASE_HANDLE"
+      #       exit 1
+      #     fi
 
-          echo "Successfully parsed release handle:"
-          echo "  release_commit_sha: $RELEASE_COMMIT_SHA"
-          echo "  release_version: $RELEASE_VERSION"
+      #     echo "Successfully parsed release handle:"
+      #     echo "  release_commit_sha: $RELEASE_COMMIT_SHA"
+      #     echo "  release_version: $RELEASE_VERSION"
 
-          # Set outputs for next steps
-          echo "release_commit_sha=$RELEASE_COMMIT_SHA" >> $GITHUB_OUTPUT
-          echo "release_version=$RELEASE_VERSION" >> $GITHUB_OUTPUT
+      #     # Set outputs for next steps
+      #     echo "release_commit_sha=$RELEASE_COMMIT_SHA" >> $GITHUB_OUTPUT
+      #     echo "release_version=$RELEASE_VERSION" >> $GITHUB_OUTPUT
 
       # - name: Create version tag
       #   uses: redis-developer/redis-oss-release-automation/.github/actions/create-tag-verified@main
@@ -147,11 +147,10 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Apply Docker image tags to multi-arch images
-        if: ${{ !contains(steps.parse-release.outputs.release_version, '-') }}
         shell: bash
         run: |
           REGISTRY=$(echo "ghcr.io/${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
-          RELEASE_VERSION="${{steps.parse-release.outputs.release_version }}"
+          RELEASE_VERSION="${{inputs.release_version}}"
 
           for DISTRIBUTION in debian alpine; do
             SOURCE_TAG="${REGISTRY}:${RELEASE_VERSION}-${DISTRIBUTION}"
