@@ -6,7 +6,11 @@ on:
     inputs:
       release_handle:
         description: 'Release handle JSON string containing release information'
-        required: true
+        required: false
+        type: string
+      release_version:
+        description: 'Release version for testing (e.g., 8.6.0)'
+        required: false
         type: string
       workflow_uuid:
         description: 'Optional UUID to identify this workflow run'
@@ -77,57 +81,57 @@ jobs:
           echo "release_commit_sha=$RELEASE_COMMIT_SHA" >> $GITHUB_OUTPUT
           echo "release_version=$RELEASE_VERSION" >> $GITHUB_OUTPUT
 
-      - name: Create version tag
-        uses: redis-developer/redis-oss-release-automation/.github/actions/create-tag-verified@main
-        with:
-          tag: v${{ steps.parse-release.outputs.release_version }}
-          ref: ${{ steps.parse-release.outputs.release_commit_sha }}
-          gh_token: ${{ secrets.GITHUB_TOKEN }}
+      # - name: Create version tag
+      #   uses: redis-developer/redis-oss-release-automation/.github/actions/create-tag-verified@main
+      #   with:
+      #     tag: v${{ steps.parse-release.outputs.release_version }}
+      #     ref: ${{ steps.parse-release.outputs.release_commit_sha }}
+      #     gh_token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Sync forked official-images repo
-        shell: bash
-        env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN_FOR_PR_2 }}
-        run: |
-          echo "Syncing fork ${{ env.FORKED_OFFICIAL_IMAGES_REPO }} with upstream ${{ env.TARGET_OFFICIAL_IMAGES_REPO }}"
+      # - name: Sync forked official-images repo
+      #   shell: bash
+      #   env:
+      #     GH_TOKEN: ${{ secrets.GH_TOKEN_FOR_PR_2 }}
+      #   run: |
+      #     echo "Syncing fork ${{ env.FORKED_OFFICIAL_IMAGES_REPO }} with upstream ${{ env.TARGET_OFFICIAL_IMAGES_REPO }}"
 
-          # Use GitHub API to sync the fork with upstream
-          # POST /repos/{owner}/{repo}/merge-upstream
-          response=$(curl -L \
-            -X POST \
-            -H "Accept: application/vnd.github+json" \
-            -H "Authorization: Bearer $GH_TOKEN" \
-            -H "X-GitHub-Api-Version: 2022-11-28" \
-            "https://api.github.com/repos/${{ env.FORKED_OFFICIAL_IMAGES_REPO }}/merge-upstream" \
-            -d '{"branch":"master"}')
+      #     # Use GitHub API to sync the fork with upstream
+      #     # POST /repos/{owner}/{repo}/merge-upstream
+      #     response=$(curl -L \
+      #       -X POST \
+      #       -H "Accept: application/vnd.github+json" \
+      #       -H "Authorization: Bearer $GH_TOKEN" \
+      #       -H "X-GitHub-Api-Version: 2022-11-28" \
+      #       "https://api.github.com/repos/${{ env.FORKED_OFFICIAL_IMAGES_REPO }}/merge-upstream" \
+      #       -d '{"branch":"master"}')
 
-          echo "API Response:"
-          echo "$response" | jq '.'
+      #     echo "API Response:"
+      #     echo "$response" | jq '.'
 
-          # Check if sync was successful
-          if echo "$response" | jq -e '.message' > /dev/null 2>&1; then
-            message=$(echo "$response" | jq -r '.message')
-            if [ "$message" = "This branch is not behind the upstream docker-library:master" ]; then
-              echo "Fork is already up to date"
-            elif echo "$message" | grep -q "Successfully fetched and fast-forwarded"; then
-              echo "Successfully synced fork with upstream"
-            else
-              echo "Warning: Unexpected response message: $message"
-            fi
-          elif echo "$response" | jq -e '.merge_type' > /dev/null 2>&1; then
-            merge_type=$(echo "$response" | jq -r '.merge_type')
-            echo "Successfully synced fork (merge type: $merge_type)"
-          else
-            echo "Error: Failed to sync fork"
-            echo "$response"
-            exit 1
-          fi
+      #     # Check if sync was successful
+      #     if echo "$response" | jq -e '.message' > /dev/null 2>&1; then
+      #       message=$(echo "$response" | jq -r '.message')
+      #       if [ "$message" = "This branch is not behind the upstream docker-library:master" ]; then
+      #         echo "Fork is already up to date"
+      #       elif echo "$message" | grep -q "Successfully fetched and fast-forwarded"; then
+      #         echo "Successfully synced fork with upstream"
+      #       else
+      #         echo "Warning: Unexpected response message: $message"
+      #       fi
+      #     elif echo "$response" | jq -e '.merge_type' > /dev/null 2>&1; then
+      #       merge_type=$(echo "$response" | jq -r '.merge_type')
+      #       echo "Successfully synced fork (merge type: $merge_type)"
+      #     else
+      #       echo "Error: Failed to sync fork"
+      #       echo "$response"
+      #       exit 1
+      #     fi
 
-      - name: Checkout official-images repo
-        uses: actions/checkout@v4
-        with:
-          path: official-images
-          repository: ${{ github.event.inputs.pr_to_official_library == 'true' && env.TARGET_OFFICIAL_IMAGES_REPO || env.FORKED_OFFICIAL_IMAGES_REPO }}
+      # - name: Checkout official-images repo
+      #   uses: actions/checkout@v4
+      #   with:
+      #     path: official-images
+      #     repository: ${{ github.event.inputs.pr_to_official_library == 'true' && env.TARGET_OFFICIAL_IMAGES_REPO || env.FORKED_OFFICIAL_IMAGES_REPO }}
 
       - name: Install release automation dependencies
         uses: ./.github/actions/release-automation-install
@@ -143,11 +147,11 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Apply Docker image tags to multi-arch images
-        if: ${{ !contains(steps.parse-release.outputs.release_version, '-') }}
+        if: ${{ !contains(github.event.inputs.release_version || steps.parse-release.outputs.release_version, '-') }}
         shell: bash
         run: |
           REGISTRY=$(echo "ghcr.io/${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
-          RELEASE_VERSION="${{ steps.parse-release.outputs.release_version }}"
+          RELEASE_VERSION="${{ github.event.inputs.release_version || steps.parse-release.outputs.release_version }}"
 
           for DISTRIBUTION in debian alpine; do
             SOURCE_TAG="${REGISTRY}:${RELEASE_VERSION}-${DISTRIBUTION}"
@@ -170,136 +174,137 @@ jobs:
               TAG_ARGS="${TAG_ARGS} -t ${REGISTRY}:${tag}"
             done
 
-            docker buildx imagetools create ${TAG_ARGS} "${SOURCE_TAG}"
+            echo "DRY RUN: docker buildx imagetools create ${TAG_ARGS} ${SOURCE_TAG}"
+            echo ""
           done
 
-      - name: Generate stackbrew library content
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          # Extract major version from release version (e.g., "8.2.1" -> "8")
-          MAJOR_VERSION=$(uv --directory release-automation run release-automation redis-version major "${{ steps.parse-release.outputs.release_version }}")
+      # - name: Generate stackbrew library content
+      #   env:
+      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      #   run: |
+      #     # Extract major version from release version (e.g., "8.2.1" -> "8")
+      #     MAJOR_VERSION=$(uv --directory release-automation run release-automation redis-version major "${{ steps.parse-release.outputs.release_version }}")
 
-          echo "Major version: $MAJOR_VERSION"
+      #     echo "Major version: $MAJOR_VERSION"
 
-          # Generate updated stackbrew content using uv
-          uv --directory release-automation run release-automation update-stackbrew-file $MAJOR_VERSION --input ../official-images/library/redis --output ../official-images/library/redis
-          cd official-images && git diff --color
-          cd -
+      #     # Generate updated stackbrew content using uv
+      #     uv --directory release-automation run release-automation update-stackbrew-file $MAJOR_VERSION --input ../official-images/library/redis --output ../official-images/library/redis
+      #     cd official-images && git diff --color
+      #     cd -
 
-      - name: Create pull request to official-images
-        id: create-pr
-        uses: peter-evans/create-pull-request@v7
-        with:
-          token: ${{ secrets.GH_TOKEN_FOR_PR_2 }}
-          draft: true
-          push-to-fork: ${{ github.event.inputs.pr_to_official_library == 'true' && env.FORKED_OFFICIAL_IMAGES_REPO || '' }}
-          path: official-images
-          branch: redis-${{ steps.parse-release.outputs.release_version }}
-          commit-message: "Redis: Update to ${{ steps.parse-release.outputs.release_version }}"
-          title: "Redis: Update to ${{ steps.parse-release.outputs.release_version }}"
-          body: |
-            Automated update for Redis ${{ steps.parse-release.outputs.release_version }}
+      # - name: Create pull request to official-images
+      #   id: create-pr
+      #   uses: peter-evans/create-pull-request@v7
+      #   with:
+      #     token: ${{ secrets.GH_TOKEN_FOR_PR_2 }}
+      #     draft: true
+      #     push-to-fork: ${{ github.event.inputs.pr_to_official_library == 'true' && env.FORKED_OFFICIAL_IMAGES_REPO || '' }}
+      #     path: official-images
+      #     branch: redis-${{ steps.parse-release.outputs.release_version }}
+      #     commit-message: "Redis: Update to ${{ steps.parse-release.outputs.release_version }}"
+      #     title: "Redis: Update to ${{ steps.parse-release.outputs.release_version }}"
+      #     body: |
+      #       Automated update for Redis ${{ steps.parse-release.outputs.release_version }}
 
-            Release commit: ${{ steps.parse-release.outputs.release_commit_sha }}
-            Release tag: v${{ steps.parse-release.outputs.release_version }}
-            Compare: ${{ github.server_url }}/${{ github.repository }}/compare/v${{ steps.parse-release.outputs.release_version }}^1...v${{ steps.parse-release.outputs.release_version }}
+      #       Release commit: ${{ steps.parse-release.outputs.release_commit_sha }}
+      #       Release tag: v${{ steps.parse-release.outputs.release_version }}
+      #       Compare: ${{ github.server_url }}/${{ github.repository }}/compare/v${{ steps.parse-release.outputs.release_version }}^1...v${{ steps.parse-release.outputs.release_version }}
 
-            ${{ env.PR_USER_MENTIONS }}
+      #       ${{ env.PR_USER_MENTIONS }}
 
-      - name: Validate PR creation
-        env:
-          PULL_REQUEST_NUMBER: ${{ steps.create-pr.outputs.pull-request-number }}
-        shell: bash
-        run: |
-          if [ -z "$PULL_REQUEST_NUMBER" ]; then
-            echo "::error::Failed to create PR, pull-request-number is empty"
-            exit 1
-          fi
+      # - name: Validate PR creation
+      #   env:
+      #     PULL_REQUEST_NUMBER: ${{ steps.create-pr.outputs.pull-request-number }}
+      #   shell: bash
+      #   run: |
+      #     if [ -z "$PULL_REQUEST_NUMBER" ]; then
+      #       echo "::error::Failed to create PR, pull-request-number is empty"
+      #       exit 1
+      #     fi
 
-      # Since publish is only for public releases, always send notifications to the announcement channel first
-      - name: Send Success Slack notification
-        id: slack-success
-        continue-on-error: true
-        uses: ./.github/actions/slack-notification
-        with:
-          slack_func: slack_format_docker_PR_message
-          slack_channel_id: ${{ vars.SLACK_CHANNEL_ID }}
-          release_tag: v${{ steps.parse-release.outputs.release_version }}
-          pr_url: ${{ steps.create-pr.outputs.pull-request-url }}
-          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+      # # Since publish is only for public releases, always send notifications to the announcement channel first
+      # - name: Send Success Slack notification
+      #   id: slack-success
+      #   continue-on-error: true
+      #   uses: ./.github/actions/slack-notification
+      #   with:
+      #     slack_func: slack_format_docker_PR_message
+      #     slack_channel_id: ${{ vars.SLACK_CHANNEL_ID }}
+      #     release_tag: v${{ steps.parse-release.outputs.release_version }}
+      #     pr_url: ${{ steps.create-pr.outputs.pull-request-url }}
+      #     SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
 
-      # Post link to message in the announcement channel to the slack thread if requested
-      # This makes user to see the link to the "official" message if he started the release in the thread
-      - name: Post announcement link to Slack
-        continue-on-error: true
-        if: |
-          github.event.inputs.slack_channel_id != '' &&
-          steps.slack-success.outputs.slack_url != ''
-        uses: ./.github/actions/slack-notification
-        with:
-          slack_func: slack_format_simple_msg
-          slack_channel_id: ${{ github.event.inputs.slack_channel_id }}
-          slack_thread_ts: ${{ github.event.inputs.slack_thread_ts }}
-          message: ${{ steps.slack-success.outputs.slack_url }}
-          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+      # # Post link to message in the announcement channel to the slack thread if requested
+      # # This makes user to see the link to the "official" message if he started the release in the thread
+      # - name: Post announcement link to Slack
+      #   continue-on-error: true
+      #   if: |
+      #     github.event.inputs.slack_channel_id != '' &&
+      #     steps.slack-success.outputs.slack_url != ''
+      #   uses: ./.github/actions/slack-notification
+      #   with:
+      #     slack_func: slack_format_simple_msg
+      #     slack_channel_id: ${{ github.event.inputs.slack_channel_id }}
+      #     slack_thread_ts: ${{ github.event.inputs.slack_thread_ts }}
+      #     message: ${{ steps.slack-success.outputs.slack_url }}
+      #     SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
 
-      - name: Create Release info
-        id: create-release-info
-        shell: bash
-        run: |
-          # Create release_info.json with all fields, then filter out empty ones
-          jq -n \
-            --arg release_version "${{ steps.parse-release.outputs.release_version }}" \
-            --arg pull_request_number "${{ steps.create-pr.outputs.pull-request-number }}" \
-            --arg pull_request_url "${{ steps.create-pr.outputs.pull-request-url }}" \
-            --argjson run_id "${{ github.run_id }}" \
-            --arg slack_ts "${{ steps.slack-success.outputs.slack_ts }}" \
-            --arg slack_channel_id "${{ github.event.inputs.slack_channel_id || vars.SLACK_CHANNEL_ID }}" \
-            --arg slack_message_url "${{ steps.slack-success.outputs.slack_url }}" \
-            '{
-              release_version: $release_version,
-              pull_request_number: $pull_request_number,
-              pull_request_url: $pull_request_url,
-              run_id: $run_id,
-              slack_ts: $slack_ts,
-              slack_channel_id: $slack_channel_id,
-              slack_message_url: $slack_message_url
-            } | with_entries(select(.value != ""))' > result.json
+      # - name: Create Release info
+      #   id: create-release-info
+      #   shell: bash
+      #   run: |
+      #     # Create release_info.json with all fields, then filter out empty ones
+      #     jq -n \
+      #       --arg release_version "${{ steps.parse-release.outputs.release_version }}" \
+      #       --arg pull_request_number "${{ steps.create-pr.outputs.pull-request-number }}" \
+      #       --arg pull_request_url "${{ steps.create-pr.outputs.pull-request-url }}" \
+      #       --argjson run_id "${{ github.run_id }}" \
+      #       --arg slack_ts "${{ steps.slack-success.outputs.slack_ts }}" \
+      #       --arg slack_channel_id "${{ github.event.inputs.slack_channel_id || vars.SLACK_CHANNEL_ID }}" \
+      #       --arg slack_message_url "${{ steps.slack-success.outputs.slack_url }}" \
+      #       '{
+      #         release_version: $release_version,
+      #         pull_request_number: $pull_request_number,
+      #         pull_request_url: $pull_request_url,
+      #         run_id: $run_id,
+      #         slack_ts: $slack_ts,
+      #         slack_channel_id: $slack_channel_id,
+      #         slack_message_url: $slack_message_url
+      #       } | with_entries(select(.value != ""))' > result.json
 
-          echo "Created result.json for release_info:"
-          cat result.json | jq '.'
+      #     echo "Created result.json for release_info:"
+      #     cat result.json | jq '.'
 
-      - name: Upload release info artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: release_info
-          path: result.json
-          retention-days: 400
+      # - name: Upload release info artifact
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: release_info
+      #     path: result.json
+      #     retention-days: 400
 
-      - name: Send Failure Slack notification
-        id: slack-failure
-        if: failure()
-        uses: ./.github/actions/slack-notification
-        with:
-          slack_func: slack_format_failure_message
-          slack_channel_id: ${{ vars.SLACK_CHANNEL_ID }}
-          release_tag: v${{ steps.parse-release.outputs.release_version }}
-          message: "Docker PR failed"
-          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+      # - name: Send Failure Slack notification
+      #   id: slack-failure
+      #   if: failure()
+      #   uses: ./.github/actions/slack-notification
+      #   with:
+      #     slack_func: slack_format_failure_message
+      #     slack_channel_id: ${{ vars.SLACK_CHANNEL_ID }}
+      #     release_tag: v${{ steps.parse-release.outputs.release_version }}
+      #     message: "Docker PR failed"
+      #     SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
 
-      # Post link to message in the announcement channel to the slack thread if requested
-      # This makes user to see the link to the "official" message if he started the release in the thread
-      - name: Post failure notification link to Slack
-        continue-on-error: true
-        if: |
-          failure() &&
-          github.event.inputs.slack_channel_id != '' &&
-          steps.slack-failure.outputs.slack_url != ''
-        uses: ./.github/actions/slack-notification
-        with:
-          slack_func: slack_format_simple_msg
-          slack_channel_id: ${{ github.event.inputs.slack_channel_id }}
-          slack_thread_ts: ${{ github.event.inputs.slack_thread_ts }}
-          message: ${{ steps.slack-failure.outputs.slack_url }}
-          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+      # # Post link to message in the announcement channel to the slack thread if requested
+      # # This makes user to see the link to the "official" message if he started the release in the thread
+      # - name: Post failure notification link to Slack
+      #   continue-on-error: true
+      #   if: |
+      #     failure() &&
+      #     github.event.inputs.slack_channel_id != '' &&
+      #     steps.slack-failure.outputs.slack_url != ''
+      #   uses: ./.github/actions/slack-notification
+      #   with:
+      #     slack_func: slack_format_simple_msg
+      #     slack_channel_id: ${{ github.event.inputs.slack_channel_id }}
+      #     slack_thread_ts: ${{ github.event.inputs.slack_thread_ts }}
+      #     message: ${{ steps.slack-failure.outputs.slack_url }}
+      #     SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
