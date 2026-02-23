@@ -153,7 +153,7 @@ jobs:
             echo "Processing ${SOURCE_TAG}"
 
             TAGS=$(uv --directory release-automation run release-automation \
-              generate-image-tags "${RELEASE_VERSION}" "${DISTRIBUTION}")
+              generate-image-tags "${RELEASE_VERSION}" "${DISTRIBUTION}" 2>/dev/null)
 
             if [ -z "$TAGS" ]; then
               echo "No tags generated for ${RELEASE_VERSION} ${DISTRIBUTION}, skipping"
