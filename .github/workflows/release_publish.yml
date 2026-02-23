@@ -143,6 +143,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Apply Docker image tags to multi-arch images
+        if: ${{ !contains(steps.parse-release.outputs.release_version, '-') }}
         shell: bash
         run: |
           REGISTRY=$(echo "ghcr.io/${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
