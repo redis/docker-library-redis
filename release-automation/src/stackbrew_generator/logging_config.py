@@ -1,8 +1,6 @@
 """Logging configuration for stackbrew generator."""
 
 import logging
-import os
-from contextlib import contextmanager
 from typing import Optional
 
 from rich.console import Console
