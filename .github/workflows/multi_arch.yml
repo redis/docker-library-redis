@@ -11,6 +11,16 @@ on:
       workflow_uuid:
         description: 'Optional UUID to identify this workflow run'
         required: false
+      slack_channel_id:
+        description: 'Slack channel ID to duplicate links to announcement messages to'
+        required: false
+        type: string
+        default: ''
+      slack_thread_ts:
+        description: 'Thread timestamp to post message as a reply (optional)'
+        required: false
+        type: string
+        default: ''
 
 # UUID is used to help automation to identify workflow run in the list of workflow runs.
 run-name: "Multi-Arch Images${{ github.event.inputs.workflow_uuid && format(': {0}', github.event.inputs.workflow_uuid) || '' }}"
