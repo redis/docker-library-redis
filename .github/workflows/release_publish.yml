@@ -132,6 +132,47 @@ jobs:
       - name: Install release automation dependencies
         uses: ./.github/actions/release-automation-install
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Apply Docker image tags to multi-arch images
+        if: ${{ !contains(steps.parse-release.outputs.release_version, '-') }}
+        shell: bash
+        run: |
+          REGISTRY=$(echo "ghcr.io/${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+          RELEASE_VERSION="${{ steps.parse-release.outputs.release_version }}"
+
+          for DISTRIBUTION in debian alpine; do
+            SOURCE_TAG="${REGISTRY}:${RELEASE_VERSION}-${DISTRIBUTION}"
+            echo "Processing ${SOURCE_TAG}"
+
+            TAGS=$(uv --directory release-automation run release-automation \
+              generate-image-tags "${RELEASE_VERSION}" "${DISTRIBUTION}" 2>/dev/null)
+
+            if [ -z "$TAGS" ]; then
+              echo "No tags generated for ${RELEASE_VERSION} ${DISTRIBUTION}, skipping"
+              continue
+            fi
+
+            echo "Generated tags: ${TAGS}"
+
+            IFS=',' read -ra TAG_ARRAY <<< "$TAGS"
+            TAG_ARGS=""
+            for tag in "${TAG_ARRAY[@]}"; do
+              tag=$(echo "$tag" | xargs)
+              TAG_ARGS="${TAG_ARGS} -t ${REGISTRY}:${tag}"
+            done
+
+            docker buildx imagetools create ${TAG_ARGS} "${SOURCE_TAG}"
+          done
+
       - name: Generate stackbrew library content
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
