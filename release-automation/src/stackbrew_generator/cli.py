@@ -143,6 +143,96 @@ def generate_stackbrew_content(
         raise typer.Exit(1)
 
 
+@app.command(name="generate-image-tags")
+def generate_image_tags(
+    version: str = typer.Argument(
+        ...,
+        help="Redis version (e.g., '8.6.0', '8.6.0-rc1')"
+    ),
+    directory: str = typer.Argument(
+        ...,
+        help="Distribution directory name (e.g., 'debian', 'alpine')",
+    ),
+    remote: str = typer.Option(
+        "origin",
+        "--remote",
+        help="Git remote to use for fetching tags and branches"
+    ),
+    verbose: bool = typer.Option(
+        False,
+        "--verbose",
+        "-v",
+        help="Enable verbose output"
+    ),
+) -> None:
+    """Generate Docker image tags for a Redis version and distribution.
+
+    Uses the same stackbrew generation pipeline as generate-stackbrew-content
+    to determine tags, including whether the version is latest.
+
+    Examples:
+        generate-image-tags 8.6.0 debian
+          -> 8.6.0, 8.6, 8, 8.6.0-trixie, 8.6-trixie, 8-trixie, latest, trixie
+
+        generate-image-tags 8.6.0 alpine
+          -> 8.6.0-alpine, 8.6-alpine, 8-alpine, 8.6.0-alpine3.23, ...
+
+        generate-image-tags 8.6.0-rc1 debian
+          -> 8.6.0-rc1, 8.6.0-rc1-trixie
+    """
+    setup_logging(verbose=verbose, console=console)
+
+    try:
+        redis_version = RedisVersion.parse(version)
+    except (ValueError, Exception) as e:
+        console.print(f"[red]Failed to parse version '{version}': {e}[/red]")
+        raise typer.Exit(1)
+
+    try:
+        git_client = GitClient(remote=remote)
+        version_filter = VersionFilter(git_client)
+        distribution_detector = DistributionDetector(git_client)
+        stackbrew_generator = StackbrewGenerator()
+
+        versions = version_filter.get_actual_major_redis_versions(redis_version.major)
+
+        if not versions:
+            console.print(f"[red]No versions found for Redis {redis_version.major}.x[/red]")
+            raise typer.Exit(1)
+
+        refs_to_fetch = [commit for _, commit, _ in versions]
+        git_client.fetch_refs(refs_to_fetch)
+        releases = distribution_detector.prepare_releases_list(versions)
+        entries = stackbrew_generator.generate_stackbrew_library(releases)
+
+        tags = ""
+        for entry in entries:
+            if entry.version == redis_version and entry.distribution.type.value == directory:
+                tags = ", ".join(entry.tags)
+                break
+
+        if not tags:
+            console.print(f"[yellow]No tags found for {version} in {directory}[/yellow]")
+
+        print(tags)
+
+    except StackbrewGeneratorError as e:
+        console.print(f"[red]Error: {e}[/red]")
+        if verbose:
+            console.print_exception()
+        raise typer.Exit(1)
+    except typer.Exit:
+        raise
+    except KeyboardInterrupt:
+        console.print("\n[yellow]Operation cancelled by user[/yellow]")
+        raise typer.Exit(130)
+    except Exception as e:
+        console.print(f"[red]Unexpected error: {e}[/red]")
+        if verbose:
+            console.print_exception()
+        raise typer.Exit(1)
+
+
 @app.command()
 def update_stackbrew_file(
     major_version: int = typer.Argument(
