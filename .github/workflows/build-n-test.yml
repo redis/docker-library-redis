@@ -75,7 +75,6 @@ jobs:
           - linux/ppc64le
           - linux/s390x
           - linux/arm64
-          - linux/riscv64
         exclude:
         - distribution: alpine
           platform: linux/arm/v5
