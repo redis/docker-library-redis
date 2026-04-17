@@ -1,4 +1,4 @@
-FROM debian:trixie-slim
+FROM debian:bookworm-slim
 
 # add our user and group first to make sure their IDs get assigned consistently, regardless of whatever dependencies get added
 RUN set -eux; \
@@ -14,8 +14,8 @@ RUN set -eux; \
 	; \
 	rm -rf /var/lib/apt/lists/*
 
-ARG REDIS_DOWNLOAD_URL=https://github.com/redis/redis/archive/refs/tags/8.6.2.tar.gz
-ARG REDIS_DOWNLOAD_SHA=cef021615ec4aef355a824cf933702be5def36e37ca1e9b99ab1cc5599f1748f
+ARG REDIS_DOWNLOAD_URL=https://github.com/redis/redis/archive/refs/tags/7.4.8.tar.gz
+ARG REDIS_DOWNLOAD_SHA=280ce804ab84bf42692f77d1f503a1ae962571c6b2f33dfc3a880d6cbd18e660
 
 RUN set -eux; \
 	\
@@ -26,34 +26,10 @@ RUN set -eux; \
 		wget \
 		dpkg-dev \
 		gcc \
-		g++ \
 		libc6-dev \
 		libssl-dev \
-		make; \
-	\
-	arch="$(dpkg --print-architecture | awk -F- '{ print $NF }')"; \
-	case "$arch" in \
-		'amd64') export BUILD_WITH_MODULES=yes; export INSTALL_RUST_TOOLCHAIN=yes; export DISABLE_WERRORS=yes ;; \
-		'arm64') export BUILD_WITH_MODULES=yes; export INSTALL_RUST_TOOLCHAIN=yes; export DISABLE_WERRORS=yes ;; \
-		*) echo >&2 "Modules are NOT supported! unsupported architecture: '$arch'"; export BUILD_WITH_MODULES=no ;; \
-	esac; \
-	if [ "$BUILD_WITH_MODULES" = "yes" ]; then \
-		apt-get update; \
-		apt-get install -y --no-install-recommends \
-			git \
-			cmake \
-			python3 \
-			python3-pip \
-			python3-venv \
-			python3-dev \
-			unzip \
-			rsync \
-			clang \
-			automake \
-			autoconf \
-			libtool \
-			g++; \
-	fi; \
+		make \
+	; \
 	\
 	rm -rf /var/lib/apt/lists/*; \
 	\
@@ -62,6 +38,8 @@ RUN set -eux; \
 	mkdir -p /usr/src/redis; \
 	tar -xzf redis.tar.gz -C /usr/src/redis --strip-components=1; \
 	rm redis.tar.gz; \
+	\
+
 # disable Redis protected mode [1] as it is unnecessary in context of Docker
 # (ports are not automatically exposed when running inside Docker, but rather explicitly by specifying -p / -P)
 # [1]: https://github.com/redis/redis/commit/edd4d555df57dc84265fdfb4ef59a4678832f6da
@@ -77,7 +55,8 @@ RUN set -eux; \
 	gnuArch="$(dpkg-architecture --query DEB_BUILD_GNU_TYPE)"; \
 	extraJemallocConfigureFlags="--build=$gnuArch"; \
 # https://salsa.debian.org/debian/jemalloc/-/blob/c0a88c37a551be7d12e4863435365c9a6a51525f/debian/rules#L8-23
-	case "${arch##*-}" in \
+	dpkgArch="$(dpkg --print-architecture)"; \
+	case "${dpkgArch##*-}" in \
 		amd64 | i386 | x32) extraJemallocConfigureFlags="$extraJemallocConfigureFlags --with-lg-page=12" ;; \
 		*) extraJemallocConfigureFlags="$extraJemallocConfigureFlags --with-lg-page=16" ;; \
 	esac; \
@@ -90,18 +69,6 @@ RUN set -eux; \
 	make -C /usr/src/redis -j "$(nproc)" all; \
 	make -C /usr/src/redis install; \
 	\
-# TODO https://github.com/redis/redis/pull/3494 (deduplicate "redis-server" copies)
-	serverMd5="$(md5sum /usr/local/bin/redis-server | cut -d' ' -f1)"; export serverMd5; \
-	find /usr/local/bin/redis* -maxdepth 0 \
-		-type f -not -name redis-server \
-		-exec sh -eux -c ' \
-			md5="$(md5sum "$1" | cut -d" " -f1)"; \
-			test "$md5" = "$serverMd5"; \
-		' -- '{}' ';' \
-		-exec ln -svfT 'redis-server' '{}' ';' \
-	; \
-	\
-	make -C /usr/src/redis distclean; \
 	rm -r /usr/src/redis; \
 	\
 	apt-mark auto '.*' > /dev/null; \
@@ -115,7 +82,6 @@ RUN set -eux; \
 		| xargs -r apt-mark manual \
 	; \
 	apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false; \
-	rm -rf /var/cache/debconf/*; \
 	\
 	redis-cli --version; \
 	redis-server --version

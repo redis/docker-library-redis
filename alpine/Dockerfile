@@ -1,4 +1,4 @@
-FROM alpine:3.23
+FROM alpine:3.21
 
 # add our user and group first to make sure their IDs get assigned consistently, regardless of whatever dependencies get added
 RUN set -eux; \
@@ -14,8 +14,9 @@ RUN set -eux; \
 # we need setpriv package as busybox provides very limited functionality
 		setpriv \
 	;
-ARG REDIS_DOWNLOAD_URL=https://github.com/redis/redis/archive/refs/tags/8.6.2.tar.gz
-ARG REDIS_DOWNLOAD_SHA=cef021615ec4aef355a824cf933702be5def36e37ca1e9b99ab1cc5599f1748f
+ARG REDIS_DOWNLOAD_URL=https://github.com/redis/redis/archive/refs/tags/7.4.8.tar.gz
+ARG REDIS_DOWNLOAD_SHA=280ce804ab84bf42692f77d1f503a1ae962571c6b2f33dfc3a880d6cbd18e660
+
 RUN set -eux; \
 	\
 	apk add --no-cache --virtual .build-deps \
@@ -26,52 +27,8 @@ RUN set -eux; \
 		make \
 		musl-dev \
 		openssl-dev \
-		g++; \
-	\
-	arch="$(dpkg --print-architecture | awk -F- '{ print $NF }')"; \
-	case "$arch" in \
-		'amd64') export BUILD_WITH_MODULES=yes; export INSTALL_RUST_TOOLCHAIN=yes; export DISABLE_WERRORS=yes ;; \
-		'arm64') export BUILD_WITH_MODULES=yes; export INSTALL_RUST_TOOLCHAIN=yes; export DISABLE_WERRORS=yes ;; \
-		*) echo >&2 "Modules are NOT supported! unsupported architecture: '$arch'"; export BUILD_WITH_MODULES=no ;; \
-	esac; \
-	if [ "$BUILD_WITH_MODULES" = "yes" ]; then \
-	apk add --no-cache --virtual .module-build-deps \
-		autoconf \
-		automake \
-		bash \
-		bsd-compat-headers \
-		build-base \
-		cargo \
-		clang21 \
-		clang21-static \
-		clang21-libclang \
-		cmake \
-		curl \
-		g++ \
-		git \
-		libffi-dev \
-		libgcc \
-		libtool \
-		llvm21-dev \
-		ncurses-dev \
-		openssh \
-		openssl  \
-		py-virtualenv \
-		py3-cryptography \
-		py3-pip \
-		py3-virtualenv \
-		python3 \
-		python3-dev \
-		rsync \
-		tar \
-		unzip \
-		which \
-		xsimd \
-		xz; \
-	fi; \
-	\
-# install required python packages for RedisJSON module
-	pip install -q --upgrade setuptools &&  pip install -q --upgrade pip && PIP_BREAK_SYSTEM_PACKAGES=1 pip install -q addict toml jinja2 ramp-packer ;\
+		wget \
+	; \
 	wget -O redis.tar.gz "$REDIS_DOWNLOAD_URL"; \
 	echo "$REDIS_DOWNLOAD_SHA *redis.tar.gz" | sha256sum -c -; \
 	mkdir -p /usr/src/redis; \
@@ -103,30 +60,10 @@ RUN set -eux; \
 	sed -ri 's!cd jemalloc && ./configure !&'"$extraJemallocConfigureFlags"' !' /usr/src/redis/deps/Makefile; \
 	grep -F "cd jemalloc && ./configure $extraJemallocConfigureFlags " /usr/src/redis/deps/Makefile; \
 	\
-# Disable static linking the C runtime for RediSearch's rust submodule
-	export RUST_DYN_CRT=1; \
-	export PATH="/usr/lib/llvm21/bin:$PATH"; \
 	export BUILD_TLS=yes; \
-	if [ "$BUILD_WITH_MODULES" = "yes" ]; then \
-		make -C /usr/src/redis/modules/redisjson get_source; \
-		sed -i 's/^RUST_FLAGS=$/RUST_FLAGS += -C target-feature=-crt-static/' /usr/src/redis/modules/redisjson/src/Makefile ; \
-		grep -E 'RUST_FLAGS' /usr/src/redis/modules/redisjson/src/Makefile; \
-	fi; \
 	make -C /usr/src/redis -j "$(nproc)" all; \
 	make -C /usr/src/redis install; \
 	\
-# TODO https://github.com/redis/redis/pull/3494 (deduplicate "redis-server" copies)
-	serverMd5="$(md5sum /usr/local/bin/redis-server | cut -d' ' -f1)"; export serverMd5; \
-	find /usr/local/bin/redis* -maxdepth 0 \
-		-type f -not -name redis-server \
-		-exec sh -eux -c ' \
-			md5="$(md5sum "$1" | cut -d" " -f1)"; \
-			test "$md5" = "$serverMd5"; \
-		' -- '{}' ';' \
-		-exec ln -svfT 'redis-server' '{}' ';' \
-	; \
-	\
-	make -C /usr/src/redis distclean; \
 	rm -r /usr/src/redis; \
 	\
 	runDeps="$( \
@@ -136,11 +73,7 @@ RUN set -eux; \
 			| awk 'system("[ -e /usr/local/lib/" $1 " ]") == 0 { next } { print "so:" $1 }' \
 	)"; \
 	apk add --no-network --virtual .redis-rundeps $runDeps; \
-	if [ "$BUILD_WITH_MODULES" = "yes" ]; then \
-		apk del --no-network .module-build-deps; \
-	fi; \
 	apk del --no-network .build-deps; \
-	rm -rf ~/.cache ~/.gitconfig; \
 	\
 	redis-cli --version; \
 	redis-server --version;

@@ -1,4 +1,4 @@
-FROM debian:trixie-slim
+FROM debian:bookworm-slim
 
 # add our user and group first to make sure their IDs get assigned consistently, regardless of whatever dependencies get added
 RUN set -eux; \
@@ -15,15 +15,7 @@ RUN set -eux; \
 	rm -rf /var/lib/apt/lists/*
 
 ARG REDIS_DOWNLOAD_URL={{ redis_download_url | required("redis_download_url is required") }}
-{% if not custom_build %}
 ARG REDIS_DOWNLOAD_SHA={{ redis_download_sha | required("redis_download_sha is required") }}
-{% endif %}
-{% if custom_build %}
-ARG REDISEARCH_VERSION
-ARG REDISJSON_VERSION
-ARG REDISBLOOM_VERSION
-ARG REDISTIMESERIES_VERSION
-{% endif %}
 
 RUN set -eux; \
 	\
@@ -34,67 +26,19 @@ RUN set -eux; \
 		wget \
 		dpkg-dev \
 		gcc \
-		g++ \
 		libc6-dev \
 		libssl-dev \
-		make; \
-	\
-	arch="$(dpkg --print-architecture | awk -F- '{ print $NF }')"; \
-	case "$arch" in \
-		'amd64') export BUILD_WITH_MODULES=yes; export INSTALL_RUST_TOOLCHAIN=yes; export DISABLE_WERRORS=yes ;; \
-		'arm64') export BUILD_WITH_MODULES=yes; export INSTALL_RUST_TOOLCHAIN=yes; export DISABLE_WERRORS=yes ;; \
-		*) echo >&2 "Modules are NOT supported! unsupported architecture: '$arch'"; export BUILD_WITH_MODULES=no ;; \
-	esac; \
-	if [ "$BUILD_WITH_MODULES" = "yes" ]; then \
-		apt-get update; \
-		apt-get install -y --no-install-recommends \
-			git \
-			cmake \
-			python3 \
-			python3-pip \
-			python3-venv \
-			python3-dev \
-			unzip \
-			rsync \
-			clang \
-			automake \
-			autoconf \
-			libtool \
-			g++; \
-	fi; \
+		make \
+	; \
 	\
 	rm -rf /var/lib/apt/lists/*; \
 	\
 	wget -O redis.tar.gz "$REDIS_DOWNLOAD_URL"; \
-
-	{%- if not custom_build %}
-
 	echo "$REDIS_DOWNLOAD_SHA *redis.tar.gz" | sha256sum -c -; \
-
-	{%- endif %}
-
 	mkdir -p /usr/src/redis; \
 	tar -xzf redis.tar.gz -C /usr/src/redis --strip-components=1; \
 	rm redis.tar.gz; \
-
-	{%- if custom_build %}
-
 	\
-	# Update modules versions
-	if [ -n "$REDISEARCH_VERSION" ]; then \
-		sed -i "/^MODULE_VERSION = /cMODULE_VERSION = $REDISEARCH_VERSION" /usr/src/redis/modules/redisearch/Makefile; \
-	fi; \
-	if [ -n "$REDISJSON_VERSION" ]; then \
-		sed -i "/^MODULE_VERSION = /cMODULE_VERSION = $REDISJSON_VERSION" /usr/src/redis/modules/redisjson/Makefile; \
-	fi; \
-	if [ -n "$REDISBLOOM_VERSION" ]; then \
-		sed -i "/^MODULE_VERSION = /cMODULE_VERSION = $REDISBLOOM_VERSION" /usr/src/redis/modules/redisbloom/Makefile; \
-	fi; \
-	if [ -n "$REDISTIMESERIES_VERSION" ]; then \
-		sed -i "/^MODULE_VERSION = /cMODULE_VERSION = $REDISTIMESERIES_VERSION" /usr/src/redis/modules/redistimeseries/Makefile; \
-	fi; \
-
-	{%- endif %}
 
 # disable Redis protected mode [1] as it is unnecessary in context of Docker
 # (ports are not automatically exposed when running inside Docker, but rather explicitly by specifying -p / -P)
@@ -111,7 +55,8 @@ RUN set -eux; \
 	gnuArch="$(dpkg-architecture --query DEB_BUILD_GNU_TYPE)"; \
 	extraJemallocConfigureFlags="--build=$gnuArch"; \
 # https://salsa.debian.org/debian/jemalloc/-/blob/c0a88c37a551be7d12e4863435365c9a6a51525f/debian/rules#L8-23
-	case "${arch##*-}" in \
+	dpkgArch="$(dpkg --print-architecture)"; \
+	case "${dpkgArch##*-}" in \
 		amd64 | i386 | x32) extraJemallocConfigureFlags="$extraJemallocConfigureFlags --with-lg-page=12" ;; \
 		*) extraJemallocConfigureFlags="$extraJemallocConfigureFlags --with-lg-page=16" ;; \
 	esac; \
@@ -124,18 +69,6 @@ RUN set -eux; \
 	make -C /usr/src/redis -j "$(nproc)" all; \
 	make -C /usr/src/redis install; \
 	\
-# TODO https://github.com/redis/redis/pull/3494 (deduplicate "redis-server" copies)
-	serverMd5="$(md5sum /usr/local/bin/redis-server | cut -d' ' -f1)"; export serverMd5; \
-	find /usr/local/bin/redis* -maxdepth 0 \
-		-type f -not -name redis-server \
-		-exec sh -eux -c ' \
-			md5="$(md5sum "$1" | cut -d" " -f1)"; \
-			test "$md5" = "$serverMd5"; \
-		' -- '{}' ';' \
-		-exec ln -svfT 'redis-server' '{}' ';' \
-	; \
-	\
-	make -C /usr/src/redis distclean; \
 	rm -r /usr/src/redis; \
 	\
 	apt-mark auto '.*' > /dev/null; \
@@ -149,7 +82,6 @@ RUN set -eux; \
 		| xargs -r apt-mark manual \
 	; \
 	apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false; \
-	rm -rf /var/cache/debconf/*; \
 	\
 	redis-cli --version; \
 	redis-server --version
