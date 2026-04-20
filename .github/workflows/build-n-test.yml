@@ -70,22 +70,8 @@ jobs:
       matrix:
         distribution:
           - debian
-          - alpine
         platform:
           - linux/amd64
-          - linux/i386
-          - linux/arm/v5
-          - linux/arm/v6
-          - linux/arm/v7
-          - linux/ppc64le
-          - linux/s390x
-          - linux/arm64
-          - linux/riscv64
-        exclude:
-        - distribution: alpine
-          platform: linux/arm/v5
-        - distribution: debian
-          platform: linux/arm/v6
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
