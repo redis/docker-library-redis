@@ -38,6 +38,10 @@ inputs:
   run_type:
     description: 'Run type, either release, pr, nightly, unstable or custom'
     required: true
+  modules_enabled:
+    description: 'Whether module-specific rendering and tests should run'
+    required: false
+    default: "true"
 
 runs:
   using: "composite"
@@ -131,7 +135,7 @@ runs:
 
     - name: Render Dockerfiles for custom or unstable build
       shell: bash
-      if: inputs.run_type != 'release' && inputs.run_type != 'pr'
+      if: inputs.run_type != 'release' && inputs.run_type != 'pr' && inputs.modules_enabled == 'true'
       run: |
         ./bin/render-all-dockerfiles.sh -s custom_build true -s redis_download_url $REDIS_DOWNLOAD_URL
 
@@ -238,7 +242,7 @@ runs:
         docker exec "$CONTAINER_NAME" redis-cli info server
 
     - name: Verify installed modules
-      if: ${{ contains(fromJSON('["amd64", "arm64"]'), steps.platform.outputs.display_name) }}
+      if: ${{ inputs.modules_enabled == 'true' && contains(fromJSON('["amd64", "arm64"]'), steps.platform.outputs.display_name) }}
       shell: bash
       run: |
         modules=$(docker exec sanity-test-${{ steps.platform.outputs.display_name }} redis-cli module list)
@@ -258,7 +262,7 @@ runs:
         fi
 
     - name: Test RedisBloom
-      if: ${{ contains(fromJSON('["amd64", "arm64"]'), steps.platform.outputs.display_name) }}
+      if: ${{ inputs.modules_enabled == 'true' && contains(fromJSON('["amd64", "arm64"]'), steps.platform.outputs.display_name) }}
       shell: bash
       run: |
         docker exec sanity-test-${{ steps.platform.outputs.display_name }} redis-cli BF.ADD popular_keys "redis:hash"
@@ -268,7 +272,7 @@ runs:
         echo "RedisBloom test passed successfully"
 
     - name: Test RediSearch
-      if: ${{ contains(fromJSON('["amd64", "arm64"]'), steps.platform.outputs.display_name) }}
+      if: ${{ inputs.modules_enabled == 'true' && contains(fromJSON('["amd64", "arm64"]'), steps.platform.outputs.display_name) }}
       shell: bash
       run: |
         docker exec sanity-test-${{ steps.platform.outputs.display_name }} redis-cli FT.CREATE redis_commands ON HASH PREFIX 1 cmd: SCHEMA name TEXT SORTABLE description TEXT
@@ -283,7 +287,7 @@ runs:
         fi
 
     - name: Test RedisTimeSeries
-      if: ${{ contains(fromJSON('["amd64", "arm64"]'), steps.platform.outputs.display_name) }}
+      if: ${{ inputs.modules_enabled == 'true' && contains(fromJSON('["amd64", "arm64"]'), steps.platform.outputs.display_name) }}
       shell: bash
       run: |
         docker exec sanity-test-${{ steps.platform.outputs.display_name }} redis-cli TS.CREATE redis:cpu:usage RETENTION 86400
@@ -299,7 +303,7 @@ runs:
         fi
 
     - name: Test ReJSON
-      if: ${{ contains(fromJSON('["amd64", "arm64"]'), steps.platform.outputs.display_name) }}
+      if: ${{ inputs.modules_enabled == 'true' && contains(fromJSON('["amd64", "arm64"]'), steps.platform.outputs.display_name) }}
       shell: bash
       run: |
         docker exec sanity-test-${{ steps.platform.outputs.display_name }} redis-cli JSON.SET redis:config $ '{"maxmemory":"2gb","maxmemory-policy":"allkeys-lru"}'
@@ -314,7 +318,7 @@ runs:
 
     - name: Test the entrypoint
       id: test_entrypoint
-      if: ${{ contains(fromJSON('["amd64", "i386", "arm64"]'), steps.platform.outputs.display_name) }}
+      if: ${{ inputs.modules_enabled == 'true' && contains(fromJSON('["amd64", "i386", "arm64"]'), steps.platform.outputs.display_name) }}
       shell: bash
       run: >
         cd test && env
