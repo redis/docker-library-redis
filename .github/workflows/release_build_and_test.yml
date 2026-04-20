@@ -175,7 +175,7 @@ jobs:
       redisbloom_version: ${{ github.event.inputs.redisbloom_version }}
       redistimeseries_version: ${{ github.event.inputs.redistimeseries_version }}
       run_type: ${{ github.event.inputs.run_type }}
-      modules_enabled: ${{ github.event.inputs.modules_enabled }}
+      modules_enabled: ${{ inputs.modules_enabled }}
       slack_channel_id: ${{ needs.prepare-release.outputs.slack_channel_id }}
       slack_thread_ts: ${{ needs.prepare-release.outputs.slack_thread_ts }}
       override_release_branch: ${{ github.event.inputs.override_release_branch }}
