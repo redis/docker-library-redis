@@ -21,7 +21,8 @@ on:
       modules_enabled:
         description: 'Whether module-specific rendering and tests should run'
         required: false
-        default: "false"
+        type: boolean
+        default: false
       workflow_uuid:
         description: 'Optional UUID to identify this workflow run'
         required: false
