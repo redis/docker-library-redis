@@ -23,6 +23,11 @@ on:
         required: false
         type: boolean
         default: false
+      create_multi_arch_image:
+        description: 'Whether to create multi-arch manifests from published images'
+        required: false
+        type: boolean
+        default: false
       workflow_uuid:
         description: 'Optional UUID to identify this workflow run'
         required: false
@@ -176,6 +181,7 @@ jobs:
       redistimeseries_version: ${{ github.event.inputs.redistimeseries_version }}
       run_type: ${{ github.event.inputs.run_type }}
       modules_enabled: ${{ inputs.modules_enabled }}
+      create_multi_arch_image: ${{ inputs.create_multi_arch_image }}
       slack_channel_id: ${{ needs.prepare-release.outputs.slack_channel_id }}
       slack_thread_ts: ${{ needs.prepare-release.outputs.slack_thread_ts }}
       override_release_branch: ${{ github.event.inputs.override_release_branch }}
