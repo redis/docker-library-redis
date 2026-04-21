@@ -366,6 +366,7 @@ runs:
       uses: ./.github/actions/create-image-labels
       with:
           redis_version: ${{ inputs.release_tag }}
+          modules_enabled: ${{ inputs.modules_enabled }}
           redisearch_version: ${{ inputs.redisearch_version }}
           redisjson_version: ${{ inputs.redisjson_version }}
           redisbloom_version: ${{ inputs.redisbloom_version }}
