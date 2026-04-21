@@ -11,7 +11,7 @@ from .dockerfile import DockerfileRenderer
 from .exceptions import StackbrewGeneratorError
 from .git_operations import GitClient
 from .logging_config import setup_logging
-from .models import RedisVersion
+from .models import Distribution, RedisVersion, get_workflow_platforms_for_distribution
 from .stackbrew import StackbrewGenerator, StackbrewUpdater
 from .version_filter import VersionFilter
 
@@ -26,6 +26,22 @@ app = typer.Typer(
 
 # Console for logging and user messages (stderr)
 console = Console(stderr=True)
+
+
+def _repo_root() -> Path:
+    """Get the repository root from the release-automation package location."""
+    return Path(__file__).resolve().parents[3]
+
+
+def _load_distribution_from_local_dockerfile(distro_type: str) -> Distribution:
+    """Load distribution metadata from the local Dockerfile for a distro."""
+    dockerfile_path = _repo_root() / distro_type / "Dockerfile"
+    if not dockerfile_path.exists():
+        raise typer.BadParameter(f"Dockerfile not found for distro '{distro_type}': {dockerfile_path}")
+
+    dockerfile_content = dockerfile_path.read_text()
+    detector = DistributionDetector(git_client=GitClient())
+    return detector.extract_distribution_from_dockerfile(dockerfile_content)
 
 
 def _generate_stackbrew_content(major_version: int, remote: str, verbose: bool) -> str:
@@ -231,6 +247,51 @@ def generate_image_tags(
         if verbose:
             console.print_exception()
         raise typer.Exit(1)
+
+
+@app.command(name="generate-build-matrix")
+def generate_build_matrix(
+    verbose: bool = typer.Option(
+        False,
+        "--verbose",
+        "-v",
+        help="Enable verbose output"
+    ),
+) -> None:
+    """Generate GitHub Actions matrix JSON for supported distro/platform combinations.
+
+    This command reads the current branch Dockerfiles in:
+    - debian/Dockerfile
+    - alpine/Dockerfile
+
+    and emits matrix JSON in the form:
+    {
+      "include": [
+        {"distribution": "debian", "platform": "linux/amd64"},
+        ...
+      ]
+    }
+    """
+    setup_logging(verbose=verbose, console=console)
+
+    include = []
+    for distro_type in ("debian", "alpine"):
+        distribution = _load_distribution_from_local_dockerfile(distro_type)
+        platforms = get_workflow_platforms_for_distribution(distribution)
+
+        if verbose:
+            console.print(
+                f"[dim]{distro_type}: detected {distribution.type.value} {distribution.name} -> "
+                f"{', '.join(platforms)}[/dim]"
+            )
+
+        for platform in platforms:
+            include.append({
+                "distribution": distro_type,
+                "platform": platform,
+            })
+
+    print(json.dumps({"include": include}))
 
 
 @app.command()

@@ -58,6 +58,18 @@ DEBIAN_ARCHITECTURES: dict[str, Tuple[str, ...]] = {
     DebianRelease.BOOKWORM: DEBIAN_BOOKWORM_ARCHITECTURES,
 }
 
+STACKBREW_TO_WORKFLOW_PLATFORM: dict[str, str] = {
+    "amd64": "linux/amd64",
+    "arm32v5": "linux/arm/v5",
+    "arm32v6": "linux/arm/v6",
+    "arm32v7": "linux/arm/v7",
+    "arm64v8": "linux/arm64",
+    "i386": "linux/i386",
+    "ppc64le": "linux/ppc64le",
+    "riscv64": "linux/riscv64",
+    "s390x": "linux/s390x",
+}
+
 
 @functools.total_ordering
 class RedisVersion(BaseModel):
@@ -276,3 +288,22 @@ class StackbrewEntry(BaseModel):
         lines.append(f"GitFetch: {self.git_fetch_ref}")
         lines.append(f"Directory: {self.distribution.type.value}")
         return "\n".join(lines)
+
+
+def get_architectures_for_distribution(distribution: Distribution) -> List[str]:
+    """Get supported stackbrew architectures for a distribution."""
+    if distribution.type == DistroType.DEBIAN:
+        archs = DEBIAN_ARCHITECTURES.get(distribution.name, DEBIAN_TRIXIE_ARCHITECTURES)
+        return list(archs)
+    if distribution.type == DistroType.ALPINE:
+        return list(ALPINE_ARCHITECTURES)
+    return list(DEBIAN_TRIXIE_ARCHITECTURES)
+
+
+def get_workflow_platforms_for_distribution(distribution: Distribution) -> List[str]:
+    """Map supported stackbrew architectures to GitHub Actions workflow platforms."""
+    return [
+        STACKBREW_TO_WORKFLOW_PLATFORM[arch]
+        for arch in get_architectures_for_distribution(distribution)
+        if arch in STACKBREW_TO_WORKFLOW_PLATFORM
+    ]
