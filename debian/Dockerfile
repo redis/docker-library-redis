@@ -16,6 +16,8 @@ RUN set -eux; \
 
 ARG REDIS_DOWNLOAD_URL=https://github.com/redis/redis/archive/refs/tags/8.6-rc1.tar.gz
 ARG REDIS_DOWNLOAD_SHA=dc387a093cb4f956953492eeb613e833b53ee23a45625bde01cc6d2497a5c0e7
+# 1 = enable link-time optimization for bundled modules (e.g. RediSearch), 0 = off. Override with: docker build --build-arg LTO=0
+ARG LTO=1
 
 RUN set -eux; \
 	\
@@ -53,6 +55,14 @@ RUN set -eux; \
 			autoconf \
 			libtool \
 			g++; \
+		if [ "${LTO}" = "1" ]; then \
+			install -d /etc/apt/keyrings; \
+			wget -qO /etc/apt/keyrings/llvm.asc https://apt.llvm.org/llvm-snapshot.gpg.key; \
+			echo "deb [signed-by=/etc/apt/keyrings/llvm.asc] http://apt.llvm.org/trixie/ llvm-toolchain-trixie-21 main" > /etc/apt/sources.list.d/llvm.list; \
+			apt-get update; \
+			apt-get install -y --no-install-recommends clang-21 lld-21 llvm-21; \
+			export PATH="/usr/lib/llvm-21/bin:$PATH"; \
+		fi; \
 	fi; \
 	\
 	rm -rf /var/lib/apt/lists/*; \
@@ -87,6 +97,9 @@ RUN set -eux; \
 	grep -F "cd jemalloc && ./configure $extraJemallocConfigureFlags " /usr/src/redis/deps/Makefile; \
 	\
 	export BUILD_TLS=yes; \
+	if [ "$BUILD_WITH_MODULES" = "yes" ]; then \
+		export LTO=${LTO}; \
+	fi; \
 	make -C /usr/src/redis -j "$(nproc)" all; \
 	make -C /usr/src/redis install; \
 	make -C /usr/src/redis distclean; \
