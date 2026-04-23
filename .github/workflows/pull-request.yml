@@ -26,6 +26,7 @@ jobs:
       release_tag: ''
       publish_image: false
       run_type: pr
+      modules_enabled: ${{ !startsWith(github.base_ref, 'release/7.') }}
 
   build-and-test-unstable:
     needs: validate-dockerfiles-synced
@@ -40,3 +41,4 @@ jobs:
       redisbloom_version: master
       redistimeseries_version: master
       run_type: unstable
+      modules_enabled: true

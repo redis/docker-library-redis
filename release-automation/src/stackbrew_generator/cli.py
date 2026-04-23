@@ -66,6 +66,7 @@ def _generate_stackbrew_content(major_version: int, remote: str, verbose: bool) 
     version_filter = VersionFilter(git_client)
     distribution_detector = DistributionDetector(git_client)
     stackbrew_generator = StackbrewGenerator()
+    highest_remote_major = git_client.get_highest_remote_ga_major_version()
 
     # Get actual Redis versions to process
     versions = version_filter.get_actual_major_redis_versions(major_version)
@@ -86,7 +87,10 @@ def _generate_stackbrew_content(major_version: int, remote: str, verbose: bool) 
         raise typer.Exit(1)
 
     # Generate stackbrew library content
-    entries = stackbrew_generator.generate_stackbrew_library(releases)
+    entries = stackbrew_generator.generate_stackbrew_library(
+        releases,
+        enable_global_latest_tags=(major_version == highest_remote_major),
+    )
     output = stackbrew_generator.format_stackbrew_output(entries)
 
     if not output:
@@ -209,6 +213,7 @@ def generate_image_tags(
         version_filter = VersionFilter(git_client)
         distribution_detector = DistributionDetector(git_client)
         stackbrew_generator = StackbrewGenerator()
+        highest_remote_major = git_client.get_highest_remote_ga_major_version()
 
         versions = version_filter.get_actual_major_redis_versions(redis_version.major)
 
@@ -219,7 +224,10 @@ def generate_image_tags(
         refs_to_fetch = [commit for _, commit, _ in versions]
         git_client.fetch_refs(refs_to_fetch)
         releases = distribution_detector.prepare_releases_list(versions)
-        entries = stackbrew_generator.generate_stackbrew_library(releases)
+        entries = stackbrew_generator.generate_stackbrew_library(
+            releases,
+            enable_global_latest_tags=(redis_version.major == highest_remote_major),
+        )
 
         tags = ""
         for entry in entries:

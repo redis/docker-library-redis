@@ -318,7 +318,7 @@ runs:
 
     - name: Test the entrypoint
       id: test_entrypoint
-      if: ${{ inputs.modules_enabled == 'true' && contains(fromJSON('["amd64", "i386", "arm64"]'), steps.platform.outputs.display_name) }}
+      if: ${{ contains(fromJSON('["amd64", "i386", "arm64"]'), steps.platform.outputs.display_name) }}
       shell: bash
       run: >
         cd test && env
