@@ -270,14 +270,7 @@ class StackbrewEntry(BaseModel):
     @property
     def architectures(self) -> List[str]:
         """Get supported architectures based on distribution type and version."""
-        if self.distribution.type == DistroType.DEBIAN:
-            archs = DEBIAN_ARCHITECTURES.get(self.distribution.name, DEBIAN_TRIXIE_ARCHITECTURES)
-            return list(archs)
-        elif self.distribution.type == DistroType.ALPINE:
-            return list(ALPINE_ARCHITECTURES)
-        else:
-            # Fallback to debian trixie architectures for unknown distributions
-            return list(DEBIAN_TRIXIE_ARCHITECTURES)
+        return get_architectures_for_distribution(self.distribution)
 
     def __str__(self) -> str:
         """String representation in stackbrew format."""
