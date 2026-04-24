@@ -11,7 +11,7 @@ from .dockerfile import DockerfileRenderer
 from .exceptions import StackbrewGeneratorError
 from .git_operations import GitClient
 from .logging_config import setup_logging
-from .models import Distribution, RedisVersion, get_workflow_platforms_for_distribution
+from .models import Distribution, RedisVersion, get_docker_platforms_for_distribution
 from .stackbrew import StackbrewGenerator, StackbrewUpdater
 from .version_filter import VersionFilter
 
@@ -285,7 +285,7 @@ def generate_build_matrix(
     include = []
     for distro_type in ("debian", "alpine"):
         distribution = _load_distribution_from_local_dockerfile(distro_type)
-        platforms = get_workflow_platforms_for_distribution(distribution)
+        platforms = get_docker_platforms_for_distribution(distribution)
 
         if verbose:
             console.print(
