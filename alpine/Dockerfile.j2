@@ -27,6 +27,10 @@ RUN set -eux; \
 		make \
 		musl-dev \
 		openssl-dev \
+# install real "wget" to avoid:
+#   + wget -O redis.tar.gz https://download.redis.io/releases/redis-x.y.z.tar.gz
+#   Connecting to download.redis.io (45.60.121.1:80)
+#   wget: bad header line:     XxhODalH: btu; path=/; Max-Age=900
 		wget \
 	; \
 	wget -O redis.tar.gz "$REDIS_DOWNLOAD_URL"; \
@@ -78,6 +82,7 @@ RUN set -eux; \
 	redis-cli --version; \
 	redis-server --version;
 RUN mkdir /data && chown redis:redis /data
+VOLUME /data
 WORKDIR /data
 
 COPY docker-entrypoint.sh /usr/local/bin/

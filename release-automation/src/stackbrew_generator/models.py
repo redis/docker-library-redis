@@ -58,7 +58,7 @@ DEBIAN_ARCHITECTURES: dict[str, Tuple[str, ...]] = {
     DebianRelease.BOOKWORM: DEBIAN_BOOKWORM_ARCHITECTURES,
 }
 
-STACKBREW_TO_WORKFLOW_PLATFORM: dict[str, str] = {
+STACKBREW_TO_DOCKER_PLATFORM: dict[str, str] = {
     "amd64": "linux/amd64",
     "arm32v5": "linux/arm/v5",
     "arm32v6": "linux/arm/v6",
@@ -270,14 +270,7 @@ class StackbrewEntry(BaseModel):
     @property
     def architectures(self) -> List[str]:
         """Get supported architectures based on distribution type and version."""
-        if self.distribution.type == DistroType.DEBIAN:
-            archs = DEBIAN_ARCHITECTURES.get(self.distribution.name, DEBIAN_TRIXIE_ARCHITECTURES)
-            return list(archs)
-        elif self.distribution.type == DistroType.ALPINE:
-            return list(ALPINE_ARCHITECTURES)
-        else:
-            # Fallback to debian trixie architectures for unknown distributions
-            return list(DEBIAN_TRIXIE_ARCHITECTURES)
+        return get_architectures_for_distribution(self.distribution)
 
     def __str__(self) -> str:
         """String representation in stackbrew format."""
@@ -297,13 +290,13 @@ def get_architectures_for_distribution(distribution: Distribution) -> List[str]:
         return list(archs)
     if distribution.type == DistroType.ALPINE:
         return list(ALPINE_ARCHITECTURES)
-    return list(DEBIAN_TRIXIE_ARCHITECTURES)
+    raise ValueError(f"Unsupported distribution type: {distribution.type}")
 
 
-def get_workflow_platforms_for_distribution(distribution: Distribution) -> List[str]:
-    """Map supported stackbrew architectures to GitHub Actions workflow platforms."""
+def get_docker_platforms_for_distribution(distribution: Distribution) -> List[str]:
+    """Map supported stackbrew architectures to Docker platforms."""
     return [
-        STACKBREW_TO_WORKFLOW_PLATFORM[arch]
+        STACKBREW_TO_DOCKER_PLATFORM[arch]
         for arch in get_architectures_for_distribution(distribution)
-        if arch in STACKBREW_TO_WORKFLOW_PLATFORM
+        if arch in STACKBREW_TO_DOCKER_PLATFORM
     ]
