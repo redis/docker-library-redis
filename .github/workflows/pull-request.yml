@@ -26,7 +26,7 @@ jobs:
       release_tag: ''
       publish_image: false
       run_type: pr
-      modules_enabled: ${{ !startsWith(github.base_ref, 'release/7.') }}
+      modules_enabled: ${{ !startsWith(github.event.pull_request.base.ref, 'release/7.') }}
 
   build-and-test-unstable:
     needs: validate-dockerfiles-synced

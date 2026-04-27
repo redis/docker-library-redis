@@ -78,6 +78,13 @@ jobs:
             && 'unstable'
             || ''
             }}
+      - name: Ensure release branch
+        if: inputs.release_tag != '' && inputs.run_type == 'release'
+        uses: redis-developer/redis-oss-release-automation/.github/actions/ensure-release-branch@main
+        with:
+          release_tag: ${{ inputs.release_tag }}
+          gh_token: ${{ secrets.GITHUB_TOKEN }}
+          release_branch: ${{ inputs.override_release_branch }}
 
       - name: Install release automation dependencies
         uses: ./.github/actions/release-automation-install

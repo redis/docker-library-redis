@@ -129,24 +129,17 @@ runs:
           echo "Failed to find Redis release archive"
           exit 1
         fi
-        REDIS_DOWNLOAD_SHA=$(curl --fail -Ls "$REDIS_DOWNLOAD_URL" | sha256sum | cut -d' ' -f1)
-        if [ -z "$REDIS_DOWNLOAD_SHA" ]; then
-          echo "Failed to calculate Redis release archive SHA256"
-          exit 1
-        fi
-        echo "REDIS_DOWNLOAD_SHA=$REDIS_DOWNLOAD_SHA" | tee -a "$GITHUB_ENV"
 
     - name: Install release automation dependencies
       uses: ./.github/actions/release-automation-install
 
     - name: Render Dockerfiles for custom or unstable build
       shell: bash
-      if: inputs.run_type != 'release' && inputs.run_type != 'pr' && inputs.modules_enabled == 'true'
+      if: inputs.run_type != 'release' && inputs.run_type != 'pr'
       run: |
         ./bin/render-all-dockerfiles.sh \
           -s custom_build true \
-          -s redis_download_url $REDIS_DOWNLOAD_URL \
-          -s redis_download_sha $REDIS_DOWNLOAD_SHA
+          -s redis_download_url $REDIS_DOWNLOAD_URL
 
     - name: Build
       id: build
@@ -164,8 +157,6 @@ runs:
           REDISJSON_VERSION=${{ inputs.redisjson_version }}
           REDISBLOOM_VERSION=${{ inputs.redisbloom_version }}
           REDISTIMESERIES_VERSION=${{ inputs.redistimeseries_version }}
-          ${{ inputs.run_type != 'release' && inputs.run_type != 'pr' && format('REDIS_DOWNLOAD_URL={0}', env.REDIS_DOWNLOAD_URL) || '' }}
-          ${{ inputs.run_type != 'release' && inputs.run_type != 'pr' && format('REDIS_DOWNLOAD_SHA={0}', env.REDIS_DOWNLOAD_SHA) || '' }}
           ${{ inputs.run_type != 'release' && inputs.run_type != 'pr' && 'CUSTOM_BUILD=true' || '' }}
 
     - name: Capture build logs on failure
@@ -330,7 +321,7 @@ runs:
 
     - name: Test the entrypoint
       id: test_entrypoint
-      if: ${{ contains(fromJSON('["amd64", "i386", "arm64"]'), steps.platform.outputs.display_name) }}
+      if: ${{ inputs.modules_enabled == 'true' && contains(fromJSON('["amd64", "i386", "arm64"]'), steps.platform.outputs.display_name) }}
       shell: bash
       run: >
         cd test && env
@@ -399,8 +390,6 @@ runs:
           REDISBLOOM_VERSION=${{ inputs.redisbloom_version }}
           REDISTIMESERIES_VERSION=${{ inputs.redistimeseries_version }}
           ${{ inputs.run_type != 'release' && inputs.run_type != 'pr' && 'CUSTOM_BUILD=true' || '' }}
-          ${{ inputs.run_type != 'release' && inputs.run_type != 'pr' && format('REDIS_DOWNLOAD_URL={0}', env.REDIS_DOWNLOAD_URL) || '' }}
-          ${{ inputs.run_type != 'release' && inputs.run_type != 'pr' && format('REDIS_DOWNLOAD_SHA={0}', env.REDIS_DOWNLOAD_SHA) || '' }}
         labels: |
             ${{ steps.get-image-labels.outputs.image-labels }}
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
