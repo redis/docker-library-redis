@@ -17,39 +17,8 @@ jobs:
       - name: Validate Dockerfiles are synced with templates
         uses: ./.github/actions/validate-dockerfiles-synced
 
-  prepare-pr-build:
-    name: Prepare PR Build
-    runs-on: ubuntu-latest
-    outputs:
-      modules_enabled: ${{ steps.modules-enabled.outputs.modules_enabled }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Install release automation dependencies
-        uses: ./.github/actions/release-automation-install
-
-      - name: Decide modules behavior from checked-in Redis version
-        id: modules-enabled
-        shell: bash
-        run: |
-          redis_download_url=$(jq -r '.redis_download_url' .redis.version.json)
-          release_tag=$(printf '%s\n' "$redis_download_url" | sed -E 's#^.*/refs/tags/([^/]+)\.tar\.gz$#\1#')
-
-          if [ -z "$release_tag" ] || [ "$release_tag" = "$redis_download_url" ]; then
-            echo "::error::Failed to derive release tag from .redis.version.json URL: $redis_download_url"
-            exit 1
-          fi
-
-          major=$(uv --directory release-automation run release-automation redis-version major "$release_tag")
-          if [ "$major" -ge 8 ]; then
-            echo "modules_enabled=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "modules_enabled=false" >> "$GITHUB_OUTPUT"
-          fi
-
   build-and-test:
-    needs: [validate-dockerfiles-synced, prepare-pr-build]
+    needs: validate-dockerfiles-synced
     uses: ./.github/workflows/build-n-test.yml
     if: github.event_name == 'pull_request' && github.base_ref != 'unstable'
     secrets: inherit
@@ -57,7 +26,6 @@ jobs:
       release_tag: ''
       publish_image: false
       run_type: pr
-      modules_enabled: ${{ needs.prepare-pr-build.outputs.modules_enabled == 'true' }}
 
   build-and-test-unstable:
     needs: validate-dockerfiles-synced
@@ -72,4 +40,3 @@ jobs:
       redisbloom_version: master
       redistimeseries_version: master
       run_type: unstable
-      modules_enabled: true
