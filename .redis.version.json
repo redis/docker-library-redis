@@ -1,4 +1,4 @@
 {
-	"redis_download_url": "https://github.com/redis/redis/archive/refs/tags/8.8-m02.tar.gz",
-	"redis_download_sha": "e950dbc0b3c65feec76bfcdf5dec3e67d14e9f8c92d7705d99810879ca7e3dd8"
+	"redis_download_url": "https://github.com/redis/redis/archive/refs/tags/8.8-m03.tar.gz",
+	"redis_download_sha": "d4dfaef7d32e64a7165756847e481b3ce4e2b7e1c3e18e1ce75368d6b9c4dd97"
 }
