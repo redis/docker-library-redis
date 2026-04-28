@@ -15,7 +15,9 @@ RUN set -eux; \
 		setpriv \
 	;
 ARG REDIS_DOWNLOAD_URL={{ redis_download_url | required("redis_download_url is required") }}
+{% if not custom_build %}
 ARG REDIS_DOWNLOAD_SHA={{ redis_download_sha | required("redis_download_sha is required") }}
+{% endif %}
 
 RUN set -eux; \
 	\
@@ -34,7 +36,9 @@ RUN set -eux; \
 		wget \
 	; \
 	wget -O redis.tar.gz "$REDIS_DOWNLOAD_URL"; \
+{% if not custom_build %}
 	echo "$REDIS_DOWNLOAD_SHA *redis.tar.gz" | sha256sum -c -; \
+{% endif %}
 	mkdir -p /usr/src/redis; \
 	tar -xzf redis.tar.gz -C /usr/src/redis --strip-components=1; \
 	rm redis.tar.gz; \

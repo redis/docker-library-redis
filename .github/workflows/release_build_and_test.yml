@@ -60,7 +60,6 @@ jobs:
   prepare-release:
     runs-on: ["ubuntu-latest"]
     outputs:
-      modules_enabled: ${{ steps.modules-enabled.outputs.modules_enabled }}
       slack_channel_id: ${{ steps.slack-routing.outputs.slack_channel_id }}
       slack_thread_ts: ${{ steps.slack-routing.outputs.slack_thread_ts }}
       slack_fanout_msg_links: ${{ steps.slack-routing.outputs.slack_fanout_msg_links }}
@@ -124,19 +123,6 @@ jobs:
             echo "slack_thread_ts=$INPUTS_SLACK_THREAD_TS" | tee -a $GITHUB_OUTPUT
           fi
 
-      - name: Decide modules behavior from release major
-        id: modules-enabled
-        shell: bash
-        env:
-          INPUTS_RELEASE_TAG: ${{ github.event.inputs.release_tag }}
-        run: |
-          major=$(uv --directory release-automation run release-automation redis-version major "$INPUTS_RELEASE_TAG")
-          if [ "$major" -ge 8 ]; then
-            echo "modules_enabled=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "modules_enabled=false" >> "$GITHUB_OUTPUT"
-          fi
-
       - name: Log in to Container Registry
         uses: docker/login-action@v3
         with:
@@ -184,7 +170,6 @@ jobs:
       redisbloom_version: ${{ github.event.inputs.redisbloom_version }}
       redistimeseries_version: ${{ github.event.inputs.redistimeseries_version }}
       run_type: ${{ github.event.inputs.run_type }}
-      modules_enabled: ${{ needs.prepare-release.outputs.modules_enabled == 'true' }}
       slack_channel_id: ${{ needs.prepare-release.outputs.slack_channel_id }}
       slack_thread_ts: ${{ needs.prepare-release.outputs.slack_thread_ts }}
       override_release_branch: ${{ github.event.inputs.override_release_branch }}
