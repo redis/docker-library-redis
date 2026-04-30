@@ -12,12 +12,16 @@ class TestStackbrewGenerator:
         self.generator = StackbrewGenerator()
 
     def test_generate_tags_debian_ga_latest(self):
-        """Test tag generation for Debian GA version (latest)."""
+        """Test tag generation for Debian GA version (latest in major and global latest major)."""
         version = RedisVersion.parse("8.2.1")
         distribution = Distribution(type=DistroType.DEBIAN, name="bookworm")
         release = Release(commit="abc123", version=version, distribution=distribution, git_fetch_ref="refs/tags/v8.2.1")
 
-        tags = self.generator.generate_tags_for_release(release, is_latest=True)
+        tags = self.generator.generate_tags_for_release(
+            release,
+            is_latest_in_major=True,
+            is_global_latest_major=True,
+        )
 
         expected_tags = [
             "8.2.1",      # Full version
@@ -33,29 +37,37 @@ class TestStackbrewGenerator:
         assert set(tags) == set(expected_tags)
 
     def test_generate_tags_debian_ga_not_latest(self):
-        """Test tag generation for Debian GA version (not latest)."""
-        version = RedisVersion.parse("7.4.1")
+        """Test tag generation for Debian GA version (not latest in major or global latest major)."""
+        version = RedisVersion.parse("8.1.5")
         distribution = Distribution(type=DistroType.DEBIAN, name="bookworm")
-        release = Release(commit="abc123", version=version, distribution=distribution, git_fetch_ref="refs/tags/v7.4.1")
+        release = Release(commit="abc123", version=version, distribution=distribution, git_fetch_ref="refs/tags/v8.1.5")
 
-        tags = self.generator.generate_tags_for_release(release, is_latest=False)
+        tags = self.generator.generate_tags_for_release(
+            release,
+            is_latest_in_major=False,
+            is_global_latest_major=False,
+        )
 
         expected_tags = [
-            "7.4.1",           # Full version
-            "7.4",             # Mainline version (GA only)
-            "7.4.1-bookworm",  # Version with distro
-            "7.4-bookworm"     # Mainline with distro
+            "8.1.5",           # Full version
+            "8.1",             # Mainline version (GA only)
+            "8.1.5-bookworm",  # Version with distro
+            "8.1-bookworm"     # Mainline with distro
         ]
 
         assert set(tags) == set(expected_tags)
 
     def test_generate_tags_alpine_ga_latest(self):
-        """Test tag generation for Alpine GA version (latest)."""
+        """Test tag generation for Alpine GA version (latest in major and global latest major)."""
         version = RedisVersion.parse("8.2.1")
         distribution = Distribution(type=DistroType.ALPINE, name="alpine3.22")
         release = Release(commit="abc123", version=version, distribution=distribution, git_fetch_ref="refs/tags/v8.2.1")
 
-        tags = self.generator.generate_tags_for_release(release, is_latest=True)
+        tags = self.generator.generate_tags_for_release(
+            release,
+            is_latest_in_major=True,
+            is_global_latest_major=True,
+        )
 
         expected_tags = [
             "8.2.1-alpine",      # Version with distro type
@@ -76,7 +88,11 @@ class TestStackbrewGenerator:
         distribution = Distribution(type=DistroType.DEBIAN, name="bookworm")
         release = Release(commit="abc123", version=version, distribution=distribution, git_fetch_ref="refs/tags/v8.2.1-m01")
 
-        tags = self.generator.generate_tags_for_release(release, is_latest=False)
+        tags = self.generator.generate_tags_for_release(
+            release,
+            is_latest_in_major=False,
+            is_global_latest_major=False,
+        )
 
         # Milestone versions should not get mainline version tags or major version tags
         expected_tags = [
