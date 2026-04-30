@@ -12,6 +12,7 @@ from stackbrew_generator.models import (
     RedisVersion,
     Release,
     StackbrewEntry,
+    get_architectures_for_distribution,
 )
 
 
@@ -257,6 +258,13 @@ class TestRelease:
 
 class TestStackbrewEntry:
     """Tests for StackbrewEntry model."""
+
+    def test_get_architectures_for_distribution_raises_for_unknown_distribution(self):
+        """Test failing fast for unsupported distribution types."""
+        unknown_distribution = Distribution.model_construct(type="unsupported", name="mystery")
+
+        with pytest.raises(ValueError, match="Unsupported distribution type: unsupported"):
+            get_architectures_for_distribution(unknown_distribution)
 
     def test_debian_trixie_architectures(self):
         """Test that Debian trixie gets riscv64 architecture (no mips64le)."""
