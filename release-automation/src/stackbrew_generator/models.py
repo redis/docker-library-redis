@@ -58,6 +58,18 @@ DEBIAN_ARCHITECTURES: dict[str, Tuple[str, ...]] = {
     DebianRelease.BOOKWORM: DEBIAN_BOOKWORM_ARCHITECTURES,
 }
 
+STACKBREW_TO_DOCKER_PLATFORM: dict[str, str] = {
+    "amd64": "linux/amd64",
+    "arm32v5": "linux/arm/v5",
+    "arm32v6": "linux/arm/v6",
+    "arm32v7": "linux/arm/v7",
+    "arm64v8": "linux/arm64",
+    "i386": "linux/i386",
+    "ppc64le": "linux/ppc64le",
+    "riscv64": "linux/riscv64",
+    "s390x": "linux/s390x",
+}
+
 
 @functools.total_ordering
 class RedisVersion(BaseModel):
@@ -258,14 +270,7 @@ class StackbrewEntry(BaseModel):
     @property
     def architectures(self) -> List[str]:
         """Get supported architectures based on distribution type and version."""
-        if self.distribution.type == DistroType.DEBIAN:
-            archs = DEBIAN_ARCHITECTURES.get(self.distribution.name, DEBIAN_TRIXIE_ARCHITECTURES)
-            return list(archs)
-        elif self.distribution.type == DistroType.ALPINE:
-            return list(ALPINE_ARCHITECTURES)
-        else:
-            # Fallback to debian trixie architectures for unknown distributions
-            return list(DEBIAN_TRIXIE_ARCHITECTURES)
+        return get_architectures_for_distribution(self.distribution)
 
     def __str__(self) -> str:
         """String representation in stackbrew format."""
@@ -276,3 +281,22 @@ class StackbrewEntry(BaseModel):
         lines.append(f"GitFetch: {self.git_fetch_ref}")
         lines.append(f"Directory: {self.distribution.type.value}")
         return "\n".join(lines)
+
+
+def get_architectures_for_distribution(distribution: Distribution) -> List[str]:
+    """Get supported stackbrew architectures for a distribution."""
+    if distribution.type == DistroType.DEBIAN:
+        archs = DEBIAN_ARCHITECTURES.get(distribution.name, DEBIAN_TRIXIE_ARCHITECTURES)
+        return list(archs)
+    if distribution.type == DistroType.ALPINE:
+        return list(ALPINE_ARCHITECTURES)
+    raise ValueError(f"Unsupported distribution type: {distribution.type}")
+
+
+def get_docker_platforms_for_distribution(distribution: Distribution) -> List[str]:
+    """Map supported stackbrew architectures to Docker platforms."""
+    return [
+        STACKBREW_TO_DOCKER_PLATFORM[arch]
+        for arch in get_architectures_for_distribution(distribution)
+        if arch in STACKBREW_TO_DOCKER_PLATFORM
+    ]

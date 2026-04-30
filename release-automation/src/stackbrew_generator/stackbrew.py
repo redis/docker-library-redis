@@ -17,13 +17,15 @@ class StackbrewGenerator:
     def generate_tags_for_release(
         self,
         release: Release,
-        is_latest: bool = False
+        is_latest_in_major: bool = False,
+        is_global_latest_major: bool = False,
     ) -> List[str]:
         """Generate Docker tags for a release.
 
         Args:
             release: Release to generate tags for
-            is_latest: Whether this is the latest version
+            is_latest_in_major: Whether this is the latest active minor in its major
+            is_global_latest_major: Whether this major is the highest active major overall
 
         Returns:
             List of Docker tags
@@ -40,7 +42,7 @@ class StackbrewGenerator:
             version_tags.append(version.mainline_version)
 
         # Add major version tag for latest versions
-        if is_latest:
+        if is_latest_in_major:
             version_tags.append(str(version.major))
 
         # For default distribution (Debian), add version tags without distro suffix
@@ -52,8 +54,8 @@ class StackbrewGenerator:
             for version_tag in version_tags:
                 tags.append(f"{version_tag}-{distro_name}")
 
-        # Add special latest tags
-        if is_latest:
+        # Add global latest tags only for the highest overall major version
+        if is_global_latest_major:
             if distribution.is_default:
                 tags.append("latest")
             # Add bare distro names as tags
@@ -61,11 +63,16 @@ class StackbrewGenerator:
 
         return tags
 
-    def generate_stackbrew_library(self, releases: List[Release]) -> List[StackbrewEntry]:
+    def generate_stackbrew_library(
+        self,
+        releases: List[Release],
+        enable_global_latest_tags: bool = True,
+    ) -> List[StackbrewEntry]:
         """Generate stackbrew library entries from releases.
 
         Args:
             releases: List of releases to process
+            enable_global_latest_tags: Whether to emit latest/bare distro tags
 
         Returns:
             List of StackbrewEntry objects
@@ -92,11 +99,18 @@ class StackbrewGenerator:
             elif latest_minor != release.version.minor:
                 latest_minor = None
 
-            # Check if this release should get latest tags
-            is_latest = latest_minor is not None
+            # Major tag like "7" still belongs to the latest active minor within the major.
+            is_latest_in_major = latest_minor is not None
+            # Global tags like "latest" or bare distro names should only be emitted
+            # for the highest overall major version.
+            is_global_latest_major = enable_global_latest_tags and is_latest_in_major
 
             # Generate tags for this release
-            tags = self.generate_tags_for_release(release, is_latest)
+            tags = self.generate_tags_for_release(
+                release,
+                is_latest_in_major=is_latest_in_major,
+                is_global_latest_major=is_global_latest_major,
+            )
 
             if tags:
                 entry = StackbrewEntry(
