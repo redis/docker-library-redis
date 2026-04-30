@@ -102,6 +102,45 @@ class GitClient:
         console.print(f"[dim]Found {len(tags)} tags[/dim]")
         return tags
 
+    def get_highest_remote_ga_major_version(self) -> int:
+        """Get the highest Redis major version that has at least one GA tag.
+
+        Returns:
+            Highest discovered major version with a GA release tag
+
+        Raises:
+            GitOperationError: If no matching GA version tags are found or git fails
+        """
+        console.print("[dim]Listing remote tags for all Redis GA major versions[/dim]")
+
+        cmd = [
+            "git", "ls-remote", "--tags",
+            self.remote, "refs/tags/v*"
+        ]
+
+        result = self._run_command(cmd)
+
+        majors = set()
+        for line in result.stdout.strip().split('\n'):
+            if not line:
+                continue
+            _, ref = line.split('\t', 1)
+            if ref.endswith("^{}"):
+                ref = ref[:-3]
+
+            match = re.search(r"(v[1-9]\d*\.\d+(?:\.\d+)?[A-Za-z0-9.-]*)$", ref)
+            if match:
+                version = RedisVersion.parse(match.group(1))
+                if version.is_ga:
+                    majors.add(version.major)
+
+        if not majors:
+            raise GitOperationError("No Redis GA version tags found on remote")
+
+        highest_major = max(majors)
+        console.print(f"[dim]Highest remote Redis GA major version: {highest_major}[/dim]")
+        return highest_major
+
     def fetch_refs(self, refs: List[str]) -> None:
         """Fetch specific refs from remote.
 

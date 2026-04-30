@@ -58,29 +58,45 @@ on:
         value: ${{ jobs.notify-slack.outputs.slack_url || jobs.notify-slack-when-failed.outputs.slack_url }}
 
 jobs:
+  prepare-build-matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.generate-matrix.outputs.matrix }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: >-
+            ${{ (github.ref_name == 'unstable'
+            || github.event_name == 'workflow_call'
+            || github.event_name == 'schedule')
+            && 'unstable'
+            || ''
+            }}
+      - name: Ensure release branch
+        if: inputs.release_tag != '' && inputs.run_type == 'release'
+        uses: redis-developer/redis-oss-release-automation/.github/actions/ensure-release-branch@main
+        with:
+          release_tag: ${{ inputs.release_tag }}
+          gh_token: ${{ secrets.GITHUB_TOKEN }}
+          release_branch: ${{ inputs.override_release_branch }}
+
+      - name: Install release automation dependencies
+        uses: ./.github/actions/release-automation-install
+
+      - name: Generate build matrix
+        id: generate-matrix
+        shell: bash
+        run: |
+          matrix=$(uv --directory release-automation run release-automation generate-build-matrix)
+          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+
   build-and-test:
+    needs: prepare-build-matrix
     runs-on: ${{ contains(matrix.platform, 'arm64') && 'ubuntu24-arm64-2-8' || 'ubuntu-latest' }}
     strategy:
       fail-fast: false
-      matrix:
-        distribution:
-          - debian
-          - alpine
-        platform:
-          - linux/amd64
-          - linux/i386
-          - linux/arm/v5
-          - linux/arm/v6
-          - linux/arm/v7
-          - linux/ppc64le
-          - linux/s390x
-          - linux/arm64
-          - linux/riscv64
-        exclude:
-        - distribution: alpine
-          platform: linux/arm/v5
-        - distribution: debian
-          platform: linux/arm/v6
+      matrix: ${{ fromJson(needs.prepare-build-matrix.outputs.matrix) }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
