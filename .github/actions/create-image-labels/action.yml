@@ -5,6 +5,10 @@ inputs:
   redis_version:
     description: 'Redis version to build'
     required: true
+  modules_enabled:
+    description: 'Whether module-related labels should be included'
+    required: false
+    default: 'true'
   redisjson_version:
     description: 'redisjson to build'
     required: false
@@ -34,7 +38,7 @@ runs:
         ref: ${{ inputs.redis_version }}
 
     - name: Get modules versions
-      if: inputs.redisearch_version == '' || inputs.redisjson_version == '' || inputs.redistimeseries_version == '' || inputs.redisbloom_version == ''
+      if: inputs.modules_enabled == 'true' && (inputs.redisearch_version == '' || inputs.redisjson_version == '' || inputs.redistimeseries_version == '' || inputs.redisbloom_version == '')
       shell: bash
       run: |
         get_module_version() {
@@ -56,6 +60,7 @@ runs:
         fi
 
     - name: Checkout Redisearch repository
+      if: inputs.modules_enabled == 'true'
       uses: actions/checkout@v4
       with:
         repository: RediSearch/RediSearch
@@ -63,6 +68,7 @@ runs:
         ref: ${{ inputs.redisearch_version != '' && inputs.redisearch_version || env.redisearch_version }}
 
     - name: Checkout Redisjson repository
+      if: inputs.modules_enabled == 'true'
       uses: actions/checkout@v4
       with:
         repository: redisjson/redisjson
@@ -70,6 +76,7 @@ runs:
         ref: ${{ inputs.redisjson_version != '' && inputs.redisjson_version || env.redisjson_version }}
 
     - name: Checkout RedisTimeSeries repository
+      if: inputs.modules_enabled == 'true'
       uses: actions/checkout@v4
       with:
         repository: RedisTimeSeries/RedisTimeSeries
@@ -77,6 +84,7 @@ runs:
         ref: ${{ inputs.redistimeseries_version != '' && inputs.redistimeseries_version || env.redistimeseries_version }}
 
     - name: Checkout RedisBloom repository
+      if: inputs.modules_enabled == 'true'
       uses: actions/checkout@v4
       with:
         repository: RedisBloom/RedisBloom
@@ -90,12 +98,14 @@ runs:
         labels=""
         created_timestamp=$(date -u --rfc-3339=seconds)
         labels+="org.opencontainers.image.created=$created_timestamp"$'\n'
-        # Modules revisions labels
-        modules_repos=(redisearch redisjson redistimeseries redisbloom)
-        for module in "${modules_repos[@]}"; do
-          revision=$(git -C $module rev-parse HEAD)
-          labels+="io.redis.$module.revision=$revision"$'\n'
-        done
+        if [ "${{ inputs.modules_enabled }}" = "true" ]; then
+          # Modules revisions labels
+          modules_repos=(redisearch redisjson redistimeseries redisbloom)
+          for module in "${modules_repos[@]}"; do
+            revision=$(git -C $module rev-parse HEAD)
+            labels+="io.redis.$module.revision=$revision"$'\n'
+          done
+        fi
 
         # Redis labels
         cd redis
