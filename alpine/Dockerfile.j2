@@ -23,9 +23,7 @@ ARG REDISEARCH_VERSION
 ARG REDISJSON_VERSION
 ARG REDISBLOOM_VERSION
 ARG REDISTIMESERIES_VERSION
-{% endif -%}
-# 1 = enable link-time optimization for bundled modules (e.g. RediSearch), 0 = off. Override with: docker build --build-arg LTO=0
-ARG LTO=1
+{% endif %}
 
 RUN set -eux; \
 	\
@@ -125,15 +123,8 @@ RUN set -eux; \
 	export RUST_DYN_CRT=1; \
 	export PATH="/usr/lib/llvm21/bin:$PATH"; \
 	export BUILD_TLS=yes; \
-	if [ "$BUILD_WITH_MODULES" = "yes" ] && [ "${LTO}" = "1" ]; then \
-		mkdir -p /usr/local/bin; \
-		ln -sf /usr/lib/llvm21/bin/clang-21 /usr/local/bin/clang-21; \
-		ln -sf /usr/lib/llvm21/bin/clang++-21 /usr/local/bin/clang++-21; \
-		ln -sf /usr/lib/llvm21/bin/lld /usr/local/bin/lld; \
-		[ -x /usr/lib/llvm21/bin/lld-21 ] && ln -sf /usr/lib/llvm21/bin/lld-21 /usr/local/bin/lld-21; \
-	fi; \
 	if [ "$BUILD_WITH_MODULES" = "yes" ]; then \
-		export LTO=${LTO}; \
+		export LTO=1; \
 
 	{%- if custom_build %}
 

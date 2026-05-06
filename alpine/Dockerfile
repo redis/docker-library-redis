@@ -16,8 +16,6 @@ RUN set -eux; \
 	;
 ARG REDIS_DOWNLOAD_URL=https://github.com/redis/redis/archive/refs/tags/8.6-rc1.tar.gz
 ARG REDIS_DOWNLOAD_SHA=dc387a093cb4f956953492eeb613e833b53ee23a45625bde01cc6d2497a5c0e7
-# 1 = enable link-time optimization for bundled modules (e.g. RediSearch), 0 = off. Override with: docker build --build-arg LTO=0
-ARG LTO=1
 
 RUN set -eux; \
 	\
@@ -111,15 +109,8 @@ RUN set -eux; \
 	export RUST_DYN_CRT=1; \
 	export PATH="/usr/lib/llvm21/bin:$PATH"; \
 	export BUILD_TLS=yes; \
-	if [ "$BUILD_WITH_MODULES" = "yes" ] && [ "${LTO}" = "1" ]; then \
-		mkdir -p /usr/local/bin; \
-		ln -sf /usr/lib/llvm21/bin/clang-21 /usr/local/bin/clang-21; \
-		ln -sf /usr/lib/llvm21/bin/clang++-21 /usr/local/bin/clang++-21; \
-		ln -sf /usr/lib/llvm21/bin/lld /usr/local/bin/lld; \
-		[ -x /usr/lib/llvm21/bin/lld-21 ] && ln -sf /usr/lib/llvm21/bin/lld-21 /usr/local/bin/lld-21; \
-	fi; \
 	if [ "$BUILD_WITH_MODULES" = "yes" ]; then \
-		export LTO=${LTO}; \
+		export LTO=1; \
 		make -C /usr/src/redis/modules/redisjson get_source; \
 		sed -i 's/^RUST_FLAGS=$/RUST_FLAGS += -C target-feature=-crt-static/' /usr/src/redis/modules/redisjson/src/Makefile ; \
 		grep -E 'RUST_FLAGS' /usr/src/redis/modules/redisjson/src/Makefile; \
