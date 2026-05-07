@@ -14,6 +14,9 @@ RUN set -eux; \
 	; \
 	rm -rf /var/lib/apt/lists/*
 
+{% if release_tag %}
+ENV REDIS_VERSION={{ release_tag }}
+{% endif %}
 ARG REDIS_DOWNLOAD_URL={{ redis_download_url | required("redis_download_url is required") }}
 {% if not custom_build %}
 ARG REDIS_DOWNLOAD_SHA={{ redis_download_sha | required("redis_download_sha is required") }}

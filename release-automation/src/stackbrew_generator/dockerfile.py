@@ -15,6 +15,7 @@ class DockerfileContext(BaseModel):
         redis_download_url: Redis source tarball download URL (required)
         redis_download_sha: Redis source tarball SHA256 checksum (required)
     """
+    release_tag: str = ""
     custom_build: bool = False
     redis_download_url: str = ""
     redis_download_sha: str = ""
