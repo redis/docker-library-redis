@@ -14,6 +14,7 @@ RUN set -eux; \
 	; \
 	rm -rf /var/lib/apt/lists/*
 
+ENV REDIS_VERSION=7.2.14
 ARG REDIS_DOWNLOAD_URL=https://github.com/redis/redis/archive/refs/tags/7.2.14.tar.gz
 ARG REDIS_DOWNLOAD_SHA=704bfac84ab1c0771ddc08c8bea72e2203e3ce64c1fc6750e76b8ce2c00f3145
 
