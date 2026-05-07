@@ -14,6 +14,7 @@ RUN set -eux; \
 	; \
 	rm -rf /var/lib/apt/lists/*
 
+ENV REDIS_VERSION=8.8-m03
 ARG REDIS_DOWNLOAD_URL=https://github.com/redis/redis/archive/refs/tags/8.8-m03.tar.gz
 ARG REDIS_DOWNLOAD_SHA=d4dfaef7d32e64a7165756847e481b3ce4e2b7e1c3e18e1ce75368d6b9c4dd97
 
