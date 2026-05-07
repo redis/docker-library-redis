@@ -1,7 +1,5 @@
-#!/bin/bash
+#!/bin/sh
 set -e
-
-SETPRIV="/usr/bin/setpriv --reuid redis --regid redis --clear-groups"
 
 # first arg is `-f` or `--some-option`
 # or first arg is `something.conf`
@@ -12,7 +10,7 @@ fi
 # allow the container to be started with `--user`
 if [ "$1" = 'redis-server' ] && [ "$(id -u)" = '0' ]; then
 	find . \! -user redis -exec chown redis '{}' +
-	exec $SETPRIV "$0" "$@"
+	exec /usr/bin/setpriv --reuid redis --regid redis --clear-groups "$0" "$@"
 fi
 
 # set an appropriate umask (if one isn't set already)
