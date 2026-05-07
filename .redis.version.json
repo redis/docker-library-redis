@@ -1,4 +1,5 @@
 {
+	"release_tag": "7.4.9",
 	"redis_download_url": "https://github.com/redis/redis/archive/refs/tags/7.4.9.tar.gz",
 	"redis_download_sha": "94a3f84963f710e402bf7dbe61ed9ee3b43862d1aba995faca7a23621b51f652"
 }
