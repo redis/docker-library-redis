@@ -39,6 +39,7 @@ RUN set -eux; \
 		*) echo >&2 "Modules are NOT supported! unsupported architecture: '$arch'"; export BUILD_WITH_MODULES=no ;; \
 	esac; \
 	if [ "$BUILD_WITH_MODULES" = "yes" ]; then \
+		echo 'deb http://deb.debian.org/debian trixie-backports main' > /etc/apt/sources.list.d/backports.list; \
 		apt-get update; \
 		apt-get install -y --no-install-recommends \
 			git \
@@ -49,13 +50,15 @@ RUN set -eux; \
 			python3-dev \
 			unzip \
 			rsync \
-			clang \
 			automake \
 			autoconf \
 			libtool \
 			g++; \
+		apt-get install -y --no-install-recommends -t trixie-backports clang-21 lld-21 llvm-21; \
+		export PATH="/usr/lib/llvm-21/bin:$PATH"; \
 	fi; \
 	\
+	rm -f /etc/apt/sources.list.d/backports.list; \
 	rm -rf /var/lib/apt/lists/*; \
 	\
 	wget -O redis.tar.gz "$REDIS_DOWNLOAD_URL"; \
@@ -88,6 +91,9 @@ RUN set -eux; \
 	grep -F "cd jemalloc && ./configure $extraJemallocConfigureFlags " /usr/src/redis/deps/Makefile; \
 	\
 	export BUILD_TLS=yes; \
+	if [ "$BUILD_WITH_MODULES" = "yes" ]; then \
+		export LTO=1; \
+	fi; \
 	make -C /usr/src/redis -j "$(nproc)" all; \
 	make -C /usr/src/redis install; \
 	make -C /usr/src/redis distclean; \
