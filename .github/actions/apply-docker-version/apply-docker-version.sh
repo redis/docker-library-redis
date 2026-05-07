@@ -31,6 +31,7 @@ echo "REDIS_ARCHIVE_SHA: $REDIS_ARCHIVE_SHA"
 echo "Updating .redis.version.json..."
 cat > .redis.version.json <<EOF
 {
+	"release_tag": "$TAG",
 	"redis_download_url": "$REDIS_ARCHIVE_URL",
 	"redis_download_sha": "$REDIS_ARCHIVE_SHA"
 }
