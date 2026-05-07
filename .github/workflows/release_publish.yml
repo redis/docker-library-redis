@@ -29,7 +29,7 @@ on:
 env:
   TARGET_OFFICIAL_IMAGES_REPO: docker-library/official-images
   FORKED_OFFICIAL_IMAGES_REPO: redis-developer/docker-library-official-images
-  PR_USER_MENTIONS: "@adamiBs @yossigo @adobrzhansky @maxb-io @dagansandler @Peter-Sh"
+  PR_USER_MENTIONS: "@yossigo @dagansandler @Peter-Sh @AngelYanev @dariaguy @kalinstaykov @hilabarkai @gonen-red"
 
 # UUID is used to help automation to identify workflow run in the list of workflow runs.
 run-name: "release publish${{ github.event.inputs.workflow_uuid && format(': {0}', github.event.inputs.workflow_uuid) || '' }}"
