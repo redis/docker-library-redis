@@ -54,6 +54,7 @@ RUN set -eux; \
 		libgcc \
 		libtool \
 		llvm21-dev \
+		lld21 \
 		ncurses-dev \
 		openssh \
 		openssl  \
@@ -109,6 +110,7 @@ RUN set -eux; \
 	export PATH="/usr/lib/llvm21/bin:$PATH"; \
 	export BUILD_TLS=yes; \
 	if [ "$BUILD_WITH_MODULES" = "yes" ]; then \
+		export LTO=1; \
 		make -C /usr/src/redis/modules/redisjson get_source; \
 		sed -i 's/^RUST_FLAGS=$/RUST_FLAGS += -C target-feature=-crt-static/' /usr/src/redis/modules/redisjson/src/Makefile ; \
 		grep -E 'RUST_FLAGS' /usr/src/redis/modules/redisjson/src/Makefile; \
