@@ -4,7 +4,7 @@ set -e
 # This script updates .redis.version.json and regenerates Dockerfiles from templates
 # using environment variables REDIS_ARCHIVE_URL and REDIS_ARCHIVE_SHA.
 
-# Input TAG is expected in $1
+# Input TAG is expected in first argument
 TAG="$1"
 
 if [ -z "$TAG" ]; then
