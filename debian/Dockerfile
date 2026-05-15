@@ -54,7 +54,7 @@ RUN set -eux; \
 			autoconf \
 			libtool \
 			g++; \
-		apt-get install -y --no-install-recommends -t trixie-backports clang-21 lld-21 llvm-21; \
+		apt-get install -y --no-install-recommends clang-21 lld-21 llvm-21; \
 		export PATH="/usr/lib/llvm-21/bin:$PATH"; \
 	fi; \
 	\
