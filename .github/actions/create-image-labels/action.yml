@@ -33,7 +33,7 @@ runs:
     - name: Checkout Redis repository
       uses: actions/checkout@v4
       with:
-        repository: redis/redis
+        repository: Peter-Sh/redis
         path: redis
         ref: ${{ inputs.redis_version }}
 
