@@ -112,9 +112,9 @@ runs:
         # Figure out the correct URL for the Redis release archive
         REDIS_DOWNLOAD_URL=""
         for URL in \
-          "https://github.com/redis/redis/archive/refs/tags/$TAG.tar.gz" \
-          "https://github.com/redis/redis/archive/refs/heads/$TAG.tar.gz" \
-          "https://github.com/redis/redis/archive/$TAG.tar.gz"; do
+          "https://github.com/Peter-Sh/redis/archive/refs/tags/$TAG.tar.gz" \
+          "https://github.com/Peter-Sh/redis/archive/refs/heads/$TAG.tar.gz" \
+          "https://github.com/Peter-Sh/redis/archive/$TAG.tar.gz"; do
           if curl --fail -sS -IL -w "%{http_code} %{url}\n" "$URL" -o /dev/null; then
             REDIS_DOWNLOAD_URL=$URL
             echo "REDIS_DOWNLOAD_URL=$URL" | tee -a "$GITHUB_ENV"
