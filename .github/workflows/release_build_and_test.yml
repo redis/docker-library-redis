@@ -15,7 +15,7 @@ on:
         description: 'Release type: either public or internal'
         required: true
       run_type:
-        description: 'Run type, either release, unstable or custom'
+        description: 'Run type, either release, unstable, custom or nightly'
         required: true
         default: "custom"
       workflow_uuid:
@@ -82,7 +82,7 @@ jobs:
             exit 1
           fi
 
-          if ! [[ "$INPUTS_RUN_TYPE" =~ ^(release|unstable|custom)$ ]]; then
+          if ! [[ "$INPUTS_RUN_TYPE" =~ ^(release|unstable|custom|nightly)$ ]]; then
             echo "::error::Invalid run type: $INPUTS_RUN_TYPE"
             exit 1
           fi
