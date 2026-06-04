@@ -14,9 +14,9 @@ RUN set -eux; \
 	; \
 	rm -rf /var/lib/apt/lists/*
 
-ENV REDIS_VERSION=8.2.6
-ARG REDIS_DOWNLOAD_URL=https://github.com/redis/redis/archive/refs/tags/8.2.6.tar.gz
-ARG REDIS_DOWNLOAD_SHA=9d64fda8816d2b99d5d2019642a05e95552c56b8cc18d58efaa1e3b8b4dcf4ad
+ENV REDIS_VERSION=8.2.7
+ARG REDIS_DOWNLOAD_URL=https://github.com/redis/redis/archive/refs/tags/8.2.7.tar.gz
+ARG REDIS_DOWNLOAD_SHA=4b5b129565569a1564cf0196e17deff23298980e81deced3266cda58180d6506
 
 RUN set -eux; \
 	\
