@@ -14,9 +14,9 @@ RUN set -eux; \
 # we need setpriv package as busybox provides very limited functionality
 		setpriv \
 	;
-ENV REDIS_VERSION=8.4.3
-ARG REDIS_DOWNLOAD_URL=https://github.com/redis/redis/archive/refs/tags/8.4.3.tar.gz
-ARG REDIS_DOWNLOAD_SHA=966824af2b218450a1703c0fad584d3414e49f923e886d0ca81898754342b549
+ENV REDIS_VERSION=8.4.4
+ARG REDIS_DOWNLOAD_URL=https://github.com/redis/redis/archive/refs/tags/8.4.4.tar.gz
+ARG REDIS_DOWNLOAD_SHA=ff02092e1ca7bcf07f842d3ede8fd645218e51b3f903c254b7436c2a41583924
 RUN set -eux; \
 	\
 	apk add --no-cache --virtual .build-deps \
