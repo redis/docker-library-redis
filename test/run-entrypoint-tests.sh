@@ -705,5 +705,19 @@ test_redis_server_modules_are_loaded() {
 	run_redis_docker_and_check_modules /usr/local/bin/redis-server
 }
 
+# If the base image ships libsystemd, redis-server must be built against it so
+# that it can talk to systemd (sd_notify). On images without libsystemd (e.g.
+# Alpine) the binary is built without systemd support, so the test is skipped.
+test_redis_server_is_linked_against_libsystemd() {
+	if ! docker run --rm --entrypoint sh "$REDIS_IMG" -c 'find /lib /usr/lib -name "libsystemd.so*" 2>/dev/null | grep -q .'; then
+		echo "Skipping: libsystemd is not present in the base image"
+		startSkipping
+		return 0
+	fi
+
+	linked=$(docker run --rm --entrypoint sh "$REDIS_IMG" -c 'ldd "$(command -v redis-server)"')
+	assertContains "redis-server should be linked against libsystemd" "$linked" "libsystemd.so"
+}
+
 # shellcheck disable=SC1091
 . ./shunit2
