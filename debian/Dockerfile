@@ -30,6 +30,8 @@ RUN set -eux; \
 		g++ \
 		libc6-dev \
 		libssl-dev \
+		libsystemd-dev \
+		pkg-config \
 		make; \
 	\
 	arch="$(dpkg --print-architecture | awk -F- '{ print $NF }')"; \
