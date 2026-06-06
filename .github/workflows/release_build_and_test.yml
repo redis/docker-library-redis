@@ -65,7 +65,7 @@ jobs:
       slack_fanout_msg_links: ${{ steps.slack-routing.outputs.slack_fanout_msg_links }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Install release automation dependencies
         uses: ./.github/actions/release-automation-install
@@ -124,7 +124,7 @@ jobs:
           fi
 
       - name: Log in to Container Registry
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -179,7 +179,7 @@ jobs:
     runs-on: ["ubuntu-latest"]
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Ensure Release Branch
         if: github.event.inputs.run_type == 'release'
@@ -258,7 +258,7 @@ jobs:
           cat result.json | jq '.'
 
       - name: Upload release handle artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: release_handle
           path: result.json
@@ -275,7 +275,7 @@ jobs:
     runs-on: ["ubuntu-latest"]
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
 
     - name: Post announcement link to Slack
       uses: ./.github/actions/slack-notification
