@@ -4,7 +4,7 @@ set -e
 # This script updates .redis.version.json and regenerates Dockerfiles from templates
 # using environment variables REDIS_ARCHIVE_URL and REDIS_ARCHIVE_SHA.
 
-# Input TAG is expected in $1
+# Input TAG is expected in first argument
 TAG="$1"
 
 if [ -z "$TAG" ]; then
@@ -31,6 +31,7 @@ echo "REDIS_ARCHIVE_SHA: $REDIS_ARCHIVE_SHA"
 echo "Updating .redis.version.json..."
 cat > .redis.version.json <<EOF
 {
+	"release_tag": "$TAG",
 	"redis_download_url": "$REDIS_ARCHIVE_URL",
 	"redis_download_sha": "$REDIS_ARCHIVE_SHA"
 }
