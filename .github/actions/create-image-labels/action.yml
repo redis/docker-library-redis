@@ -31,7 +31,7 @@ runs:
   using: "composite"
   steps:
     - name: Checkout Redis repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
       with:
         repository: redis/redis
         path: redis
@@ -61,7 +61,7 @@ runs:
 
     - name: Checkout Redisearch repository
       if: inputs.modules_enabled == 'true'
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
       with:
         repository: RediSearch/RediSearch
         path: redisearch
@@ -69,7 +69,7 @@ runs:
 
     - name: Checkout Redisjson repository
       if: inputs.modules_enabled == 'true'
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
       with:
         repository: redisjson/redisjson
         path: redisjson
@@ -77,7 +77,7 @@ runs:
 
     - name: Checkout RedisTimeSeries repository
       if: inputs.modules_enabled == 'true'
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
       with:
         repository: RedisTimeSeries/RedisTimeSeries
         path: redistimeseries
@@ -85,7 +85,7 @@ runs:
 
     - name: Checkout RedisBloom repository
       if: inputs.modules_enabled == 'true'
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
       with:
         repository: RedisBloom/RedisBloom
         path: redisbloom

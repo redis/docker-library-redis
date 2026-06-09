@@ -39,7 +39,7 @@ jobs:
     runs-on: ["ubuntu-latest"]
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Parse release handle and validate
         id: parse-release
@@ -124,7 +124,7 @@ jobs:
           fi
 
       - name: Checkout official-images repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           path: official-images
           repository: ${{ github.event.inputs.pr_to_official_library == 'true' && env.TARGET_OFFICIAL_IMAGES_REPO || env.FORKED_OFFICIAL_IMAGES_REPO }}
@@ -133,10 +133,10 @@ jobs:
         uses: ./.github/actions/release-automation-install
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Log in to Container Registry
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -189,7 +189,7 @@ jobs:
 
       - name: Create pull request to official-images
         id: create-pr
-        uses: peter-evans/create-pull-request@v7
+        uses: peter-evans/create-pull-request@v8
         with:
           token: ${{ secrets.GH_TOKEN_FOR_PR_2 }}
           draft: true
@@ -271,7 +271,7 @@ jobs:
           cat result.json | jq '.'
 
       - name: Upload release info artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: release_info
           path: result.json
