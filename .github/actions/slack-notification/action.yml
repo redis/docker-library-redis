@@ -41,7 +41,7 @@ runs:
   using: "composite"
   steps:
     - name: Checkout common functions
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
       with:
         repository: redis-developer/redis-oss-release-automation
         ref: main
