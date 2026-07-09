@@ -112,12 +112,14 @@ RUN set -eux; \
 	export BUILD_TLS=yes; \
 	if [ "$BUILD_WITH_MODULES" = "yes" ]; then \
 		export LTO=1; \
-# bundled redis-full ships module sources (.prepared); otherwise clone pinned refs (shallow)
-		if ls /usr/src/redis/modules/*/src/.prepared >/dev/null 2>&1; then \
+# bundled redis-full ships module sources (.prepared); re-clone only if refs were overridden
+		if ls /usr/src/redis/modules/*/src/.prepared >/dev/null 2>&1 && [ -z "${REDISEARCH_VERSION:-}${REDISJSON_VERSION:-}${REDISBLOOM_VERSION:-}${REDISTIMESERIES_VERSION:-}" ]; then \
 			echo "Using bundled module sources (redis-full); skipping modules-update"; \
 		else \
 			make -C /usr/src/redis modules-update MODULES_UPDATE_SHALLOW=1; \
 		fi; \
+# make deploy/build.sh bypass modules/Makefile, so install the pinned Rust toolchain here
+		make -C /usr/src/redis/modules install-rust INSTALL_RUST_TOOLCHAIN=yes; \
 		make -C /usr/src/redis -j "$(nproc)" deploy; \
 	else \
 		make -C /usr/src/redis -j "$(nproc)" deploy redis; \
