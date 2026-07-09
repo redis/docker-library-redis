@@ -112,7 +112,7 @@ RUN set -eux; \
 	if [ "$BUILD_WITH_MODULES" = "yes" ]; then \
 		export LTO=1; \
 # bundled redis-full ships module sources (.prepared); re-clone only if refs were overridden
-		if ls /usr/src/redis/modules/*/src/.prepared >/dev/null 2>&1 && [ -z "${REDISEARCH_VERSION:-}${REDISJSON_VERSION:-}${REDISBLOOM_VERSION:-}${REDISTIMESERIES_VERSION:-}" ]; then \
+		if ls /usr/src/redis/modules/*/src/.prepared >/dev/null 2>&1; then \
 			echo "Using bundled module sources (redis-full); skipping modules-update"; \
 		else \
 			make -C /usr/src/redis modules-update MODULES_UPDATE_SHALLOW=1; \
