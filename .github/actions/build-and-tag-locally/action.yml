@@ -23,6 +23,10 @@ inputs:
   release_tag:
     description: 'Release tag to build'
     required: false
+  redis_repo:
+    description: 'GitHub owner/repo to pull Redis sources from (allows using a fork)'
+    default: 'redis/redis'
+    required: false
   redisearch_version:
     description: 'Redisearch version to build'
     required: false
@@ -108,16 +112,18 @@ runs:
       if: inputs.run_type != 'release' && inputs.run_type != 'pr'
       env:
         TAG: ${{ inputs.release_tag }}
+        REDIS_REPO: ${{ inputs.redis_repo }}
       run: |
         # Figure out the correct URL for the Redis release archive.
+        # REDIS_REPO defaults to redis/redis but may point at a fork.
         # Prefer a bundled redis-full.tar.gz release asset (Redis core + modules) when
         # published for this tag; otherwise fall back to the plain source archive.
         REDIS_DOWNLOAD_URL=""
         for URL in \
-          "https://github.com/redis/redis/releases/download/$TAG/redis-full.tar.gz" \
-          "https://github.com/redis/redis/archive/refs/tags/$TAG.tar.gz" \
-          "https://github.com/redis/redis/archive/refs/heads/$TAG.tar.gz" \
-          "https://github.com/redis/redis/archive/$TAG.tar.gz"; do
+          "https://github.com/$REDIS_REPO/releases/download/$TAG/redis-full.tar.gz" \
+          "https://github.com/$REDIS_REPO/archive/refs/tags/$TAG.tar.gz" \
+          "https://github.com/$REDIS_REPO/archive/refs/heads/$TAG.tar.gz" \
+          "https://github.com/$REDIS_REPO/archive/$TAG.tar.gz"; do
           if curl --fail -sS -IL -w "%{http_code} %{url}\n" "$URL" -o /dev/null; then
             REDIS_DOWNLOAD_URL=$URL
             echo "REDIS_DOWNLOAD_URL=$URL" | tee -a "$GITHUB_ENV"
