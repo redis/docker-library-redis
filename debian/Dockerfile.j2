@@ -46,15 +46,15 @@ RUN set -eux; \
 	\
 	arch="$(dpkg --print-architecture | awk -F- '{ print $NF }')"; \
 	case "$arch" in \
-		'amd64') export BUILD_WITH_MODULES=yes; export INSTALL_RUST_TOOLCHAIN=yes; export DISABLE_WERRORS=yes ;; \
-		'arm64') export BUILD_WITH_MODULES=yes; export INSTALL_RUST_TOOLCHAIN=yes; export DISABLE_WERRORS=yes ;; \
-		*) echo >&2 "Modules are NOT supported! unsupported architecture: '$arch'"; export BUILD_WITH_MODULES=no ;; \
+		'amd64' | 'arm64') BUILD_WITH_MODULES=yes ;; \
+		*) echo >&2 "Modules are NOT supported! unsupported architecture: '$arch'"; BUILD_WITH_MODULES=no ;; \
 	esac; \
 	if [ "$BUILD_WITH_MODULES" = "yes" ]; then \
 		echo 'deb http://deb.debian.org/debian trixie-backports main' > /etc/apt/sources.list.d/backports.list; \
 		apt-get update; \
 		apt-get install -y --no-install-recommends \
 			git \
+			yq \
 			cmake \
 			python3 \
 			python3-pip \
@@ -84,26 +84,6 @@ RUN set -eux; \
 	mkdir -p /usr/src/redis; \
 	tar -xzf redis.tar.gz -C /usr/src/redis --strip-components=1; \
 	rm redis.tar.gz; \
-
-	{%- if custom_build %}
-
-	\
-	# Update modules versions
-	if [ -n "$REDISEARCH_VERSION" ]; then \
-		sed -i "/^MODULE_VERSION = /cMODULE_VERSION = $REDISEARCH_VERSION" /usr/src/redis/modules/redisearch/Makefile; \
-	fi; \
-	if [ -n "$REDISJSON_VERSION" ]; then \
-		sed -i "/^MODULE_VERSION = /cMODULE_VERSION = $REDISJSON_VERSION" /usr/src/redis/modules/redisjson/Makefile; \
-	fi; \
-	if [ -n "$REDISBLOOM_VERSION" ]; then \
-		sed -i "/^MODULE_VERSION = /cMODULE_VERSION = $REDISBLOOM_VERSION" /usr/src/redis/modules/redisbloom/Makefile; \
-	fi; \
-	if [ -n "$REDISTIMESERIES_VERSION" ]; then \
-		sed -i "/^MODULE_VERSION = /cMODULE_VERSION = $REDISTIMESERIES_VERSION" /usr/src/redis/modules/redistimeseries/Makefile; \
-	fi; \
-
-	{%- endif %}
-
 # disable Redis protected mode [1] as it is unnecessary in context of Docker
 # (ports are not automatically exposed when running inside Docker, but rather explicitly by specifying -p / -P)
 # [1]: https://github.com/redis/redis/commit/edd4d555df57dc84265fdfb4ef59a4678832f6da
@@ -131,10 +111,29 @@ RUN set -eux; \
 	export BUILD_TLS=yes; \
 	if [ "$BUILD_WITH_MODULES" = "yes" ]; then \
 		export LTO=1; \
+	{% if custom_build %}
+# pin module refs in modules.yaml from build-args (empty args leave the pin untouched)
+		if [ -f /usr/src/redis/modules/modules.yaml ]; then \
+			[ -z "$REDISEARCH_VERSION" ] || yq -y -i '(.modules[] | select(.name == "redisearch").ref) = env.REDISEARCH_VERSION' /usr/src/redis/modules/modules.yaml; \
+			[ -z "$REDISJSON_VERSION" ] || yq -y -i '(.modules[] | select(.name == "redisjson").ref) = env.REDISJSON_VERSION' /usr/src/redis/modules/modules.yaml; \
+			[ -z "$REDISBLOOM_VERSION" ] || yq -y -i '(.modules[] | select(.name == "redisbloom").ref) = env.REDISBLOOM_VERSION' /usr/src/redis/modules/modules.yaml; \
+			[ -z "$REDISTIMESERIES_VERSION" ] || yq -y -i '(.modules[] | select(.name == "redistimeseries").ref) = env.REDISTIMESERIES_VERSION' /usr/src/redis/modules/modules.yaml; \
+		fi; \
+	{% endif %}
+# bundled redis-full ships module sources (.prepared); re-clone only if refs were overridden
+		if ls /usr/src/redis/modules/*/src/.prepared >/dev/null 2>&1{% if custom_build %} && [ -z "${REDISEARCH_VERSION:-}${REDISJSON_VERSION:-}${REDISBLOOM_VERSION:-}${REDISTIMESERIES_VERSION:-}" ]{% endif %}; then \
+			echo "Using bundled module sources (redis-full); skipping modules-update"; \
+		else \
+			make -C /usr/src/redis modules-update MODULES_UPDATE_SHALLOW=1; \
+		fi; \
+# make deploy/build.sh bypass modules/Makefile, so install the pinned Rust toolchain here
+		make -C /usr/src/redis/modules install-rust INSTALL_RUST_TOOLCHAIN=yes; \
+		make -C /usr/src/redis -j "$(nproc)" deploy; \
+# remove the toolchain from /usr/local so it neither bloats the image nor pollutes runtime-dep detection
+		make -C /usr/src/redis/modules uninstall-rust INSTALL_RUST_TOOLCHAIN=yes; \
+	else \
+		make -C /usr/src/redis -j "$(nproc)" deploy redis; \
 	fi; \
-	make -C /usr/src/redis -j "$(nproc)" all; \
-	make -C /usr/src/redis install; \
-	make -C /usr/src/redis distclean; \
 	rm -r /usr/src/redis; \
 	\
 	apt-mark auto '.*' > /dev/null; \

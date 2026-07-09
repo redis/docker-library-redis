@@ -5,6 +5,10 @@ inputs:
   redis_version:
     description: 'Redis version to build'
     required: true
+  redis_repo:
+    description: 'GitHub owner/repo to pull Redis sources from (allows using a fork)'
+    required: false
+    default: 'redis/redis'
   modules_enabled:
     description: 'Whether module-related labels should be included'
     required: false
@@ -33,7 +37,7 @@ runs:
     - name: Checkout Redis repository
       uses: actions/checkout@v6
       with:
-        repository: redis/redis
+        repository: ${{ inputs.redis_repo }}
         path: redis
         ref: ${{ inputs.redis_version }}
 
@@ -41,22 +45,23 @@ runs:
       if: inputs.modules_enabled == 'true' && (inputs.redisearch_version == '' || inputs.redisjson_version == '' || inputs.redistimeseries_version == '' || inputs.redisbloom_version == '')
       shell: bash
       run: |
-        get_module_version() {
-          local module="$1"
-          grep MODULE_VERSION modules/$module/Makefile | cut -d '=' -f2 | tr -d ' '
-        }
+        # read each module's pinned ref from modules.yaml (manifest is the single
+        # source of truth; the per-module MODULE_VERSION Makefiles were removed)
         cd redis
+        get_module_ref() {
+          sh scripts/lib/manifest.sh ref "$1"
+        }
         if [ -z "${{ inputs.redisearch_version }}" ]; then
-          echo redisearch_version=$(get_module_version redisearch) >> $GITHUB_ENV
+          echo redisearch_version=$(get_module_ref redisearch) >> $GITHUB_ENV
         fi
         if [ -z "${{ inputs.redisjson_version }}" ]; then
-          echo redisjson_version=$(get_module_version redisjson) >> $GITHUB_ENV
+          echo redisjson_version=$(get_module_ref redisjson) >> $GITHUB_ENV
         fi
         if [ -z "${{ inputs.redisbloom_version }}" ]; then
-          echo redisbloom_version=$(get_module_version redisbloom) >> $GITHUB_ENV
+          echo redisbloom_version=$(get_module_ref redisbloom) >> $GITHUB_ENV
         fi
         if [ -z "${{ inputs.redistimeseries_version }}" ]; then
-          echo redistimeseries_version=$(get_module_version redistimeseries) >> $GITHUB_ENV
+          echo redistimeseries_version=$(get_module_ref redistimeseries) >> $GITHUB_ENV
         fi
 
     - name: Checkout Redisearch repository
@@ -117,7 +122,7 @@ runs:
         else
           labels+="io.redis.version=$VER"$'\n'
         fi
-        labels+="io.redis.source=https://github.com/redis/redis"$'\n'
+        labels+="io.redis.source=https://github.com/${{ inputs.redis_repo }}"$'\n'
         echo "labels: $labels"
         echo "image_labels<<EOF" >> $GITHUB_OUTPUT
         echo "$labels" >> $GITHUB_OUTPUT
