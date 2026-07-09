@@ -154,7 +154,8 @@ runs:
         trap 'rm -rf "$tmpdir"' EXIT
 
         curl --fail -Ls "$REDIS_DOWNLOAD_URL" -o "$tmpdir/redis.tar.gz"
-        version_h_path=$(tar -tzf "$tmpdir/redis.tar.gz" | grep '/src/version.h$' | head -n1)
+        # core version.h is <topdir>/src/version.h; anchor so redis-full module version.h don't match
+        version_h_path=$(tar -tzf "$tmpdir/redis.tar.gz" | grep -E '^[^/]+/src/version.h$' | head -n1)
 
         if [ -z "$version_h_path" ]; then
           echo "Failed to locate src/version.h in Redis archive"
