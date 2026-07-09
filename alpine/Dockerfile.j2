@@ -146,6 +146,8 @@ RUN set -eux; \
 # make deploy/build.sh bypass modules/Makefile, so install the pinned Rust toolchain here
 		make -C /usr/src/redis/modules install-rust INSTALL_RUST_TOOLCHAIN=yes; \
 		make -C /usr/src/redis -j "$(nproc)" deploy; \
+# remove the toolchain from /usr/local so it neither bloats the image nor pollutes runtime-dep detection
+		make -C /usr/src/redis/modules uninstall-rust INSTALL_RUST_TOOLCHAIN=yes; \
 	else \
 		make -C /usr/src/redis -j "$(nproc)" deploy redis; \
 	fi; \
