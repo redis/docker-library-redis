@@ -51,6 +51,7 @@ RUN set -eux; \
 		g++ \
 		git \
 		libffi-dev \
+		yq \
 		libgcc \
 		libtool \
 		llvm21-dev \
@@ -111,13 +112,16 @@ RUN set -eux; \
 	export BUILD_TLS=yes; \
 	if [ "$BUILD_WITH_MODULES" = "yes" ]; then \
 		export LTO=1; \
-		make -C /usr/src/redis/modules/redisjson get_source; \
-		sed -i 's/^RUST_FLAGS=$/RUST_FLAGS += -C target-feature=-crt-static/' /usr/src/redis/modules/redisjson/src/Makefile ; \
-		grep -E 'RUST_FLAGS' /usr/src/redis/modules/redisjson/src/Makefile; \
+# bundled redis-full ships module sources (.prepared); otherwise clone pinned refs (shallow)
+		if ls /usr/src/redis/modules/*/src/.prepared >/dev/null 2>&1; then \
+			echo "Using bundled module sources (redis-full); skipping modules-update"; \
+		else \
+			make -C /usr/src/redis modules-update MODULES_UPDATE_SHALLOW=1; \
+		fi; \
+		make -C /usr/src/redis -j "$(nproc)" deploy; \
+	else \
+		make -C /usr/src/redis -j "$(nproc)" deploy redis; \
 	fi; \
-	make -C /usr/src/redis -j "$(nproc)" all; \
-	make -C /usr/src/redis install; \
-	make -C /usr/src/redis distclean; \
 	rm -r /usr/src/redis; \
 	\
 	runDeps="$( \

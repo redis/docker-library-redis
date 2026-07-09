@@ -55,6 +55,7 @@ RUN set -eux; \
 		apt-get update; \
 		apt-get install -y --no-install-recommends \
 			git \
+			yq \
 			cmake \
 			python3 \
 			python3-pip \
@@ -85,25 +86,6 @@ RUN set -eux; \
 	tar -xzf redis.tar.gz -C /usr/src/redis --strip-components=1; \
 	rm redis.tar.gz; \
 
-	{%- if custom_build %}
-
-	\
-	# Update modules versions
-	if [ -n "$REDISEARCH_VERSION" ]; then \
-		sed -i "/^MODULE_VERSION = /cMODULE_VERSION = $REDISEARCH_VERSION" /usr/src/redis/modules/redisearch/Makefile; \
-	fi; \
-	if [ -n "$REDISJSON_VERSION" ]; then \
-		sed -i "/^MODULE_VERSION = /cMODULE_VERSION = $REDISJSON_VERSION" /usr/src/redis/modules/redisjson/Makefile; \
-	fi; \
-	if [ -n "$REDISBLOOM_VERSION" ]; then \
-		sed -i "/^MODULE_VERSION = /cMODULE_VERSION = $REDISBLOOM_VERSION" /usr/src/redis/modules/redisbloom/Makefile; \
-	fi; \
-	if [ -n "$REDISTIMESERIES_VERSION" ]; then \
-		sed -i "/^MODULE_VERSION = /cMODULE_VERSION = $REDISTIMESERIES_VERSION" /usr/src/redis/modules/redistimeseries/Makefile; \
-	fi; \
-
-	{%- endif %}
-
 # disable Redis protected mode [1] as it is unnecessary in context of Docker
 # (ports are not automatically exposed when running inside Docker, but rather explicitly by specifying -p / -P)
 # [1]: https://github.com/redis/redis/commit/edd4d555df57dc84265fdfb4ef59a4678832f6da
@@ -131,10 +113,25 @@ RUN set -eux; \
 	export BUILD_TLS=yes; \
 	if [ "$BUILD_WITH_MODULES" = "yes" ]; then \
 		export LTO=1; \
+	{% if custom_build %}
+# pin module refs in modules.yaml from build-args (empty args leave the pin untouched)
+		if [ -f /usr/src/redis/modules/modules.yaml ]; then \
+			[ -z "$REDISEARCH_VERSION" ] || yq -y -i '(.modules[] | select(.name == "redisearch").ref) = env.REDISEARCH_VERSION' /usr/src/redis/modules/modules.yaml; \
+			[ -z "$REDISJSON_VERSION" ] || yq -y -i '(.modules[] | select(.name == "redisjson").ref) = env.REDISJSON_VERSION' /usr/src/redis/modules/modules.yaml; \
+			[ -z "$REDISBLOOM_VERSION" ] || yq -y -i '(.modules[] | select(.name == "redisbloom").ref) = env.REDISBLOOM_VERSION' /usr/src/redis/modules/modules.yaml; \
+			[ -z "$REDISTIMESERIES_VERSION" ] || yq -y -i '(.modules[] | select(.name == "redistimeseries").ref) = env.REDISTIMESERIES_VERSION' /usr/src/redis/modules/modules.yaml; \
+		fi; \
+	{% endif %}
+# bundled redis-full ships module sources (.prepared); otherwise clone pinned refs (shallow)
+		if ls /usr/src/redis/modules/*/src/.prepared >/dev/null 2>&1; then \
+			echo "Using bundled module sources (redis-full); skipping modules-update"; \
+		else \
+			make -C /usr/src/redis modules-update MODULES_UPDATE_SHALLOW=1; \
+		fi; \
+		make -C /usr/src/redis -j "$(nproc)" deploy; \
+	else \
+		make -C /usr/src/redis -j "$(nproc)" deploy redis; \
 	fi; \
-	make -C /usr/src/redis -j "$(nproc)" all; \
-	make -C /usr/src/redis install; \
-	make -C /usr/src/redis distclean; \
 	rm -r /usr/src/redis; \
 	\
 	apt-mark auto '.*' > /dev/null; \

@@ -45,6 +45,7 @@ RUN set -eux; \
 		apt-get update; \
 		apt-get install -y --no-install-recommends \
 			git \
+			yq \
 			cmake \
 			python3 \
 			python3-pip \
@@ -68,6 +69,7 @@ RUN set -eux; \
 	mkdir -p /usr/src/redis; \
 	tar -xzf redis.tar.gz -C /usr/src/redis --strip-components=1; \
 	rm redis.tar.gz; \
+
 # disable Redis protected mode [1] as it is unnecessary in context of Docker
 # (ports are not automatically exposed when running inside Docker, but rather explicitly by specifying -p / -P)
 # [1]: https://github.com/redis/redis/commit/edd4d555df57dc84265fdfb4ef59a4678832f6da
@@ -95,10 +97,16 @@ RUN set -eux; \
 	export BUILD_TLS=yes; \
 	if [ "$BUILD_WITH_MODULES" = "yes" ]; then \
 		export LTO=1; \
+# bundled redis-full ships module sources (.prepared); otherwise clone pinned refs (shallow)
+		if ls /usr/src/redis/modules/*/src/.prepared >/dev/null 2>&1; then \
+			echo "Using bundled module sources (redis-full); skipping modules-update"; \
+		else \
+			make -C /usr/src/redis modules-update MODULES_UPDATE_SHALLOW=1; \
+		fi; \
+		make -C /usr/src/redis -j "$(nproc)" deploy; \
+	else \
+		make -C /usr/src/redis -j "$(nproc)" deploy redis; \
 	fi; \
-	make -C /usr/src/redis -j "$(nproc)" all; \
-	make -C /usr/src/redis install; \
-	make -C /usr/src/redis distclean; \
 	rm -r /usr/src/redis; \
 	\
 	apt-mark auto '.*' > /dev/null; \

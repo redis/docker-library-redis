@@ -62,6 +62,7 @@ RUN set -eux; \
 		g++ \
 		git \
 		libffi-dev \
+		yq \
 		libgcc \
 		libtool \
 		llvm21-dev \
@@ -128,32 +129,25 @@ RUN set -eux; \
 	export BUILD_TLS=yes; \
 	if [ "$BUILD_WITH_MODULES" = "yes" ]; then \
 		export LTO=1; \
-
-	{%- if custom_build %}
-
-		# Update modules versions
-		if [ -n "$REDISEARCH_VERSION" ]; then \
-			sed -i "/^MODULE_VERSION = /cMODULE_VERSION = $REDISEARCH_VERSION" /usr/src/redis/modules/redisearch/Makefile; \
+	{% if custom_build %}
+# pin module refs in modules.yaml from build-args (empty args leave the pin untouched)
+		if [ -f /usr/src/redis/modules/modules.yaml ]; then \
+			[ -z "$REDISEARCH_VERSION" ] || yq -i '(.modules[] | select(.name == "redisearch").ref) = strenv(REDISEARCH_VERSION)' /usr/src/redis/modules/modules.yaml; \
+			[ -z "$REDISJSON_VERSION" ] || yq -i '(.modules[] | select(.name == "redisjson").ref) = strenv(REDISJSON_VERSION)' /usr/src/redis/modules/modules.yaml; \
+			[ -z "$REDISBLOOM_VERSION" ] || yq -i '(.modules[] | select(.name == "redisbloom").ref) = strenv(REDISBLOOM_VERSION)' /usr/src/redis/modules/modules.yaml; \
+			[ -z "$REDISTIMESERIES_VERSION" ] || yq -i '(.modules[] | select(.name == "redistimeseries").ref) = strenv(REDISTIMESERIES_VERSION)' /usr/src/redis/modules/modules.yaml; \
 		fi; \
-		if [ -n "$REDISJSON_VERSION" ]; then \
-			sed -i "/^MODULE_VERSION = /cMODULE_VERSION = $REDISJSON_VERSION" /usr/src/redis/modules/redisjson/Makefile; \
+	{% endif %}
+# bundled redis-full ships module sources (.prepared); otherwise clone pinned refs (shallow)
+		if ls /usr/src/redis/modules/*/src/.prepared >/dev/null 2>&1; then \
+			echo "Using bundled module sources (redis-full); skipping modules-update"; \
+		else \
+			make -C /usr/src/redis modules-update MODULES_UPDATE_SHALLOW=1; \
 		fi; \
-		if [ -n "$REDISBLOOM_VERSION" ]; then \
-			sed -i "/^MODULE_VERSION = /cMODULE_VERSION = $REDISBLOOM_VERSION" /usr/src/redis/modules/redisbloom/Makefile; \
-		fi; \
-		if [ -n "$REDISTIMESERIES_VERSION" ]; then \
-			sed -i "/^MODULE_VERSION = /cMODULE_VERSION = $REDISTIMESERIES_VERSION" /usr/src/redis/modules/redistimeseries/Makefile; \
-		fi; \
-
-	{%- endif %}
-
-		make -C /usr/src/redis/modules/redisjson get_source; \
-		sed -i 's/^RUST_FLAGS=$/RUST_FLAGS += -C target-feature=-crt-static/' /usr/src/redis/modules/redisjson/src/Makefile ; \
-		grep -E 'RUST_FLAGS' /usr/src/redis/modules/redisjson/src/Makefile; \
+		make -C /usr/src/redis -j "$(nproc)" deploy; \
+	else \
+		make -C /usr/src/redis -j "$(nproc)" deploy redis; \
 	fi; \
-	make -C /usr/src/redis -j "$(nproc)" all; \
-	make -C /usr/src/redis install; \
-	make -C /usr/src/redis distclean; \
 	rm -r /usr/src/redis; \
 	\
 	runDeps="$( \

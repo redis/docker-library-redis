@@ -109,9 +109,12 @@ runs:
       env:
         TAG: ${{ inputs.release_tag }}
       run: |
-        # Figure out the correct URL for the Redis release archive
+        # Figure out the correct URL for the Redis release archive.
+        # Prefer a bundled redis-full.tar.gz release asset (Redis core + modules) when
+        # published for this tag; otherwise fall back to the plain source archive.
         REDIS_DOWNLOAD_URL=""
         for URL in \
+          "https://github.com/redis/redis/releases/download/$TAG/redis-full.tar.gz" \
           "https://github.com/redis/redis/archive/refs/tags/$TAG.tar.gz" \
           "https://github.com/redis/redis/archive/refs/heads/$TAG.tar.gz" \
           "https://github.com/redis/redis/archive/$TAG.tar.gz"; do
