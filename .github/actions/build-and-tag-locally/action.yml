@@ -420,6 +420,7 @@ runs:
       uses: ./.github/actions/create-image-labels
       with:
           redis_version: ${{ inputs.release_tag }}
+          redis_repo: ${{ inputs.redis_repo }}
           modules_enabled: ${{ steps.redis-version.outputs.modules_enabled }}
           redisearch_version: ${{ inputs.redisearch_version }}
           redisjson_version: ${{ inputs.redisjson_version }}

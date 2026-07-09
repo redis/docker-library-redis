@@ -5,6 +5,10 @@ inputs:
   redis_version:
     description: 'Redis version to build'
     required: true
+  redis_repo:
+    description: 'GitHub owner/repo to pull Redis sources from (allows using a fork)'
+    required: false
+    default: 'redis/redis'
   modules_enabled:
     description: 'Whether module-related labels should be included'
     required: false
@@ -33,7 +37,7 @@ runs:
     - name: Checkout Redis repository
       uses: actions/checkout@v6
       with:
-        repository: redis/redis
+        repository: ${{ inputs.redis_repo }}
         path: redis
         ref: ${{ inputs.redis_version }}
 
@@ -117,7 +121,7 @@ runs:
         else
           labels+="io.redis.version=$VER"$'\n'
         fi
-        labels+="io.redis.source=https://github.com/redis/redis"$'\n'
+        labels+="io.redis.source=https://github.com/${{ inputs.redis_repo }}"$'\n'
         echo "labels: $labels"
         echo "image_labels<<EOF" >> $GITHUB_OUTPUT
         echo "$labels" >> $GITHUB_OUTPUT
