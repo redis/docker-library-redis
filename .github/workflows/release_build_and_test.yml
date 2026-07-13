@@ -11,6 +11,10 @@ on:
       release_tag:
         description: 'Release tag to build'
         required: true
+      redis_repo:
+        description: 'GitHub owner/repo to pull Redis sources from (allows using a fork)'
+        required: false
+        default: 'redis/redis'
       release_type:
         description: 'Release type: either public or internal'
         required: true
@@ -164,6 +168,7 @@ jobs:
     secrets: inherit
     with:
       release_tag: ${{ github.event.inputs.release_tag }}
+      redis_repo: ${{ github.event.inputs.redis_repo }}
       publish_image: true
       redisearch_version: ${{ github.event.inputs.redisearch_version }}
       redisjson_version: ${{ github.event.inputs.redisjson_version }}

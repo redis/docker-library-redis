@@ -7,6 +7,11 @@ on:
         description: 'Release tag to build'
         required: true
         type: string
+      redis_repo:
+        description: 'GitHub owner/repo to pull Redis sources from (allows using a fork)'
+        required: false
+        type: string
+        default: 'redis/redis'
       redisearch_version:
         description: 'Redisearch version to build'
         required: false
@@ -124,6 +129,7 @@ jobs:
           publish_image: ${{ inputs.publish_image }}
           registry_repository: ${{ format('ghcr.io/{0}', github.repository) }}
           release_tag: ${{ inputs.release_tag }}
+          redis_repo: ${{ inputs.redis_repo }}
           redisearch_version: ${{ inputs.redisearch_version }}
           redisjson_version: ${{ inputs.redisjson_version }}
           redisbloom_version: ${{ inputs.redisbloom_version }}

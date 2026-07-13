@@ -23,6 +23,10 @@ inputs:
   release_tag:
     description: 'Release tag to build'
     required: false
+  redis_repo:
+    description: 'GitHub owner/repo to pull Redis sources from (allows using a fork)'
+    default: 'redis/redis'
+    required: false
   redisearch_version:
     description: 'Redisearch version to build'
     required: false
@@ -108,13 +112,18 @@ runs:
       if: inputs.run_type != 'release' && inputs.run_type != 'pr'
       env:
         TAG: ${{ inputs.release_tag }}
+        REDIS_REPO: ${{ inputs.redis_repo }}
       run: |
-        # Figure out the correct URL for the Redis release archive
+        # Figure out the correct URL for the Redis release archive.
+        # REDIS_REPO defaults to redis/redis but may point at a fork.
+        # Prefer a bundled redis-full.tar.gz release asset (Redis core + modules) when
+        # published for this tag; otherwise fall back to the plain source archive.
         REDIS_DOWNLOAD_URL=""
         for URL in \
-          "https://github.com/redis/redis/archive/refs/tags/$TAG.tar.gz" \
-          "https://github.com/redis/redis/archive/refs/heads/$TAG.tar.gz" \
-          "https://github.com/redis/redis/archive/$TAG.tar.gz"; do
+          "https://github.com/$REDIS_REPO/releases/download/$TAG/redis-full.tar.gz" \
+          "https://github.com/$REDIS_REPO/archive/refs/tags/$TAG.tar.gz" \
+          "https://github.com/$REDIS_REPO/archive/refs/heads/$TAG.tar.gz" \
+          "https://github.com/$REDIS_REPO/archive/$TAG.tar.gz"; do
           if curl --fail -sS -IL -w "%{http_code} %{url}\n" "$URL" -o /dev/null; then
             REDIS_DOWNLOAD_URL=$URL
             echo "REDIS_DOWNLOAD_URL=$URL" | tee -a "$GITHUB_ENV"
@@ -145,7 +154,8 @@ runs:
         trap 'rm -rf "$tmpdir"' EXIT
 
         curl --fail -Ls "$REDIS_DOWNLOAD_URL" -o "$tmpdir/redis.tar.gz"
-        version_h_path=$(tar -tzf "$tmpdir/redis.tar.gz" | grep '/src/version.h$' | head -n1)
+        # core version.h is <topdir>/src/version.h; anchor so redis-full module version.h don't match
+        version_h_path=$(tar -tzf "$tmpdir/redis.tar.gz" | grep -E '^[^/]+/src/version.h$' | head -n1)
 
         if [ -z "$version_h_path" ]; then
           echo "Failed to locate src/version.h in Redis archive"
@@ -410,6 +420,7 @@ runs:
       uses: ./.github/actions/create-image-labels
       with:
           redis_version: ${{ inputs.release_tag }}
+          redis_repo: ${{ inputs.redis_repo }}
           modules_enabled: ${{ steps.redis-version.outputs.modules_enabled }}
           redisearch_version: ${{ inputs.redisearch_version }}
           redisjson_version: ${{ inputs.redisjson_version }}

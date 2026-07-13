@@ -36,9 +36,8 @@ RUN set -eux; \
 	\
 	arch="$(dpkg --print-architecture | awk -F- '{ print $NF }')"; \
 	case "$arch" in \
-		'amd64') export BUILD_WITH_MODULES=yes; export INSTALL_RUST_TOOLCHAIN=yes; export DISABLE_WERRORS=yes ;; \
-		'arm64') export BUILD_WITH_MODULES=yes; export INSTALL_RUST_TOOLCHAIN=yes; export DISABLE_WERRORS=yes ;; \
-		*) echo >&2 "Modules are NOT supported! unsupported architecture: '$arch'"; export BUILD_WITH_MODULES=no ;; \
+		'amd64' | 'arm64') BUILD_WITH_MODULES=yes ;; \
+		*) echo >&2 "Modules are NOT supported! unsupported architecture: '$arch'"; BUILD_WITH_MODULES=no ;; \
 	esac; \
 	if [ "$BUILD_WITH_MODULES" = "yes" ]; then \
 		echo 'deb http://deb.debian.org/debian trixie-backports main' > /etc/apt/sources.list.d/backports.list; \
@@ -95,10 +94,20 @@ RUN set -eux; \
 	export BUILD_TLS=yes; \
 	if [ "$BUILD_WITH_MODULES" = "yes" ]; then \
 		export LTO=1; \
+# bundled redis-full ships module sources (.prepared); re-clone only if refs were overridden
+		if ls /usr/src/redis/modules/*/src/.prepared >/dev/null 2>&1; then \
+			echo "Using bundled module sources (redis-full); skipping modules-update"; \
+		else \
+			make -C /usr/src/redis modules-update MODULES_UPDATE_SHALLOW=1; \
+		fi; \
+# make deploy/build.sh bypass modules/Makefile, so install the pinned Rust toolchain here
+		make -C /usr/src/redis/modules install-rust INSTALL_RUST_TOOLCHAIN=yes; \
+		make -C /usr/src/redis -j "$(nproc)" deploy; \
+# remove the toolchain from /usr/local so it neither bloats the image nor pollutes runtime-dep detection
+		make -C /usr/src/redis/modules uninstall-rust INSTALL_RUST_TOOLCHAIN=yes; \
+	else \
+		make -C /usr/src/redis -j "$(nproc)" deploy redis; \
 	fi; \
-	make -C /usr/src/redis -j "$(nproc)" all; \
-	make -C /usr/src/redis install; \
-	make -C /usr/src/redis distclean; \
 	rm -r /usr/src/redis; \
 	\
 	apt-mark auto '.*' > /dev/null; \
