@@ -50,7 +50,6 @@ RUN set -eux; \
 		g++ \
 		git \
 		libffi-dev \
-		yq-go \
 		libgcc \
 		libtool \
 		llvm21-dev \
