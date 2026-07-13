@@ -50,7 +50,7 @@ runs:
         get_module_ref() {
           local module="$1"
 
-          if [ -x scripts/lib/manifest.sh ]; then
+          if [ -f scripts/lib/manifest.sh ]; then
             sh scripts/lib/manifest.sh ref "$module"
             return
           fi
