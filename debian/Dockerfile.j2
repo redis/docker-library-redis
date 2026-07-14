@@ -121,13 +121,13 @@ RUN set -eux; \
 			[ -z "$REDISBLOOM_VERSION" ] || yq -y -i '(.modules[] | select(.name == "redisbloom").ref) = env.REDISBLOOM_VERSION' /usr/src/redis/modules/modules.yaml; \
 			[ -z "$REDISTIMESERIES_VERSION" ] || yq -y -i '(.modules[] | select(.name == "redistimeseries").ref) = env.REDISTIMESERIES_VERSION' /usr/src/redis/modules/modules.yaml; \
 		fi; \
-	{% endif %}
 # bundled redis-full ships module sources (.prepared); re-clone only if refs were overridden
-		if ls /usr/src/redis/modules/*/src/.prepared >/dev/null 2>&1{% if custom_build %} && [ -z "${REDISEARCH_VERSION:-}${REDISJSON_VERSION:-}${REDISBLOOM_VERSION:-}${REDISTIMESERIES_VERSION:-}" ]{% endif %}; then \
+		if ls /usr/src/redis/modules/*/src/.prepared >/dev/null 2>&1 && [ -z "${REDISEARCH_VERSION:-}${REDISJSON_VERSION:-}${REDISBLOOM_VERSION:-}${REDISTIMESERIES_VERSION:-}" ]; then \
 			echo "Using bundled module sources (redis-full); skipping modules-update"; \
 		else \
 			make -C /usr/src/redis modules-update MODULES_UPDATE_SHALLOW=1; \
 		fi; \
+	{% endif %}
 # make deploy/build.sh bypass modules/Makefile, so install the pinned Rust toolchain here
 		make -C /usr/src/redis/modules install-rust INSTALL_RUST_TOOLCHAIN=yes; \
 		make -C /usr/src/redis -j "$(nproc)" deploy; \
