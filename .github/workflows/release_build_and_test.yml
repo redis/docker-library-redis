@@ -79,6 +79,7 @@ jobs:
           INPUTS_RELEASE_TAG: ${{ github.event.inputs.release_tag }}
           INPUTS_RELEASE_TYPE: ${{ github.event.inputs.release_type }}
           INPUTS_RUN_TYPE: ${{ github.event.inputs.run_type }}
+          INPUTS_REDIS_REPO: ${{ github.event.inputs.redis_repo }}
         shell: bash
         run: |
           if ! [[ "$INPUTS_RELEASE_TYPE" =~ ^(public|internal)$ ]]; then
@@ -93,6 +94,12 @@ jobs:
 
           if [ "$INPUTS_RUN_TYPE" != "release" ] && [ "$INPUTS_RELEASE_TYPE" = "public" ]; then
             echo "::error::Public release may have only run type 'release'"
+            exit 1
+          fi
+
+          # A fork may only be used for non-release runs; releases must build redis/redis
+          if [ "$INPUTS_RUN_TYPE" = "release" ] && [ "${INPUTS_REDIS_REPO:-redis/redis}" != "redis/redis" ]; then
+            echo "::error::Release builds must use redis_repo=redis/redis (got '$INPUTS_REDIS_REPO'); forks are allowed only for non-release runs"
             exit 1
           fi
 
