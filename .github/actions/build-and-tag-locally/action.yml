@@ -42,6 +42,10 @@ inputs:
   run_type:
     description: 'Run type, either release, pr, nightly, unstable or custom'
     required: true
+  release_type:
+    description: 'Release type, either public or internal'
+    required: false
+    default: ''
 
 runs:
   using: "composite"
@@ -192,6 +196,12 @@ runs:
         ./bin/render-all-dockerfiles.sh \
           -s custom_build true \
           -s redis_download_url $REDIS_DOWNLOAD_URL
+
+    - name: Render Dockerfiles for internal release
+      shell: bash
+      if: inputs.run_type == 'release' && inputs.release_type == 'internal'
+      run: |
+        ./bin/render-all-dockerfiles.sh -s internal true
 
     - name: Build
       id: build
