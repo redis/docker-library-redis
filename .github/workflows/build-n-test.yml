@@ -37,6 +37,11 @@ on:
         description: 'Run type, either release, pr, unstable, nightly or custom'
         required: false
         type: string
+      release_type:
+        description: 'Release type, either public or internal'
+        required: false
+        type: string
+        default: ''
       slack_channel_id:
         description: 'Slack channel ID to post notifications to'
         required: false
@@ -135,6 +140,7 @@ jobs:
           redisbloom_version: ${{ inputs.redisbloom_version }}
           redistimeseries_version: ${{ inputs.redistimeseries_version }}
           run_type: ${{ inputs.run_type }}
+          release_type: ${{ inputs.release_type }}
 
   create-multi-arch-image:
     runs-on: ubuntu-latest
