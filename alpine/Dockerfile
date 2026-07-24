@@ -14,9 +14,9 @@ RUN set -eux; \
 # we need setpriv package as busybox provides very limited functionality
 		setpriv \
 	;
-ENV REDIS_VERSION=7.2.14
-ARG REDIS_DOWNLOAD_URL=https://github.com/redis/redis/archive/refs/tags/7.2.14.tar.gz
-ARG REDIS_DOWNLOAD_SHA=704bfac84ab1c0771ddc08c8bea72e2203e3ce64c1fc6750e76b8ce2c00f3145
+ENV REDIS_VERSION=7.2.15
+ARG REDIS_DOWNLOAD_URL=https://github.com/redis/redis/archive/refs/tags/7.2.15.tar.gz
+ARG REDIS_DOWNLOAD_SHA=daca2a09f85fa472aa3a966298ddf90707b0a7607e144be6d16c7ff6daa08893
 
 RUN set -eux; \
 	\
