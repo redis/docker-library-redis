@@ -1153,7 +1153,7 @@ wheels = [
 [[package]]
 name = "redis-version"
 version = "0.1.0"
-source = { git = "https://github.com/redis/redis-oss-release-automation.git?subdirectory=packages%2Fredis-version#c2e8efe462775fcdaa22216fa829f84f9dd88d84" }
+source = { git = "https://github.com/redis/redis-oss-release-automation.git?subdirectory=packages%2Fredis-version#8291afe419998e3755caf429baaad9e14e78ef7c" }
 dependencies = [
     { name = "pydantic" },
     { name = "typer" },
