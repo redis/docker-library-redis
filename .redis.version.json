@@ -1,5 +1,5 @@
 {
-	"release_tag": "8.10-rc2",
-	"redis_download_url": "https://github.com/redis/redis/releases/download/8.10-rc2/redis-full.tar.gz",
-	"redis_download_sha": "49d1a3652aeac5674b43a43a16b6dba49bb40dd840beb61ec1d940958fefd9a6"
+	"release_tag": "8.10.0",
+	"redis_download_url": "https://github.com/redis/redis/releases/download/8.10.0/redis-full.tar.gz",
+	"redis_download_sha": "021973d690498682372505c8c0da934e010eb5ae7db9438dcf5a6d78a9e6a5b8"
 }
