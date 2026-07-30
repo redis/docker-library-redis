@@ -11,6 +11,10 @@ on:
       release_tag:
         description: 'Release tag to build'
         required: true
+      redis_repo:
+        description: 'GitHub owner/repo to pull Redis sources from (allows using a fork)'
+        required: false
+        default: 'redis/redis'
       release_type:
         description: 'Release type: either public or internal'
         required: true
@@ -75,6 +79,7 @@ jobs:
           INPUTS_RELEASE_TAG: ${{ github.event.inputs.release_tag }}
           INPUTS_RELEASE_TYPE: ${{ github.event.inputs.release_type }}
           INPUTS_RUN_TYPE: ${{ github.event.inputs.run_type }}
+          INPUTS_REDIS_REPO: ${{ github.event.inputs.redis_repo }}
         shell: bash
         run: |
           if ! [[ "$INPUTS_RELEASE_TYPE" =~ ^(public|internal)$ ]]; then
@@ -89,6 +94,12 @@ jobs:
 
           if [ "$INPUTS_RUN_TYPE" != "release" ] && [ "$INPUTS_RELEASE_TYPE" = "public" ]; then
             echo "::error::Public release may have only run type 'release'"
+            exit 1
+          fi
+
+          # A fork may only be used for non-release runs; releases must build redis/redis
+          if [ "$INPUTS_RUN_TYPE" = "release" ] && [ "${INPUTS_REDIS_REPO:-redis/redis}" != "redis/redis" ]; then
+            echo "::error::Release builds must use redis_repo=redis/redis (got '$INPUTS_REDIS_REPO'); forks are allowed only for non-release runs"
             exit 1
           fi
 
@@ -164,12 +175,14 @@ jobs:
     secrets: inherit
     with:
       release_tag: ${{ github.event.inputs.release_tag }}
+      redis_repo: ${{ github.event.inputs.redis_repo }}
       publish_image: true
       redisearch_version: ${{ github.event.inputs.redisearch_version }}
       redisjson_version: ${{ github.event.inputs.redisjson_version }}
       redisbloom_version: ${{ github.event.inputs.redisbloom_version }}
       redistimeseries_version: ${{ github.event.inputs.redistimeseries_version }}
       run_type: ${{ github.event.inputs.run_type }}
+      release_type: ${{ github.event.inputs.release_type }}
       slack_channel_id: ${{ needs.prepare-release.outputs.slack_channel_id }}
       slack_thread_ts: ${{ needs.prepare-release.outputs.slack_thread_ts }}
       override_release_branch: ${{ github.event.inputs.override_release_branch }}
