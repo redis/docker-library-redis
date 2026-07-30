@@ -10,24 +10,30 @@ authors = [
     {name = "Redis Team", email = "team@redis.io"},
 ]
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.9"
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
 ]
 dependencies = [
+    "redis-version",
     "typer[all]>=0.9.0",
     "rich>=13.0.0",
     "pydantic>=2.0.0",
     "packaging>=21.0",
     "jinja2>=3.1.6",
 ]
+
+[tool.uv.sources]
+redis-version = { git = "https://github.com/redis/redis-oss-release-automation.git", subdirectory = "packages/redis-version" }
 
 [project.optional-dependencies]
 dev = [
@@ -59,7 +65,7 @@ include = [
 
 [tool.black]
 line-length = 88
-target-version = ['py38']
+target-version = ['py39']
 include = '\.pyi?$'
 
 [tool.isort]
@@ -67,7 +73,7 @@ profile = "black"
 multi_line_output = 3
 
 [tool.mypy]
-python_version = "3.8"
+python_version = "3.9"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true
