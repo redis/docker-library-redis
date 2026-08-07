@@ -33,13 +33,10 @@ DEBIAN_TRIXIE_ARCHITECTURES: Tuple[str, ...] = (
 )
 DEBIAN_BOOKWORM_ARCHITECTURES: Tuple[str, ...] = (
     "amd64",
-    "arm32v5",
     "arm32v7",
     "arm64v8",
     "i386",
-    "mips64le",
     "ppc64le",
-    "s390x",
 )
 ALPINE_ARCHITECTURES: Tuple[str, ...] = (
     "amd64",
