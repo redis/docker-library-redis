@@ -1,5 +1,5 @@
 {
-	"release_tag": "6.2.23",
-	"redis_download_url": "https://github.com/redis/redis/archive/refs/tags/6.2.23.tar.gz",
-	"redis_download_sha": "deb248b09b5dd39ee789d3e5165c93675406700a6756311b8f84b64493e537ad"
+	"release_tag": "6.2.24",
+	"redis_download_url": "https://github.com/redis/redis/archive/refs/tags/6.2.24.tar.gz",
+	"redis_download_sha": "4840108eb0182fe7ea59f4f4bcb47b36848372591d3115bf02c2a2b739655116"
 }
