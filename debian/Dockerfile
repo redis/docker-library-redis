@@ -14,9 +14,9 @@ RUN set -eux; \
 	; \
 	rm -rf /var/lib/apt/lists/*
 
-ENV REDIS_VERSION=7.2.15
-ARG REDIS_DOWNLOAD_URL=https://github.com/redis/redis/archive/refs/tags/7.2.15.tar.gz
-ARG REDIS_DOWNLOAD_SHA=daca2a09f85fa472aa3a966298ddf90707b0a7607e144be6d16c7ff6daa08893
+ENV REDIS_VERSION=7.2.16
+ARG REDIS_DOWNLOAD_URL=https://github.com/redis/redis/archive/refs/tags/7.2.16.tar.gz
+ARG REDIS_DOWNLOAD_SHA=65fa69e66187cb5a4cf625bd587c743507e518749c5a0eec29c4f086495c8a7e
 
 RUN set -eux; \
 	\
