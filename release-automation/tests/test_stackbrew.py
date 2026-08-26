@@ -141,6 +141,55 @@ class TestStackbrewGenerator:
         assert "latest" not in debian_8_1_5.tags
         assert "8" not in debian_8_1_5.tags
 
+    def test_generate_stackbrew_library_assigns_major_aliases_per_distro_tag(self):
+        """Keep global aliases global while retaining the Bookworm major alias."""
+        releases = [
+            Release(
+                commit="trixie-debian",
+                version=RedisVersion.parse("8.10.1"),
+                distribution=Distribution(type=DistroType.DEBIAN, name="trixie"),
+                git_fetch_ref="refs/tags/v8.10.1",
+            ),
+            Release(
+                commit="bookworm-debian",
+                version=RedisVersion.parse("8.2.9"),
+                distribution=Distribution(type=DistroType.DEBIAN, name="bookworm"),
+                git_fetch_ref="refs/tags/v8.2.9",
+            ),
+        ]
+
+        entries = self.generator.generate_stackbrew_library(releases)
+
+        trixie = next(
+            entry
+            for entry in entries
+            if entry.distribution.type == DistroType.DEBIAN
+            and entry.distribution.name == "trixie"
+        )
+        bookworm = next(
+            entry
+            for entry in entries
+            if entry.distribution.type == DistroType.DEBIAN
+            and entry.distribution.name == "bookworm"
+        )
+        assert trixie.tags == [
+            "8.10.1",
+            "8.10",
+            "8",
+            "8.10.1-trixie",
+            "8.10-trixie",
+            "8-trixie",
+            "latest",
+            "trixie",
+        ]
+        assert bookworm.tags == [
+            "8.2.9",
+            "8.2",
+            "8.2.9-bookworm",
+            "8.2-bookworm",
+            "8-bookworm",
+        ]
+
     def test_format_stackbrew_output(self):
         """Test stackbrew output formatting."""
         entries = [
