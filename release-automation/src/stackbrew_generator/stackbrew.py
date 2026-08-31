@@ -2,7 +2,7 @@
 
 import re
 from pathlib import Path
-from typing import List, Optional, Set
+from typing import Dict, List, Optional, Set, Tuple
 
 from rich.console import Console
 
@@ -17,20 +17,20 @@ class StackbrewGenerator:
     def generate_tags_for_release(
         self,
         release: Release,
-        is_latest_in_major: bool = False,
-        is_global_latest_major: bool = False,
-        latest_distro_tag_names: Optional[Set[str]] = None,
-        bare_distro_tag_names: Optional[Set[str]] = None,
+        is_latest_minor: bool = False,
+        emit_global_latest: bool = False,
+        major_alias_distro_names: Optional[Set[str]] = None,
+        bare_alias_distro_names: Optional[Set[str]] = None,
     ) -> List[str]:
         """Generate Docker tags for a release.
 
         Args:
             release: Release to generate tags for
-            is_latest_in_major: Whether this is the latest active minor in its major
-            is_global_latest_major: Whether this major is the highest active major overall
-            latest_distro_tag_names: Distro tag names whose major aliases belong to
+            is_latest_minor: Whether this is the latest active minor in its major
+            emit_global_latest: Whether to emit the global "latest" alias
+            major_alias_distro_names: Distro names whose major aliases belong to
                 this release
-            bare_distro_tag_names: Bare distro aliases that belong to this release
+            bare_alias_distro_names: Bare distro aliases that belong to this release
 
         Returns:
             List of Docker tags
@@ -50,18 +50,18 @@ class StackbrewGenerator:
         # This lets an older maintained distro release own (for example)
         # "8-bookworm" without also owning the unqualified "8" tag.
         default_version_tags = version_tags.copy()
-        if is_latest_in_major:
+        if is_latest_minor:
             default_version_tags.append(str(version.major))
 
         # Preserve the direct-call behavior used by existing callers and tests:
-        # a release that is globally latest owns all of its distro major aliases.
-        if latest_distro_tag_names is None:
-            latest_distro_tag_names = (
-                set(distribution.tag_names) if is_latest_in_major else set()
+        # the latest minor owns all of its distro-qualified major aliases.
+        if major_alias_distro_names is None:
+            major_alias_distro_names = (
+                set(distribution.tag_names) if is_latest_minor else set()
             )
-        if bare_distro_tag_names is None:
-            bare_distro_tag_names = (
-                set(distribution.tag_names) if is_global_latest_major else set()
+        if bare_alias_distro_names is None:
+            bare_alias_distro_names = (
+                set(distribution.tag_names) if emit_global_latest else set()
             )
 
         # For default distribution (Debian), add version tags without distro suffix
@@ -71,35 +71,67 @@ class StackbrewGenerator:
         # Add distro-specific tags
         for distro_name in distribution.tag_names:
             distro_version_tags = version_tags.copy()
-            if distro_name in latest_distro_tag_names:
+            if distro_name in major_alias_distro_names:
                 distro_version_tags.append(str(version.major))
 
             for version_tag in distro_version_tags:
                 tags.append(f"{version_tag}-{distro_name}")
 
         # The global "latest" alias remains on the newest default image only.
-        if is_global_latest_major and distribution.is_default:
+        if emit_global_latest and distribution.is_default:
             tags.append("latest")
 
         # Bare distro aliases belong to the newest release supporting each distro.
         tags.extend(
             distro_name
             for distro_name in distribution.tag_names
-            if distro_name in bare_distro_tag_names
+            if distro_name in bare_alias_distro_names
         )
 
         return tags
 
+    @staticmethod
+    def _release_sort_key(release: Release) -> Tuple:
+        """Return a deterministic newest-first sorting key for a release."""
+        return (
+            release.version.sort_key,
+            release.distribution.is_default,
+            release.distribution.type.value,
+            release.distribution.name,
+            release.commit,
+        )
+
+    @staticmethod
+    def _find_distro_alias_owners(releases: List[Release]) -> Dict[str, Release]:
+        """Find the highest GA release supporting each distro tag name."""
+        owners: Dict[str, Release] = {}
+
+        for release in releases:
+            if release.version.is_milestone:
+                continue
+
+            for distro_name in release.distribution.tag_names:
+                current_owner = owners.get(distro_name)
+                if (
+                    current_owner is None
+                    or release.version.sort_key > current_owner.version.sort_key
+                ):
+                    owners[distro_name] = release
+
+        return owners
+
     def generate_stackbrew_library(
         self,
         releases: List[Release],
-        enable_global_latest_tags: bool = True,
+        emit_global_latest: bool = True,
+        emit_bare_aliases: bool = True,
     ) -> List[StackbrewEntry]:
         """Generate stackbrew library entries from releases.
 
         Args:
             releases: List of releases to process
-            enable_global_latest_tags: Whether to emit latest/bare distro tags
+            emit_global_latest: Whether to emit the global "latest" alias
+            emit_bare_aliases: Whether to emit bare distro aliases
 
         Returns:
             List of StackbrewEntry objects
@@ -111,49 +143,50 @@ class StackbrewGenerator:
             return []
 
         entries = []
-        latest_minor = None
-        latest_minor_unset = True
-        seen_distro_tag_names: Set[str] = set()
+        ordered_releases = sorted(
+            releases,
+            key=self._release_sort_key,
+            reverse=True,
+        )
+        ga_versions = [
+            release.version
+            for release in ordered_releases
+            if not release.version.is_milestone
+        ]
+        latest_ga_version = max(
+            ga_versions,
+            key=lambda version: version.sort_key,
+            default=None,
+        )
+        distro_alias_owners = self._find_distro_alias_owners(ordered_releases)
 
-        for release in releases:
-            # Determine latest version following bash logic:
-            # - Set latest_minor to the minor version of the first non-milestone version
-            # - Clear latest_minor if subsequent versions have different minor versions
-            if latest_minor_unset:
-                if not release.version.is_milestone:
-                    latest_minor = release.version.minor
-                    latest_minor_unset = False
-                    console.print(f"[dim]Latest minor version set to: {latest_minor}[/dim]")
-            elif latest_minor != release.version.minor:
-                latest_minor = None
+        if latest_ga_version is not None:
+            console.print(
+                f"[dim]Latest minor version set to: {latest_ga_version.minor}[/dim]"
+            )
 
-            # Major tag like "7" still belongs to the latest active minor within the major.
-            is_latest_in_major = latest_minor is not None
-            # Global tags like "latest" or bare distro names should only be emitted
-            # for the highest overall major version.
-            is_global_latest_major = enable_global_latest_tags and is_latest_in_major
-
-            # Distro aliases belong to the first GA release that supports each
-            # distro name. Releases are ordered newest first, so older maintained
-            # distros retain their aliases without taking global aliases such as
-            # the unqualified major or "latest" from the newest release.
-            latest_distro_tag_names = set()
-            bare_distro_tag_names = set()
-            if not release.version.is_milestone:
-                for distro_name in release.distribution.tag_names:
-                    if distro_name not in seen_distro_tag_names:
-                        latest_distro_tag_names.add(distro_name)
-                        if enable_global_latest_tags:
-                            bare_distro_tag_names.add(distro_name)
-                        seen_distro_tag_names.add(distro_name)
+        for release in ordered_releases:
+            is_latest_minor = (
+                latest_ga_version is not None
+                and not release.version.is_milestone
+                and release.version.minor == latest_ga_version.minor
+            )
+            major_alias_distro_names = {
+                distro_name
+                for distro_name in release.distribution.tag_names
+                if distro_alias_owners.get(distro_name) is release
+            }
+            bare_alias_distro_names = (
+                major_alias_distro_names if emit_bare_aliases else set()
+            )
 
             # Generate tags for this release
             tags = self.generate_tags_for_release(
                 release,
-                is_latest_in_major=is_latest_in_major,
-                is_global_latest_major=is_global_latest_major,
-                latest_distro_tag_names=latest_distro_tag_names,
-                bare_distro_tag_names=bare_distro_tag_names,
+                is_latest_minor=is_latest_minor,
+                emit_global_latest=emit_global_latest and is_latest_minor,
+                major_alias_distro_names=major_alias_distro_names,
+                bare_alias_distro_names=bare_alias_distro_names,
             )
 
             if tags:

@@ -19,8 +19,8 @@ class TestStackbrewGenerator:
 
         tags = self.generator.generate_tags_for_release(
             release,
-            is_latest_in_major=True,
-            is_global_latest_major=True,
+            is_latest_minor=True,
+            emit_global_latest=True,
         )
 
         expected_tags = [
@@ -44,8 +44,8 @@ class TestStackbrewGenerator:
 
         tags = self.generator.generate_tags_for_release(
             release,
-            is_latest_in_major=False,
-            is_global_latest_major=False,
+            is_latest_minor=False,
+            emit_global_latest=False,
         )
 
         expected_tags = [
@@ -65,8 +65,8 @@ class TestStackbrewGenerator:
 
         tags = self.generator.generate_tags_for_release(
             release,
-            is_latest_in_major=True,
-            is_global_latest_major=True,
+            is_latest_minor=True,
+            emit_global_latest=True,
         )
 
         expected_tags = [
@@ -90,8 +90,8 @@ class TestStackbrewGenerator:
 
         tags = self.generator.generate_tags_for_release(
             release,
-            is_latest_in_major=False,
-            is_global_latest_major=False,
+            is_latest_minor=False,
+            emit_global_latest=False,
         )
 
         # Milestone versions should not get mainline version tags or major version tags
@@ -251,9 +251,17 @@ class TestStackbrewGenerator:
             "8.2-alpine3.22",
         ]
 
+        shuffled_entries = self.generator.generate_stackbrew_library(
+            [releases[index] for index in (4, 2, 0, 3, 1)]
+        )
+        assert self.generator.format_stackbrew_output(
+            shuffled_entries
+        ) == self.generator.format_stackbrew_output(entries)
+
         non_global_entries = self.generator.generate_stackbrew_library(
             releases,
-            enable_global_latest_tags=False,
+            emit_global_latest=False,
+            emit_bare_aliases=False,
         )
         assert all("latest" not in entry.tags for entry in non_global_entries)
         assert all(
@@ -263,6 +271,27 @@ class TestStackbrewGenerator:
         )
         assert any("8-bookworm" in entry.tags for entry in non_global_entries)
         assert any("8-alpine3.22" in entry.tags for entry in non_global_entries)
+
+        bare_only_entries = self.generator.generate_stackbrew_library(
+            releases,
+            emit_global_latest=False,
+            emit_bare_aliases=True,
+        )
+        assert all("latest" not in entry.tags for entry in bare_only_entries)
+        assert any("bookworm" in entry.tags for entry in bare_only_entries)
+        assert any("alpine3.22" in entry.tags for entry in bare_only_entries)
+
+        latest_only_entries = self.generator.generate_stackbrew_library(
+            releases,
+            emit_global_latest=True,
+            emit_bare_aliases=False,
+        )
+        assert any("latest" in entry.tags for entry in latest_only_entries)
+        assert all(
+            distro_name not in entry.tags
+            for entry in latest_only_entries
+            for distro_name in entry.distribution.tag_names
+        )
 
     def test_format_stackbrew_output(self):
         """Test stackbrew output formatting."""
