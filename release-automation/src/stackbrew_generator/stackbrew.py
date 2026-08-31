@@ -20,6 +20,7 @@ class StackbrewGenerator:
         is_latest_in_major: bool = False,
         is_global_latest_major: bool = False,
         latest_distro_tag_names: Optional[Set[str]] = None,
+        bare_distro_tag_names: Optional[Set[str]] = None,
     ) -> List[str]:
         """Generate Docker tags for a release.
 
@@ -29,6 +30,7 @@ class StackbrewGenerator:
             is_global_latest_major: Whether this major is the highest active major overall
             latest_distro_tag_names: Distro tag names whose major aliases belong to
                 this release
+            bare_distro_tag_names: Bare distro aliases that belong to this release
 
         Returns:
             List of Docker tags
@@ -57,6 +59,10 @@ class StackbrewGenerator:
             latest_distro_tag_names = (
                 set(distribution.tag_names) if is_latest_in_major else set()
             )
+        if bare_distro_tag_names is None:
+            bare_distro_tag_names = (
+                set(distribution.tag_names) if is_global_latest_major else set()
+            )
 
         # For default distribution (Debian), add version tags without distro suffix
         if distribution.is_default:
@@ -71,12 +77,16 @@ class StackbrewGenerator:
             for version_tag in distro_version_tags:
                 tags.append(f"{version_tag}-{distro_name}")
 
-        # Add global latest tags only for the highest overall major version
-        if is_global_latest_major:
-            if distribution.is_default:
-                tags.append("latest")
-            # Add bare distro names as tags
-            tags.extend(distribution.tag_names)
+        # The global "latest" alias remains on the newest default image only.
+        if is_global_latest_major and distribution.is_default:
+            tags.append("latest")
+
+        # Bare distro aliases belong to the newest release supporting each distro.
+        tags.extend(
+            distro_name
+            for distro_name in distribution.tag_names
+            if distro_name in bare_distro_tag_names
+        )
 
         return tags
 
@@ -103,7 +113,7 @@ class StackbrewGenerator:
         entries = []
         latest_minor = None
         latest_minor_unset = True
-        seen_debian_distro_tag_names: Set[str] = set()
+        seen_distro_tag_names: Set[str] = set()
 
         for release in releases:
             # Determine latest version following bash logic:
@@ -123,20 +133,19 @@ class StackbrewGenerator:
             # for the highest overall major version.
             is_global_latest_major = enable_global_latest_tags and is_latest_in_major
 
-            # A Debian suite-qualified major tag (for example, "8-bookworm")
-            # belongs to the first GA release that supports that suite. Releases
-            # are ordered newest first, so later releases can retain their suite
-            # aliases without taking global aliases from the newest release.
+            # Distro aliases belong to the first GA release that supports each
+            # distro name. Releases are ordered newest first, so older maintained
+            # distros retain their aliases without taking global aliases such as
+            # the unqualified major or "latest" from the newest release.
             latest_distro_tag_names = set()
-            if not release.version.is_milestone and release.distribution.is_default:
+            bare_distro_tag_names = set()
+            if not release.version.is_milestone:
                 for distro_name in release.distribution.tag_names:
-                    if distro_name not in seen_debian_distro_tag_names:
+                    if distro_name not in seen_distro_tag_names:
                         latest_distro_tag_names.add(distro_name)
-                        seen_debian_distro_tag_names.add(distro_name)
-            elif is_latest_in_major:
-                # Preserve the existing Alpine behavior: its major aliases belong
-                # to the globally latest minor only.
-                latest_distro_tag_names = set(release.distribution.tag_names)
+                        if enable_global_latest_tags:
+                            bare_distro_tag_names.add(distro_name)
+                        seen_distro_tag_names.add(distro_name)
 
             # Generate tags for this release
             tags = self.generate_tags_for_release(
@@ -144,6 +153,7 @@ class StackbrewGenerator:
                 is_latest_in_major=is_latest_in_major,
                 is_global_latest_major=is_global_latest_major,
                 latest_distro_tag_names=latest_distro_tag_names,
+                bare_distro_tag_names=bare_distro_tag_names,
             )
 
             if tags:

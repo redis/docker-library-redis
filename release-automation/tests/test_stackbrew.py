@@ -142,7 +142,7 @@ class TestStackbrewGenerator:
         assert "8" not in debian_8_1_5.tags
 
     def test_generate_stackbrew_library_assigns_major_aliases_per_distro_tag(self):
-        """Keep global aliases global while retaining the Bookworm major alias."""
+        """Assign moving aliases to the newest release for each distro name."""
         releases = [
             Release(
                 commit="trixie-debian",
@@ -151,9 +151,27 @@ class TestStackbrewGenerator:
                 git_fetch_ref="refs/tags/v8.10.1",
             ),
             Release(
+                commit="alpine-3.23",
+                version=RedisVersion.parse("8.10.1"),
+                distribution=Distribution(type=DistroType.ALPINE, name="alpine3.23"),
+                git_fetch_ref="refs/tags/v8.10.1",
+            ),
+            Release(
+                commit="alpine-3.22-current",
+                version=RedisVersion.parse("8.4.6"),
+                distribution=Distribution(type=DistroType.ALPINE, name="alpine3.22"),
+                git_fetch_ref="refs/tags/v8.4.6",
+            ),
+            Release(
                 commit="bookworm-debian",
                 version=RedisVersion.parse("8.2.9"),
                 distribution=Distribution(type=DistroType.DEBIAN, name="bookworm"),
+                git_fetch_ref="refs/tags/v8.2.9",
+            ),
+            Release(
+                commit="alpine-3.22-older",
+                version=RedisVersion.parse("8.2.9"),
+                distribution=Distribution(type=DistroType.ALPINE, name="alpine3.22"),
                 git_fetch_ref="refs/tags/v8.2.9",
             ),
         ]
@@ -172,6 +190,24 @@ class TestStackbrewGenerator:
             if entry.distribution.type == DistroType.DEBIAN
             and entry.distribution.name == "bookworm"
         )
+        alpine_3_23 = next(
+            entry
+            for entry in entries
+            if entry.version.minor == 10
+            and entry.distribution.type == DistroType.ALPINE
+        )
+        alpine_3_22_current = next(
+            entry
+            for entry in entries
+            if entry.version.minor == 4
+            and entry.distribution.type == DistroType.ALPINE
+        )
+        alpine_3_22_older = next(
+            entry
+            for entry in entries
+            if entry.version.minor == 2
+            and entry.distribution.type == DistroType.ALPINE
+        )
         assert trixie.tags == [
             "8.10.1",
             "8.10",
@@ -188,7 +224,45 @@ class TestStackbrewGenerator:
             "8.2.9-bookworm",
             "8.2-bookworm",
             "8-bookworm",
+            "bookworm",
         ]
+        assert alpine_3_23.tags == [
+            "8.10.1-alpine",
+            "8.10-alpine",
+            "8-alpine",
+            "8.10.1-alpine3.23",
+            "8.10-alpine3.23",
+            "8-alpine3.23",
+            "alpine",
+            "alpine3.23",
+        ]
+        assert alpine_3_22_current.tags == [
+            "8.4.6-alpine",
+            "8.4-alpine",
+            "8.4.6-alpine3.22",
+            "8.4-alpine3.22",
+            "8-alpine3.22",
+            "alpine3.22",
+        ]
+        assert alpine_3_22_older.tags == [
+            "8.2.9-alpine",
+            "8.2-alpine",
+            "8.2.9-alpine3.22",
+            "8.2-alpine3.22",
+        ]
+
+        non_global_entries = self.generator.generate_stackbrew_library(
+            releases,
+            enable_global_latest_tags=False,
+        )
+        assert all("latest" not in entry.tags for entry in non_global_entries)
+        assert all(
+            distro_name not in entry.tags
+            for entry in non_global_entries
+            for distro_name in entry.distribution.tag_names
+        )
+        assert any("8-bookworm" in entry.tags for entry in non_global_entries)
+        assert any("8-alpine3.22" in entry.tags for entry in non_global_entries)
 
     def test_format_stackbrew_output(self):
         """Test stackbrew output formatting."""
@@ -260,7 +334,7 @@ class TestStackbrewGenerator:
             ["8.2.1", "8.2", "8", "8.2.1-bookworm", "8.2-bookworm", "8-bookworm", "latest", "bookworm"],  # GA - gets all tags
             ["8.2.1-alpine", "8.2-alpine", "8-alpine", "8.2.1-alpine3.22", "8.2-alpine3.22", "8-alpine3.22", "alpine", "alpine3.22"],  # GA - gets all tags
             ["8.0.3", "8.0", "8.0.3-bookworm", "8.0-bookworm"],  # different minor - no major tags
-            ["8.0.3-alpine", "8.0-alpine", "8.0.3-alpine3.21", "8.0-alpine3.21"]  # different minor - no major tags
+            ["8.0.3-alpine", "8.0-alpine", "8.0.3-alpine3.21", "8.0-alpine3.21", "8-alpine3.21", "alpine3.21"]  # newest release for Alpine 3.21
         ]
 
         assert len(entries) == 6
