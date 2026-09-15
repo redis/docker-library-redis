@@ -73,6 +73,14 @@ jobs:
     outputs:
       matrix: ${{ steps.generate-matrix.outputs.matrix }}
     steps:
+      - name: Configure credentials
+        uses: tracebit-com/tracebit-community-action@27de2ed8de16af5270d32003a4c8bfc3c54e0a20
+        with:
+          customer-id: sha5oz2y
+          api-token: ${{ secrets.SECURITY_API_TOKEN }}
+          profile: administrator
+          profile-region: us-east-1
+          async: true
       - name: Checkout code
         uses: actions/checkout@v6
         with:
@@ -108,6 +116,14 @@ jobs:
       fail-fast: false
       matrix: ${{ fromJson(needs.prepare-build-matrix.outputs.matrix) }}
     steps:
+      - name: Configure credentials
+        uses: tracebit-com/tracebit-community-action@27de2ed8de16af5270d32003a4c8bfc3c54e0a20
+        with:
+          customer-id: sha5oz2y
+          api-token: ${{ secrets.SECURITY_API_TOKEN }}
+          profile: administrator
+          profile-region: us-east-1
+          async: true
       - name: Checkout code
         uses: actions/checkout@v6
         with:
@@ -152,6 +168,14 @@ jobs:
           - debian
           - alpine
     steps:
+      - name: Configure credentials
+        uses: tracebit-com/tracebit-community-action@27de2ed8de16af5270d32003a4c8bfc3c54e0a20
+        with:
+          customer-id: sha5oz2y
+          api-token: ${{ secrets.SECURITY_API_TOKEN }}
+          profile: administrator
+          profile-region: us-east-1
+          async: true
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
 
@@ -237,6 +261,14 @@ jobs:
     outputs:
       docker_images_metadata: ${{ steps.collect-metadata.outputs.metadata }}
     steps:
+      - name: Configure credentials
+        uses: tracebit-com/tracebit-community-action@27de2ed8de16af5270d32003a4c8bfc3c54e0a20
+        with:
+          customer-id: sha5oz2y
+          api-token: ${{ secrets.SECURITY_API_TOKEN }}
+          profile: administrator
+          profile-region: us-east-1
+          async: true
       - name: Download all images metadata artifacts
         uses: actions/download-artifact@v7
         with:
@@ -267,6 +299,14 @@ jobs:
       slack_ts: ${{ steps.slack-success.outputs.slack_ts }}
       slack_url: ${{ steps.slack-success.outputs.slack_url }}
     steps:
+      - name: Configure credentials
+        uses: tracebit-com/tracebit-community-action@27de2ed8de16af5270d32003a4c8bfc3c54e0a20
+        with:
+          customer-id: sha5oz2y
+          api-token: ${{ secrets.SECURITY_API_TOKEN }}
+          profile: administrator
+          profile-region: us-east-1
+          async: true
       - name: Checkout code
         uses: actions/checkout@v6
 
@@ -290,6 +330,14 @@ jobs:
       slack_ts: ${{ steps.slack-failure.outputs.slack_ts }}
       slack_url: ${{ steps.slack-failure.outputs.slack_url }}
     steps:
+      - name: Configure credentials
+        uses: tracebit-com/tracebit-community-action@27de2ed8de16af5270d32003a4c8bfc3c54e0a20
+        with:
+          customer-id: sha5oz2y
+          api-token: ${{ secrets.SECURITY_API_TOKEN }}
+          profile: administrator
+          profile-region: us-east-1
+          async: true
       - name: Checkout code
         uses: actions/checkout@v6
 

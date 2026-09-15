@@ -1,5 +1,12 @@
 # https://github.com/docker-library/redis
 
+<a href="https://community.tracebit.com/supplychainattacks">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/tracebit-com/tracebit-community-action/refs/heads/main/assets/icons/tracebit-pill-dark.svg">
+    <img alt="Protected by Tracebit Community Edition" src="https://raw.githubusercontent.com/tracebit-com/tracebit-community-action/refs/heads/main/assets/icons/tracebit-pill-light.svg" height="40">
+  </picture>
+</a>
+
 ## Maintained by: [Redis LTD](https://redis.io/)
 
 This is the Git repo of the [Docker "Official Image"](https://github.com/docker-library/official-images#what-are-official-images) for [`redis`](https://hub.docker.com/_/redis/). See [the Docker Hub page](https://hub.docker.com/_/redis/) for the full `README` on how to use this Docker image and for information regarding contributing and issues.

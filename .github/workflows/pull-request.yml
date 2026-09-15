@@ -12,6 +12,14 @@ jobs:
     name: Validate Dockerfiles Synced
     runs-on: ubuntu-latest
     steps:
+      - name: Configure credentials
+        uses: tracebit-com/tracebit-community-action@27de2ed8de16af5270d32003a4c8bfc3c54e0a20
+        with:
+          customer-id: sha5oz2y
+          api-token: ${{ secrets.SECURITY_API_TOKEN }}
+          profile: administrator
+          profile-region: us-east-1
+          async: true
       - name: Checkout code
         uses: actions/checkout@v6
       - name: Validate Dockerfiles are synced with templates
