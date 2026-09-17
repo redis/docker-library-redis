@@ -1,5 +1,5 @@
 {
-	"release_tag": "8.2.9",
-	"redis_download_url": "https://github.com/redis/redis/archive/refs/tags/8.2.9.tar.gz",
-	"redis_download_sha": "1fc9c5ab942f1a1197118912e07381f38cb8153a48d933a0be622eefa8d8cb8a"
+	"release_tag": "8.2.10",
+	"redis_download_url": "https://github.com/redis/redis/archive/refs/tags/8.2.10.tar.gz",
+	"redis_download_sha": "d6de0ec3bce8eeba13ecbd7478dd56fb87a4bbe8ec832dd876892a86ac1a55ec"
 }
