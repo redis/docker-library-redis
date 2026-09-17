@@ -8,6 +8,7 @@ on:
 jobs:
   build-and-test-unstable:
     uses: redis/docker-library-redis/.github/workflows/build-n-test.yml@unstable
+    secrets: inherit
     with:
       release_tag: unstable
       publish_image: true
