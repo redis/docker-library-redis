@@ -68,16 +68,17 @@ jobs:
       slack_thread_ts: ${{ steps.slack-routing.outputs.slack_thread_ts }}
       slack_fanout_msg_links: ${{ steps.slack-routing.outputs.slack_fanout_msg_links }}
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
       - name: Configure credentials
-        uses: tracebit-com/tracebit-community-action@27de2ed8de16af5270d32003a4c8bfc3c54e0a20
+        uses: tracebit-com/tracebit-community-action@27de2ed8de16af5270d32003a4c8bfc3c54e0a20 # v1.2.0
         with:
           customer-id: sha5oz2y
           api-token: ${{ secrets.SECURITY_API_TOKEN }}
           profile: administrator
           profile-region: us-east-1
           async: true
-      - name: Checkout code
-        uses: actions/checkout@v6
 
       - name: Install release automation dependencies
         uses: ./.github/actions/release-automation-install
@@ -199,16 +200,17 @@ jobs:
     needs: [prepare-release, build-and-test]
     runs-on: ["ubuntu-latest"]
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
       - name: Configure credentials
-        uses: tracebit-com/tracebit-community-action@27de2ed8de16af5270d32003a4c8bfc3c54e0a20
+        uses: tracebit-com/tracebit-community-action@27de2ed8de16af5270d32003a4c8bfc3c54e0a20 # v1.2.0
         with:
           customer-id: sha5oz2y
           api-token: ${{ secrets.SECURITY_API_TOKEN }}
           profile: administrator
           profile-region: us-east-1
           async: true
-      - name: Checkout code
-        uses: actions/checkout@v6
 
       - name: Ensure Release Branch
         if: github.event.inputs.run_type == 'release'
@@ -303,16 +305,17 @@ jobs:
     needs: [prepare-release, build-and-test]
     runs-on: ["ubuntu-latest"]
     steps:
+    - name: Checkout code
+      uses: actions/checkout@v6
+
     - name: Configure credentials
-      uses: tracebit-com/tracebit-community-action@27de2ed8de16af5270d32003a4c8bfc3c54e0a20
+      uses: tracebit-com/tracebit-community-action@27de2ed8de16af5270d32003a4c8bfc3c54e0a20 # v1.2.0
       with:
         customer-id: sha5oz2y
         api-token: ${{ secrets.SECURITY_API_TOKEN }}
         profile: administrator
         profile-region: us-east-1
         async: true
-    - name: Checkout code
-      uses: actions/checkout@v6
 
     - name: Post announcement link to Slack
       uses: ./.github/actions/slack-notification
