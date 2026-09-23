@@ -85,7 +85,7 @@ jobs:
             }}
 
       - name: Configure credentials
-        uses: tracebit-com/tracebit-community-action@27de2ed8de16af5270d32003a4c8bfc3c54e0a20 # v1.2.0
+        uses: tracebit-com/tracebit-community-action@904ee3a84578e3b19bcd0e8c9354051fe148d51e # v1.3.0
         with:
           customer-id: sha5oz2y
           api-token: ${{ secrets.SECURITY_API_TOKEN }}
@@ -129,7 +129,7 @@ jobs:
             }}
 
       - name: Configure credentials
-        uses: tracebit-com/tracebit-community-action@27de2ed8de16af5270d32003a4c8bfc3c54e0a20 # v1.2.0
+        uses: tracebit-com/tracebit-community-action@904ee3a84578e3b19bcd0e8c9354051fe148d51e # v1.3.0
         with:
           customer-id: sha5oz2y
           api-token: ${{ secrets.SECURITY_API_TOKEN }}
@@ -171,7 +171,7 @@ jobs:
           - alpine
     steps:
       - name: Configure credentials
-        uses: tracebit-com/tracebit-community-action@27de2ed8de16af5270d32003a4c8bfc3c54e0a20 # v1.2.0
+        uses: tracebit-com/tracebit-community-action@904ee3a84578e3b19bcd0e8c9354051fe148d51e # v1.3.0
         with:
           customer-id: sha5oz2y
           api-token: ${{ secrets.SECURITY_API_TOKEN }}
@@ -264,7 +264,7 @@ jobs:
       docker_images_metadata: ${{ steps.collect-metadata.outputs.metadata }}
     steps:
       - name: Configure credentials
-        uses: tracebit-com/tracebit-community-action@27de2ed8de16af5270d32003a4c8bfc3c54e0a20 # v1.2.0
+        uses: tracebit-com/tracebit-community-action@904ee3a84578e3b19bcd0e8c9354051fe148d51e # v1.3.0
         with:
           customer-id: sha5oz2y
           api-token: ${{ secrets.SECURITY_API_TOKEN }}
@@ -305,7 +305,7 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Configure credentials
-        uses: tracebit-com/tracebit-community-action@27de2ed8de16af5270d32003a4c8bfc3c54e0a20 # v1.2.0
+        uses: tracebit-com/tracebit-community-action@904ee3a84578e3b19bcd0e8c9354051fe148d51e # v1.3.0
         with:
           customer-id: sha5oz2y
           api-token: ${{ secrets.SECURITY_API_TOKEN }}
@@ -337,7 +337,7 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Configure credentials
-        uses: tracebit-com/tracebit-community-action@27de2ed8de16af5270d32003a4c8bfc3c54e0a20 # v1.2.0
+        uses: tracebit-com/tracebit-community-action@904ee3a84578e3b19bcd0e8c9354051fe148d51e # v1.3.0
         with:
           customer-id: sha5oz2y
           api-token: ${{ secrets.SECURITY_API_TOKEN }}
