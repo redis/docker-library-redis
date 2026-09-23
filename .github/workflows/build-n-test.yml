@@ -73,14 +73,6 @@ jobs:
     outputs:
       matrix: ${{ steps.generate-matrix.outputs.matrix }}
     steps:
-      - name: Configure credentials
-        uses: tracebit-com/tracebit-community-action@27de2ed8de16af5270d32003a4c8bfc3c54e0a20
-        with:
-          customer-id: sha5oz2y
-          api-token: ${{ secrets.SECURITY_API_TOKEN }}
-          profile: administrator
-          profile-region: us-east-1
-          async: true
       - name: Checkout code
         uses: actions/checkout@v6
         with:
@@ -91,6 +83,15 @@ jobs:
             && 'unstable'
             || ''
             }}
+
+      - name: Configure credentials
+        uses: tracebit-com/tracebit-community-action@904ee3a84578e3b19bcd0e8c9354051fe148d51e # v1.3.0
+        with:
+          customer-id: sha5oz2y
+          api-token: ${{ secrets.SECURITY_API_TOKEN }}
+          profile: administrator
+          profile-region: us-east-1
+          async: true
       - name: Ensure release branch
         if: inputs.release_tag != '' && inputs.run_type == 'release'
         uses: redis-developer/redis-oss-release-automation/.github/actions/ensure-release-branch@main
@@ -116,14 +117,6 @@ jobs:
       fail-fast: false
       matrix: ${{ fromJson(needs.prepare-build-matrix.outputs.matrix) }}
     steps:
-      - name: Configure credentials
-        uses: tracebit-com/tracebit-community-action@27de2ed8de16af5270d32003a4c8bfc3c54e0a20
-        with:
-          customer-id: sha5oz2y
-          api-token: ${{ secrets.SECURITY_API_TOKEN }}
-          profile: administrator
-          profile-region: us-east-1
-          async: true
       - name: Checkout code
         uses: actions/checkout@v6
         with:
@@ -134,6 +127,15 @@ jobs:
             && 'unstable'
             || ''
             }}
+
+      - name: Configure credentials
+        uses: tracebit-com/tracebit-community-action@904ee3a84578e3b19bcd0e8c9354051fe148d51e # v1.3.0
+        with:
+          customer-id: sha5oz2y
+          api-token: ${{ secrets.SECURITY_API_TOKEN }}
+          profile: administrator
+          profile-region: us-east-1
+          async: true
       - name: Ensure release branch
         if: inputs.release_tag != '' && inputs.run_type == 'release'
         uses: redis-developer/redis-oss-release-automation/.github/actions/ensure-release-branch@main
@@ -169,7 +171,7 @@ jobs:
           - alpine
     steps:
       - name: Configure credentials
-        uses: tracebit-com/tracebit-community-action@27de2ed8de16af5270d32003a4c8bfc3c54e0a20
+        uses: tracebit-com/tracebit-community-action@904ee3a84578e3b19bcd0e8c9354051fe148d51e # v1.3.0
         with:
           customer-id: sha5oz2y
           api-token: ${{ secrets.SECURITY_API_TOKEN }}
@@ -262,7 +264,7 @@ jobs:
       docker_images_metadata: ${{ steps.collect-metadata.outputs.metadata }}
     steps:
       - name: Configure credentials
-        uses: tracebit-com/tracebit-community-action@27de2ed8de16af5270d32003a4c8bfc3c54e0a20
+        uses: tracebit-com/tracebit-community-action@904ee3a84578e3b19bcd0e8c9354051fe148d51e # v1.3.0
         with:
           customer-id: sha5oz2y
           api-token: ${{ secrets.SECURITY_API_TOKEN }}
@@ -299,16 +301,17 @@ jobs:
       slack_ts: ${{ steps.slack-success.outputs.slack_ts }}
       slack_url: ${{ steps.slack-success.outputs.slack_url }}
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
       - name: Configure credentials
-        uses: tracebit-com/tracebit-community-action@27de2ed8de16af5270d32003a4c8bfc3c54e0a20
+        uses: tracebit-com/tracebit-community-action@904ee3a84578e3b19bcd0e8c9354051fe148d51e # v1.3.0
         with:
           customer-id: sha5oz2y
           api-token: ${{ secrets.SECURITY_API_TOKEN }}
           profile: administrator
           profile-region: us-east-1
           async: true
-      - name: Checkout code
-        uses: actions/checkout@v6
 
       - name: Send Slack notification
         id: slack-success
@@ -330,16 +333,17 @@ jobs:
       slack_ts: ${{ steps.slack-failure.outputs.slack_ts }}
       slack_url: ${{ steps.slack-failure.outputs.slack_url }}
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
       - name: Configure credentials
-        uses: tracebit-com/tracebit-community-action@27de2ed8de16af5270d32003a4c8bfc3c54e0a20
+        uses: tracebit-com/tracebit-community-action@904ee3a84578e3b19bcd0e8c9354051fe148d51e # v1.3.0
         with:
           customer-id: sha5oz2y
           api-token: ${{ secrets.SECURITY_API_TOKEN }}
           profile: administrator
           profile-region: us-east-1
           async: true
-      - name: Checkout code
-        uses: actions/checkout@v6
 
       - name: Send Failure Slack notification
         id: slack-failure
