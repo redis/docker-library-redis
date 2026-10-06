@@ -120,11 +120,11 @@ runs:
       run: |
         # Figure out the correct URL for the Redis release archive.
         # REDIS_REPO defaults to redis/redis but may point at a fork.
-        # Prefer a bundled redis-full.tar.gz release asset (Redis core + modules) when
+        # Prefer a bundled redis-$TAG.tar.gz release asset (Redis core + modules) when
         # published for this tag; otherwise fall back to the plain source archive.
         REDIS_DOWNLOAD_URL=""
         for URL in \
-          "https://github.com/$REDIS_REPO/releases/download/$TAG/redis-full.tar.gz" \
+          "https://github.com/$REDIS_REPO/releases/download/$TAG/redis-$TAG.tar.gz" \
           "https://github.com/$REDIS_REPO/archive/refs/tags/$TAG.tar.gz" \
           "https://github.com/$REDIS_REPO/archive/refs/heads/$TAG.tar.gz" \
           "https://github.com/$REDIS_REPO/archive/$TAG.tar.gz"; do
@@ -158,7 +158,7 @@ runs:
         trap 'rm -rf "$tmpdir"' EXIT
 
         curl --fail -Ls "$REDIS_DOWNLOAD_URL" -o "$tmpdir/redis.tar.gz"
-        # core version.h is <topdir>/src/version.h; anchor so redis-full module version.h don't match
+        # core version.h is <topdir>/src/version.h; anchor so bundled module version.h don't match
         version_h_path=$(tar -tzf "$tmpdir/redis.tar.gz" | grep -E '^[^/]+/src/version.h$' | head -n1)
 
         if [ -z "$version_h_path" ]; then
