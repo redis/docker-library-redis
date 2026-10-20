@@ -113,7 +113,6 @@ RUN set -eux; \
 	grep -F "cd jemalloc && ./configure $extraJemallocConfigureFlags " /usr/src/redis/deps/Makefile; \
 	\
 	export BUILD_TLS=yes; \
-# enable zstd replication compression (repl-compression config), see https://github.com/redis/docker-library-redis/issues/557
 	export BUILD_COMPRESSION=yes; \
 	if [ "$BUILD_WITH_MODULES" = "yes" ]; then \
 		export LTO=1; \
