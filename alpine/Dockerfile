@@ -110,7 +110,6 @@ RUN set -eux; \
 	export RUST_DYN_CRT=1; \
 	export PATH="/usr/lib/llvm21/bin:$PATH"; \
 	export BUILD_TLS=yes; \
-# enable zstd replication compression (repl-compression config), see https://github.com/redis/docker-library-redis/issues/557
 	export BUILD_COMPRESSION=yes; \
 	if [ "$BUILD_WITH_MODULES" = "yes" ]; then \
 		export LTO=1; \
