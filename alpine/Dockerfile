@@ -27,6 +27,8 @@ RUN set -eux; \
 		make \
 		musl-dev \
 		openssl-dev \
+# zstd is required for replication compression (BUILD_COMPRESSION=yes)
+		zstd-dev \
 		g++; \
 	\
 	arch="$(dpkg --print-architecture | awk -F- '{ print $NF }')"; \
@@ -108,6 +110,8 @@ RUN set -eux; \
 	export RUST_DYN_CRT=1; \
 	export PATH="/usr/lib/llvm21/bin:$PATH"; \
 	export BUILD_TLS=yes; \
+# enable zstd replication compression (repl-compression config), see https://github.com/redis/docker-library-redis/issues/557
+	export BUILD_COMPRESSION=yes; \
 	if [ "$BUILD_WITH_MODULES" = "yes" ]; then \
 		export LTO=1; \
 # make deploy/build.sh bypass modules/Makefile, so install the pinned Rust toolchain here

@@ -31,6 +31,8 @@ RUN set -eux; \
 		libc6-dev \
 		libssl-dev \
 		libsystemd-dev \
+# libzstd is required for replication compression (BUILD_COMPRESSION=yes)
+		libzstd-dev \
 		pkg-config \
 		make; \
 	\
@@ -92,6 +94,8 @@ RUN set -eux; \
 	grep -F "cd jemalloc && ./configure $extraJemallocConfigureFlags " /usr/src/redis/deps/Makefile; \
 	\
 	export BUILD_TLS=yes; \
+# enable zstd replication compression (repl-compression config), see https://github.com/redis/docker-library-redis/issues/557
+	export BUILD_COMPRESSION=yes; \
 	if [ "$BUILD_WITH_MODULES" = "yes" ]; then \
 		export LTO=1; \
 # make deploy/build.sh bypass modules/Makefile, so install the pinned Rust toolchain here
