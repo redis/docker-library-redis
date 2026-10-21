@@ -38,6 +38,8 @@ RUN set -eux; \
 		make \
 		musl-dev \
 		openssl-dev \
+# zstd is required for replication compression (BUILD_COMPRESSION=yes)
+		zstd-dev \
 		g++; \
 	\
 	arch="$(dpkg --print-architecture | awk -F- '{ print $NF }')"; \
@@ -128,6 +130,7 @@ RUN set -eux; \
 	export RUST_DYN_CRT=1; \
 	export PATH="/usr/lib/llvm21/bin:$PATH"; \
 	export BUILD_TLS=yes; \
+	export BUILD_COMPRESSION=yes; \
 	if [ "$BUILD_WITH_MODULES" = "yes" ]; then \
 		export LTO=1; \
 	{% if custom_build %}
