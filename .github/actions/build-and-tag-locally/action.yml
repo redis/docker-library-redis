@@ -125,6 +125,7 @@ runs:
         REDIS_DOWNLOAD_URL=""
         for URL in \
           "https://github.com/$REDIS_REPO/releases/download/$TAG/redis-$TAG.tar.gz" \
+          "https://github.com/$REDIS_REPO/releases/download/$TAG/redis-full.tar.gz" \
           "https://github.com/$REDIS_REPO/archive/refs/tags/$TAG.tar.gz" \
           "https://github.com/$REDIS_REPO/archive/refs/heads/$TAG.tar.gz" \
           "https://github.com/$REDIS_REPO/archive/$TAG.tar.gz"; do
