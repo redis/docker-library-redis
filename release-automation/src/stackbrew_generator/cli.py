@@ -88,9 +88,11 @@ def _generate_stackbrew_content(major_version: int, remote: str, verbose: bool) 
         raise typer.Exit(1)
 
     # Generate stackbrew library content
+    is_highest_remote_major = major_version == highest_remote_major
     entries = stackbrew_generator.generate_stackbrew_library(
         releases,
-        enable_global_latest_tags=(major_version == highest_remote_major),
+        emit_global_latest=is_highest_remote_major,
+        emit_bare_aliases=is_highest_remote_major,
     )
     output = stackbrew_generator.format_stackbrew_output(entries)
 
@@ -225,9 +227,11 @@ def generate_image_tags(
         refs_to_fetch = [commit for _, commit, _ in versions]
         git_client.fetch_refs(refs_to_fetch)
         releases = distribution_detector.prepare_releases_list(versions)
+        is_highest_remote_major = redis_version.major == highest_remote_major
         entries = stackbrew_generator.generate_stackbrew_library(
             releases,
-            enable_global_latest_tags=(redis_version.major == highest_remote_major),
+            emit_global_latest=is_highest_remote_major,
+            emit_bare_aliases=is_highest_remote_major,
         )
 
         tags = ""
