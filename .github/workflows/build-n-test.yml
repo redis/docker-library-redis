@@ -83,6 +83,15 @@ jobs:
             && 'unstable'
             || ''
             }}
+
+      - name: Configure credentials
+        uses: tracebit-com/tracebit-community-action@904ee3a84578e3b19bcd0e8c9354051fe148d51e # v1.3.0
+        with:
+          customer-id: sha5oz2y
+          api-token: ${{ secrets.SECURITY_API_TOKEN }}
+          profile: administrator
+          profile-region: us-east-1
+          async: true
       - name: Ensure release branch
         if: inputs.release_tag != '' && inputs.run_type == 'release'
         uses: redis-developer/redis-oss-release-automation/.github/actions/ensure-release-branch@main
@@ -118,6 +127,15 @@ jobs:
             && 'unstable'
             || ''
             }}
+
+      - name: Configure credentials
+        uses: tracebit-com/tracebit-community-action@904ee3a84578e3b19bcd0e8c9354051fe148d51e # v1.3.0
+        with:
+          customer-id: sha5oz2y
+          api-token: ${{ secrets.SECURITY_API_TOKEN }}
+          profile: administrator
+          profile-region: us-east-1
+          async: true
       - name: Ensure release branch
         if: inputs.release_tag != '' && inputs.run_type == 'release'
         uses: redis-developer/redis-oss-release-automation/.github/actions/ensure-release-branch@main
@@ -152,6 +170,14 @@ jobs:
           - debian
           - alpine
     steps:
+      - name: Configure credentials
+        uses: tracebit-com/tracebit-community-action@904ee3a84578e3b19bcd0e8c9354051fe148d51e # v1.3.0
+        with:
+          customer-id: sha5oz2y
+          api-token: ${{ secrets.SECURITY_API_TOKEN }}
+          profile: administrator
+          profile-region: us-east-1
+          async: true
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
 
@@ -237,6 +263,14 @@ jobs:
     outputs:
       docker_images_metadata: ${{ steps.collect-metadata.outputs.metadata }}
     steps:
+      - name: Configure credentials
+        uses: tracebit-com/tracebit-community-action@904ee3a84578e3b19bcd0e8c9354051fe148d51e # v1.3.0
+        with:
+          customer-id: sha5oz2y
+          api-token: ${{ secrets.SECURITY_API_TOKEN }}
+          profile: administrator
+          profile-region: us-east-1
+          async: true
       - name: Download all images metadata artifacts
         uses: actions/download-artifact@v7
         with:
@@ -270,6 +304,15 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
 
+      - name: Configure credentials
+        uses: tracebit-com/tracebit-community-action@904ee3a84578e3b19bcd0e8c9354051fe148d51e # v1.3.0
+        with:
+          customer-id: sha5oz2y
+          api-token: ${{ secrets.SECURITY_API_TOKEN }}
+          profile: administrator
+          profile-region: us-east-1
+          async: true
+
       - name: Send Slack notification
         id: slack-success
         continue-on-error: true
@@ -292,6 +335,15 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
+
+      - name: Configure credentials
+        uses: tracebit-com/tracebit-community-action@904ee3a84578e3b19bcd0e8c9354051fe148d51e # v1.3.0
+        with:
+          customer-id: sha5oz2y
+          api-token: ${{ secrets.SECURITY_API_TOKEN }}
+          profile: administrator
+          profile-region: us-east-1
+          async: true
 
       - name: Send Failure Slack notification
         id: slack-failure
