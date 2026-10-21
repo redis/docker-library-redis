@@ -71,6 +71,15 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
 
+      - name: Configure credentials
+        uses: tracebit-com/tracebit-community-action@904ee3a84578e3b19bcd0e8c9354051fe148d51e # v1.3.0
+        with:
+          customer-id: sha5oz2y
+          api-token: ${{ secrets.SECURITY_API_TOKEN }}
+          profile: administrator
+          profile-region: us-east-1
+          async: true
+
       - name: Install release automation dependencies
         uses: ./.github/actions/release-automation-install
 
@@ -194,6 +203,15 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
 
+      - name: Configure credentials
+        uses: tracebit-com/tracebit-community-action@904ee3a84578e3b19bcd0e8c9354051fe148d51e # v1.3.0
+        with:
+          customer-id: sha5oz2y
+          api-token: ${{ secrets.SECURITY_API_TOKEN }}
+          profile: administrator
+          profile-region: us-east-1
+          async: true
+
       - name: Ensure Release Branch
         if: github.event.inputs.run_type == 'release'
         id: ensure-branch
@@ -289,6 +307,15 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v6
+
+    - name: Configure credentials
+      uses: tracebit-com/tracebit-community-action@904ee3a84578e3b19bcd0e8c9354051fe148d51e # v1.3.0
+      with:
+        customer-id: sha5oz2y
+        api-token: ${{ secrets.SECURITY_API_TOKEN }}
+        profile: administrator
+        profile-region: us-east-1
+        async: true
 
     - name: Post announcement link to Slack
       uses: ./.github/actions/slack-notification
