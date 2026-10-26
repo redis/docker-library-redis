@@ -1,5 +1,5 @@
 {
-	"release_tag": "7.2.16",
-	"redis_download_url": "https://github.com/redis/redis/archive/refs/tags/7.2.16.tar.gz",
-	"redis_download_sha": "65fa69e66187cb5a4cf625bd587c743507e518749c5a0eec29c4f086495c8a7e"
+	"release_tag": "7.2.17",
+	"redis_download_url": "https://github.com/redis/redis/archive/refs/tags/7.2.17.tar.gz",
+	"redis_download_sha": "c4a315a3ab32d864624605a7faf70df906f05a186054bfb84997c78440660748"
 }
