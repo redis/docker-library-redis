@@ -120,11 +120,11 @@ runs:
       run: |
         # Figure out the correct URL for the Redis release archive.
         # REDIS_REPO defaults to redis/redis but may point at a fork.
-        # Prefer a bundled redis-$TAG.tar.gz release asset (Redis core + modules) when
+        # Prefer a bundled redis-full-$TAG.tar.gz release asset (Redis core + modules) when
         # published for this tag; otherwise fall back to the plain source archive.
         REDIS_DOWNLOAD_URL=""
         for URL in \
-          "https://github.com/$REDIS_REPO/releases/download/$TAG/redis-$TAG.tar.gz" \
+          "https://github.com/$REDIS_REPO/releases/download/$TAG/redis-full-$TAG.tar.gz" \
           "https://github.com/$REDIS_REPO/releases/download/$TAG/redis-full.tar.gz" \
           "https://github.com/$REDIS_REPO/archive/refs/tags/$TAG.tar.gz" \
           "https://github.com/$REDIS_REPO/archive/refs/heads/$TAG.tar.gz" \
