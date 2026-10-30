@@ -699,6 +699,64 @@ test_redis_process_uid_and_gid_are_root_when_SKIP_DROP_PRIVS_is_used() {
 	run_redis_docker_and_check_uid_gid "${common_flags[@]}" --expected-cmd "[sentinel]" /usr/local/bin/redis-server /etc/sentinel/sentinel.conf --sentinel
 }
 
+# Temporary Redis 8.12 toggle tests; remove with the entrypoint toggle.
+test_source_aware_config_rewrite_values() {
+	local container actual value expected
+	container=$(docker run --rm -d -e ENABLE_SOURCE_AWARE_CONFIG_REWRITE= "$REDIS_IMG") || return 1
+	if ! wait_for_redis_server_in_container "$container"; then
+		return 1
+	fi
+	actual=$(docker exec "$container" redis-cli --raw config get config-rewrite-source-aware)
+	docker stop "$container" >/dev/null
+	if [ -z "$actual" ]; then
+		echo "Skipping: Redis does not support config-rewrite-source-aware"
+		startSkipping
+		return 0
+	fi
+	assertEquals "Empty toggle preserves the disabled Redis default" no "$(printf '%s\n' "$actual" | tail -n 1)"
+
+	for value in unset '' yes no; do
+		local env_flags=(-e ENABLE_SOURCE_AWARE_CONFIG_REWRITE)
+		if [ "$value" != unset ]; then
+			env_flags=(-e "ENABLE_SOURCE_AWARE_CONFIG_REWRITE=$value")
+		fi
+		# Explicit environment settings must override the opposite CLI value.
+		expected=yes
+		local cli_value=yes
+		if [ "$value" = yes ]; then
+			cli_value=no
+		elif [ "$value" = no ]; then
+			expected=no
+		fi
+		container=$(env -u ENABLE_SOURCE_AWARE_CONFIG_REWRITE docker run --rm -d \
+			"${env_flags[@]}" "$REDIS_IMG" --config-rewrite-source-aware "$cli_value") || return 1
+		if ! wait_for_redis_server_in_container "$container"; then
+			return 1
+		fi
+		actual=$(docker exec "$container" redis-cli --raw config get config-rewrite-source-aware | tail -n 1)
+		docker stop "$container" >/dev/null
+		assertEquals "ENABLE_SOURCE_AWARE_CONFIG_REWRITE='$value'" "$expected" "$actual"
+	done
+}
+
+test_source_aware_config_rewrite_invalid_value() {
+	local output status
+	output=$(docker run --rm -e ENABLE_SOURCE_AWARE_CONFIG_REWRITE=invalid "$REDIS_IMG" 2>&1)
+	status=$?
+	assertEquals "Invalid toggle must fail startup" 1 "$status"
+	assertContains "$output" "ENABLE_SOURCE_AWARE_CONFIG_REWRITE must be 'yes' or 'no'"
+}
+
+test_source_aware_config_rewrite_ignored_for_other_commands() {
+	local output
+	output=$(docker run --rm -e ENABLE_SOURCE_AWARE_CONFIG_REWRITE=invalid "$REDIS_IMG" sh -c 'echo toggle-ignored')
+	assertEquals "Unrelated commands ignore the toggle" toggle-ignored "$output"
+	output=$(docker run --rm -e ENABLE_SOURCE_AWARE_CONFIG_REWRITE=invalid "$REDIS_IMG" redis-sentinel --version)
+	assert_redis_v8 "$output"
+	output=$(docker run --rm -e ENABLE_SOURCE_AWARE_CONFIG_REWRITE=invalid "$REDIS_IMG" redis-server --version --sentinel)
+	assert_redis_v8 "$output"
+}
+
 test_redis_server_modules_are_loaded() {
 	run_redis_docker_and_check_modules
 	run_redis_docker_and_check_modules redis-server
