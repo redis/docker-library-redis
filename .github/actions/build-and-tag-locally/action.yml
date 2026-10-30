@@ -124,7 +124,7 @@ runs:
         # published for this tag; otherwise fall back to the plain source archive.
         REDIS_DOWNLOAD_URL=""
         for URL in \
-          "https://github.com/$REDIS_REPO/releases/download/$TAG/redis-$TAG.tar.gz" \
+          "https://github.com/$REDIS_REPO/releases/download/$TAG/redis-full-$TAG.tar.gz" \
           "https://github.com/$REDIS_REPO/releases/download/$TAG/redis-full.tar.gz" \
           "https://github.com/$REDIS_REPO/archive/refs/tags/$TAG.tar.gz" \
           "https://github.com/$REDIS_REPO/archive/refs/heads/$TAG.tar.gz" \
