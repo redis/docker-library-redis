@@ -1,4 +1,4 @@
-FROM alpine:3.21
+FROM alpine:3.22
 
 # add our user and group first to make sure their IDs get assigned consistently, regardless of whatever dependencies get added
 RUN set -eux; \
