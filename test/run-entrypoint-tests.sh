@@ -699,6 +699,16 @@ test_redis_process_uid_and_gid_are_root_when_SKIP_DROP_PRIVS_is_used() {
 	run_redis_docker_and_check_uid_gid "${common_flags[@]}" --expected-cmd "[sentinel]" /usr/local/bin/redis-server /etc/sentinel/sentinel.conf --sentinel
 }
 
+test_redis_check_tools_get_only_user_args() {
+	local output
+	output=$(docker run --rm "$REDIS_IMG" sh -c 'printf "*1\r\n\$4\r\nPING\r\n" > /tmp/test.aof && exec /usr/local/bin/docker-entrypoint.sh redis-check-aof /tmp/test.aof' 2>&1)
+	assertContains "redis-check-aof output: $output" "$output" "is valid"
+	assertNotContains "redis-check-aof output: $output" "$output" "Usage:"
+	output=$(docker run --rm "$REDIS_IMG" redis-check-rdb /nonexistent.rdb 2>&1)
+	assertContains "redis-check-rdb output: $output" "$output" "Checking RDB file /nonexistent.rdb"
+	assertNotContains "redis-check-rdb output: $output" "$output" "Usage:"
+}
+
 test_redis_server_modules_are_loaded() {
 	run_redis_docker_and_check_modules
 	run_redis_docker_and_check_modules redis-server
