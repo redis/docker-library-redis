@@ -98,7 +98,12 @@ fi
 CMD=$(command -v "$1" 2>/dev/null || :)
 
 if [ "$(readlink -f "$CMD")" = '/usr/local/bin/redis-server' ]; then
-	IS_REDIS_SERVER=1
+	# redis-check-aof and redis-check-rdb are symlinks to redis-server, but
+	# they are offline tools that reject any extra arguments
+	case "$(basename "$CMD")" in
+		redis-check-aof|redis-check-rdb) ;;
+		*) IS_REDIS_SERVER=1 ;;
+	esac
 fi
 
 if check_for_sentinel "$CMD" "$@"; then
