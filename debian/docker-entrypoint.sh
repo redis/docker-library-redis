@@ -97,8 +97,12 @@ if [ "${1#-}" != "$1" ] || [ "${1%.conf}" != "$1" ]; then
 fi
 CMD=$(command -v "$1" 2>/dev/null || :)
 
+# redis-sentinel, redis-check-aof and redis-check-rdb are all symlinks to
+# redis-server; only the server and sentinel accept server arguments
 if [ "$(readlink -f "$CMD")" = '/usr/local/bin/redis-server' ]; then
-	IS_REDIS_SERVER=1
+	case "$(basename "$CMD")" in
+		redis-server|redis-sentinel) IS_REDIS_SERVER=1 ;;
+	esac
 fi
 
 if check_for_sentinel "$CMD" "$@"; then
