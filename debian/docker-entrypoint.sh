@@ -97,8 +97,12 @@ if [ "${1#-}" != "$1" ] || [ "${1%.conf}" != "$1" ]; then
 fi
 CMD=$(command -v "$1" 2>/dev/null || :)
 
+# redis-sentinel, redis-check-aof and redis-check-rdb are all symlinks to
+# redis-server; only the server and sentinel accept server arguments
 if [ "$(readlink -f "$CMD")" = '/usr/local/bin/redis-server' ]; then
-	IS_REDIS_SERVER=1
+	case "$(basename "$CMD")" in
+		redis-server|redis-sentinel) IS_REDIS_SERVER=1 ;;
+	esac
 fi
 
 if check_for_sentinel "$CMD" "$@"; then
@@ -148,16 +152,6 @@ if [ "$um" = '0022' ]; then
 fi
 
 if [ "$IS_REDIS_SERVER" ] && ! [ "$IS_REDIS_SENTINEL" ]; then
-	# Temporary Redis 8.12 toggle; remove when source-aware rewrites become unconditional.
-	case "${ENABLE_SOURCE_AWARE_CONFIG_REWRITE:-}" in
-		'') ;;
-		yes|no) set -- "$@" --config-rewrite-source-aware "$ENABLE_SOURCE_AWARE_CONFIG_REWRITE" ;;
-		*)
-			echo "Error: ENABLE_SOURCE_AWARE_CONFIG_REWRITE must be 'yes' or 'no'." >&2
-			exit 1
-			;;
-	esac
-
 	echo "Starting Redis Server"
 	modules_dir="/usr/local/lib/redis/modules/"
 	
