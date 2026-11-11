@@ -93,7 +93,11 @@ jobs:
 
   build-and-test:
     needs: prepare-build-matrix
-    runs-on: ${{ contains(matrix.platform, 'arm64') && 'ubuntu24-arm64-2-8' || 'ubuntu-latest' }}
+    # Pinned to ubuntu-24.04: the Docker 29.4.2 shipped on the ubuntu-26.04 runner
+    # image has a seccomp profile that denies socketcall, which breaks the debian
+    # i386 image (moby/moby#52506). Switch back to ubuntu-latest once
+    # actions/runner-images#15205 is resolved.
+    runs-on: ${{ contains(matrix.platform, 'arm64') && 'ubuntu24-arm64-2-8' || 'ubuntu-24.04' }}
     strategy:
       fail-fast: false
       matrix: ${{ fromJson(needs.prepare-build-matrix.outputs.matrix) }}
