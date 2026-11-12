@@ -14,9 +14,9 @@ RUN set -eux; \
 	; \
 	rm -rf /var/lib/apt/lists/*
 
-ENV REDIS_VERSION=8.12-rc2
-ARG REDIS_DOWNLOAD_URL=https://github.com/redis/redis/releases/download/8.12-rc2/redis-full-8.12-rc2.tar.gz
-ARG REDIS_DOWNLOAD_SHA=a6f861440905925b793035712ec1ed6de1ef16bc9725220ae94a694fcd28474f
+ENV REDIS_VERSION=8.12-rc3
+ARG REDIS_DOWNLOAD_URL=https://github.com/redis/redis/releases/download/8.12-rc3/redis-full-8.12-rc3.tar.gz
+ARG REDIS_DOWNLOAD_SHA=911ce0b13b2509c36f5d1c70c6aee74f3f0a21b4f03de3d25188b27e99f9ef9c
 
 RUN set -eux; \
 	\
